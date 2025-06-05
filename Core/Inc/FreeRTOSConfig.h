@@ -101,6 +101,7 @@ extern uint32_t SystemCoreClock;
 
 /* The following flag must be enabled only when using newlib */
 #define configUSE_NEWLIB_REENTRANT          1
+#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 3
 
 /* CMSIS-RTOS V2 flags */
 #define configUSE_OS2_THREAD_SUSPEND_RESUME  1

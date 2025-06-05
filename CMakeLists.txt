@@ -84,6 +84,9 @@ target_include_directories(freertos_plus_tcp
     "${CMAKE_CURRENT_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32H5xx/Include"
 )
 
+# Adding the FreeRTOS-Plus-FAT subdirectory
+#add_subdirectory(${THIRD_PARTY_PATH}/FreeRTOS-Plus-FAT-Port)
+
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
@@ -115,6 +118,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     freertos_kernel
     freertos_config
     freertos_plus_tcp
+#    freertos_plus_fat_port
 )
 
 set_property(TARGET freertos_kernel PROPERTY C_STANDARD 90)
