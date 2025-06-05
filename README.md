@@ -33,6 +33,7 @@ The DCC protocol is defined by various standards published by the [National Mode
 
 ## Getting Started
 ### Prerequisites
+- [git](https://git-scm.com/downloads)
 - [Visual Studio Code](https://code.visualstudio.com/download)
 - [STM32Cube for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=stmicroelectronics.stm32-vscode-extension) Can be installed from the VS Code marketplace
 - [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html)
