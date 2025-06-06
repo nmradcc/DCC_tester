@@ -28,12 +28,12 @@
 static volatile DSTATUS Stat = STA_NOINIT;
 
 /* Private function prototypes -----------------------------------------------*/
-static DSTATUS SD_check_status (BYTE);
-static DSTATUS SD_initialize (BYTE);
-static DSTATUS SD_status (BYTE);
-static DRESULT SD_read (BYTE, BYTE* , LBA_t, UINT);
-static DRESULT SD_write (BYTE, const BYTE* , LBA_t, UINT);
-static DRESULT SD_ioctl (BYTE, BYTE, void* );
+static DSTATUS SD_check_status (uint8_t);
+static DSTATUS SD_initialize (uint8_t);
+static DSTATUS SD_status (uint8_t);
+static DRESULT SD_read (uint8_t, uint8_t* , LBA_t, UINT);
+static DRESULT SD_write (uint8_t, const uint8_t* , LBA_t, UINT);
+static DRESULT SD_ioctl (uint8_t, uint8_t, void* );
 
 const Diskio_drvTypeDef SD_Driver =
 {
@@ -50,8 +50,9 @@ const Diskio_drvTypeDef SD_Driver =
  * @param  lun : not used
  * @retval DSTATUS: return 0 if the sd card is ready and 1 otherwise
  */
-static DSTATUS SD_check_status(BYTE lun)
+static DSTATUS SD_check_status(uint8_t lun)
 {
+  (void)lun;
   Stat = STA_NOINIT;
 
   if (HAL_SD_GetCardState(&sdmmc_handle) == HAL_SD_CARD_TRANSFER)
@@ -67,7 +68,7 @@ static DSTATUS SD_check_status(BYTE lun)
  * @param  lun : not used
  * @retval DSTATUS: return 0 on Success STA_NOINIT otherwise
  */
-static DSTATUS SD_initialize(BYTE lun)
+static DSTATUS SD_initialize(uint8_t lun)
 {
   Stat = STA_NOINIT;
 
@@ -85,7 +86,7 @@ static DSTATUS SD_initialize(BYTE lun)
  * @param  lun : not used
  * @retval DSTATUS: return 0 if the sd card is ready and 1 otherwise status
  */
-static DSTATUS SD_status(BYTE lun)
+static DSTATUS SD_status(uint8_t lun)
 {
   return SD_check_status(lun);
 }
@@ -98,8 +99,9 @@ static DSTATUS SD_status(BYTE lun)
  * @param  count: Number of sectors to read (1..128)
  * @retval DRESULT: return RES_OK otherwise
  */
-static DRESULT SD_read(BYTE lun, BYTE *buff, LBA_t sector, UINT count)
+static DRESULT SD_read(uint8_t lun, uint8_t *buff, LBA_t sector, UINT count)
 {
+  (void)lun; // Unused parameter
   DRESULT res = RES_ERROR;
 
   if (HAL_SD_ReadBlocks(&sdmmc_handle, (uint8_t*)buff, sector, count, SD_TIMEOUT) == HAL_OK)
@@ -121,8 +123,9 @@ static DRESULT SD_read(BYTE lun, BYTE *buff, LBA_t sector, UINT count)
  * @param  count: Number of sectors to write (1..128)
  * @retval DRESULT: return RES_OK otherwise
  */
-static DRESULT SD_write(BYTE lun, const BYTE *buff, LBA_t sector, UINT count)
+static DRESULT SD_write(uint8_t lun, const uint8_t *buff, LBA_t sector, UINT count)
 {
+  (void)lun; // Unused parameter
   DRESULT res = RES_ERROR;
 
   if (HAL_SD_WriteBlocks(&sdmmc_handle, (uint8_t*)buff, sector, count, SD_TIMEOUT) == HAL_OK)
@@ -143,8 +146,9 @@ static DRESULT SD_write(BYTE lun, const BYTE *buff, LBA_t sector, UINT count)
  * @param  *buff: Buffer to send/receive control data
  * @retval DRESULT: return RES_OK otherwise
  */
-static DRESULT SD_ioctl(BYTE lun, BYTE cmd, void *buff)
+static DRESULT SD_ioctl(uint8_t lun, uint8_t cmd, void *buff)
 {
+  (void)lun; // Unused parameter
   DRESULT res = RES_ERROR;
   HAL_SD_CardInfoTypeDef CardInfo;
 
