@@ -44,14 +44,17 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
-set(THIRD_PARTY_PATH "${CMAKE_CURRENT_SOURCE_DIR}/Middleware/Third_Party")
+# Add FatFs port library
+add_subdirectory(Middleware/Third_Party/FatFs)
+
+set(THIRD_PARTY_PATH "${CMAKE_SOURCE_DIR}/Middleware/Third_Party")
 
 # Add the freertos_config for FreeRTOS-Kernel
 add_library(freertos_config INTERFACE)
 
 target_include_directories(freertos_config
     INTERFACE
-    "${CMAKE_CURRENT_SOURCE_DIR}/Core/Inc"
+    "${CMAKE_SOURCE_DIR}/Core/Inc"
 )
 
 # Select the heap port.  values between 1-4 will pick a heap.
@@ -76,13 +79,14 @@ add_subdirectory(${THIRD_PARTY_PATH}/FreeRTOS-Plus-TCP)
 target_include_directories(freertos_plus_tcp
     INTERFACE
     # Add user defined include paths
-    "${CMAKE_CURRENT_SOURCE_DIR}/Core/Inc"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32H5xx_HAL_Driver/Inc"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Drivers/CMSIS/Include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32H5xx/Include"
+    "${CMAKE_SOURCE_DIR}/Core/Inc"
+#    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/include"
+#    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32H5xx_HAL_Driver/Inc"
+    "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Include"
+    "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32H5xx/Include"
 )
+
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
@@ -92,15 +96,18 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/App.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/FreeRTOS_CLI.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/cli_app.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/App.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/fatfs.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/FreeRTOS_CLI.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/cli_app.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Inc
+    ${CMAKE_SOURCE_DIR}/Core/Inc
+    ${THIRD_PARTY_PATH}/FatFs/src
 )
 
 # Add project symbols (macros)
@@ -115,6 +122,8 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     freertos_kernel
     freertos_config
     freertos_plus_tcp
+    fatfs
+#    freertos_plus_fat_port
 )
 
 set_property(TARGET freertos_kernel PROPERTY C_STANDARD 90)
