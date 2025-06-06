@@ -22,6 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "fatfs.h"
 #include "FreeRTOS.h"
 #include "FreeRTOS_IP.h"
 /* USER CODE END Includes */
@@ -280,7 +281,8 @@ int main(void)
   MX_USB_PCD_Init();
   MX_SDMMC1_SD_Init();
   /* USER CODE BEGIN 2 */
-    /* Initialise the RTOS.  The tasks are created. */
+  FATFS_Init();
+  /* Initialise the RTOS.  The tasks are created. */
   FREERTOS_Init();
     /* Initialise the RTOS's TCP/IP stack.  The tasks that use the network
     are created in the vApplicationIPNetworkEventHook() hook function

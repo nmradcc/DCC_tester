@@ -56,8 +56,10 @@ extern uint32_t SystemCoreClock;
 /*-------------------- STM32H5 specific defines -------------------*/
 #define configENABLE_TRUSTZONE                   0
 #define configRUN_FREERTOS_SECURE_ONLY           0
+
 #define configENABLE_FPU                         0
 #define configENABLE_MPU                         0
+
 #define configUSE_PREEMPTION                     1
 #define configSUPPORT_STATIC_ALLOCATION          1
 #define configSUPPORT_DYNAMIC_ALLOCATION         1
@@ -65,7 +67,7 @@ extern uint32_t SystemCoreClock;
 #define configUSE_TICK_HOOK                      0
 #define configCPU_CLOCK_HZ                       ( SystemCoreClock )
 #define configTICK_RATE_HZ                       ((TickType_t)1000)
-#define configMAX_PRIORITIES                     ( 56 )
+#define configMAX_PRIORITIES                     ( 7 )
 #define configMINIMAL_STACK_SIZE                 ((uint16_t)128)
 #define configTOTAL_HEAP_SIZE                    ((size_t)8192)
 #define configSTACK_ALLOCATION_FROM_SEPARATE_HEAP 0
