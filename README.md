@@ -33,6 +33,7 @@ The DCC protocol is defined by various standards published by the [National Mode
 
 ## Getting Started
 ### Prerequisites
+- [git](https://git-scm.com/downloads)
 - [Visual Studio Code](https://code.visualstudio.com/download)
 - [STM32Cube for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=stmicroelectronics.stm32-vscode-extension) Can be installed from the VS Code marketplace
 - [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html)
@@ -53,5 +54,10 @@ This library is meant to be consumed with CMake,
 
 ### Build
 
-If the VSC STM32Cube extension is installed correctly it should pickup the top level CMakeLists.txt file when VSC is launched (or the projevt folder is opened) and automatically configure the project. You can build and debug by clicking the appropriate icon. 
+If the VSC STM32Cube extension is installed correctly it should pickup the top level CMakeLists.txt file when VSC is launched (or the projevt folder is opened) and automatically configure the project. You can build and debug by clicking the appropriate icon.
+
+**Caution:** STM32CubeMX is a great tool for code generation. With it you can add/delete drivers and it will automatically generate driver initialization code, which can get quite complicated, if done manually.
+Its worth maintaining compatability going forward.  
+**DO NOT MODIFY** generated files unless you add code only in the "USER" specified code blocks. If you do not adhear to this rule, the next time you regenerate the code your changes will be lost!
+
 
