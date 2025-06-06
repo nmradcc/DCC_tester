@@ -51,10 +51,10 @@ extern "C" {
 #define ENABLE_SD_DMA_CACHE_MAINTENANCE  1
 
 
-extern SD_HandleTypeDef hsd_sdmmc1;
+extern SD_HandleTypeDef hsd1;
 
 /* Default handle used in sd_diskio.c file */
-#define sdmmc_handle hsd_sdmmc1
+#define sdmmc_handle hsd1
 
 /* Default Init function of sdmmc IP used in sd_diskio.c file */
 #if (ENABLE_SD_INIT == 1)

@@ -44,6 +44,9 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+# Add FatFs port library
+add_subdirectory(Middleware/Third_Party/FatFs)
+
 set(THIRD_PARTY_PATH "${CMAKE_SOURCE_DIR}/Middleware/Third_Party")
 
 # Add the freertos_config for FreeRTOS-Kernel
@@ -77,8 +80,8 @@ target_include_directories(freertos_plus_tcp
     INTERFACE
     # Add user defined include paths
     "${CMAKE_SOURCE_DIR}/Core/Inc"
-    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/include"
-    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure"
+#    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/include"
+#    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure"
     "${CMAKE_SOURCE_DIR}/Drivers/STM32H5xx_HAL_Driver/Inc"
     "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Include"
     "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32H5xx/Include"
