@@ -61,7 +61,7 @@ set(FREERTOS_HEAP "4" CACHE STRING "" FORCE)
 set(FREERTOS_PORT "GCC_ARM_CM33_NTZ_NONSECURE" CACHE STRING "" FORCE)
 
 # Adding the FreeRTOS subdirectory
-add_subdirectory(${THIRD_PARTY_PATH}/FreeRTOS-Kernel)
+add_subdirectory(${THIRD_PARTY_PATH}/CMSIS-FreeRTOS/Source)
 
 
 target_compile_definitions(freertos_config INTERFACE ${definitions})
