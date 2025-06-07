@@ -1,6 +1,0 @@
-[submodule "Middleware/Third_Party/CMSIS-FreeRTOS"]
-	path = Middleware/Third_Party/CMSIS-FreeRTOS
-	url = https://github.com/ARM-software/CMSIS-FreeRTOS
-[submodule "Middleware/Third_Party/FreeRTOS-Plus-TCP"]
-	path = Middleware/Third_Party/FreeRTOS-Plus-TCP
-	url = https://github.com/FreeRTOS/FreeRTOS-Plus-TCP

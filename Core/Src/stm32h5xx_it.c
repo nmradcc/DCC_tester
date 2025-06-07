@@ -22,7 +22,7 @@
 #include "stm32h5xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "app.h"
+#include "app_freertos.h"
 #include "task.h"
 /* USER CODE END Includes */
 
