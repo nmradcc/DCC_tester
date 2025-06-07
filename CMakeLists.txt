@@ -45,27 +45,9 @@ add_executable(${CMAKE_PROJECT_NAME})
 add_subdirectory(cmake/stm32cubemx)
 
 # Add FatFs port library
-add_subdirectory(Middleware/Third_Party/FatFs)
+add_subdirectory(MyMiddleware/Third_Party/FatFs)
 
-set(THIRD_PARTY_PATH "${CMAKE_SOURCE_DIR}/Middleware/Third_Party")
-
-set(FREERTOS_PLUS_TCP_NETWORK_IF "STM32" CACHE STRING "" FORCE)
-
-# Adding the FreeRTOS-Plus-TCP subdirectory
-#add_subdirectory(${THIRD_PARTY_PATH}/FreeRTOS-Plus-TCP)
-
-# Add include paths
-#target_include_directories(freertos_plus_tcp
-#    INTERFACE
-#    # Add user defined include paths
-#    "${CMAKE_SOURCE_DIR}/Core/Inc"
-##    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/include"
-##    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure"
-#    "${CMAKE_SOURCE_DIR}/Drivers/STM32H5xx_HAL_Driver/Inc"
-#    "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Include"
-#    "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32H5xx/Include"
-#)
-
+set(THIRD_PARTY_PATH "${CMAKE_SOURCE_DIR}/MyMiddleware/Third_Party")
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
@@ -75,7 +57,6 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-#    ${CMAKE_SOURCE_DIR}/Core/Src/App.c
     ${CMAKE_SOURCE_DIR}/Core/Src/fatfs.c
     ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio.c
     ${CMAKE_SOURCE_DIR}/Core/Src/FreeRTOS_CLI.c
@@ -99,6 +80,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
-#    freertos_plus_tcp
     fatfs
 )

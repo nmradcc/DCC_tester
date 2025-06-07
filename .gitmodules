@@ -1,4 +1,0 @@
-
-[submodule "Middleware/Third_Party/FreeRTOS-Plus-TCP"]
-	path = Middleware/Third_Party/FreeRTOS-Plus-TCP
-	url = https://github.com/FreeRTOS/FreeRTOS-Plus-TCP
