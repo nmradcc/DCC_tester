@@ -23,14 +23,14 @@ set(CMAKE_PROJECT_NAME DCC_tester)
 
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")
-add_compile_definitions(STM32H563xx)
+#??add_compile_definitions(STM32H563xx)
 
 # Enable compile command to ease indexing with e.g. clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
-# Include FetchContent module for dependency management
-include(FetchContent)
-
+#??# Include FetchContent module for dependency management
+#??include(FetchContent)
+#??
 # Core project settings
 project(${CMAKE_PROJECT_NAME})
 message("Build type: " ${CMAKE_BUILD_TYPE})
@@ -49,43 +49,22 @@ add_subdirectory(Middleware/Third_Party/FatFs)
 
 set(THIRD_PARTY_PATH "${CMAKE_SOURCE_DIR}/Middleware/Third_Party")
 
-# Add the freertos_config for FreeRTOS-Kernel
-add_library(freertos_config INTERFACE)
-
-target_include_directories(freertos_config
-    INTERFACE
-    "${CMAKE_SOURCE_DIR}/Core/Inc"
-)
-
-# Select the heap port.  values between 1-4 will pick a heap.
-set(FREERTOS_HEAP "4" CACHE STRING "" FORCE)
-
-# Select the native compile PORT
-set(FREERTOS_PORT "GCC_ARM_CM33_NTZ_NONSECURE" CACHE STRING "" FORCE)
-
-# Adding the FreeRTOS subdirectory
-add_subdirectory(${THIRD_PARTY_PATH}/CMSIS-FreeRTOS/Source)
-
-
-target_compile_definitions(freertos_config INTERFACE ${definitions})
-target_compile_options(freertos_config INTERFACE ${options})
-
 set(FREERTOS_PLUS_TCP_NETWORK_IF "STM32" CACHE STRING "" FORCE)
 
 # Adding the FreeRTOS-Plus-TCP subdirectory
-add_subdirectory(${THIRD_PARTY_PATH}/FreeRTOS-Plus-TCP)
+#add_subdirectory(${THIRD_PARTY_PATH}/FreeRTOS-Plus-TCP)
 
 # Add include paths
-target_include_directories(freertos_plus_tcp
-    INTERFACE
-    # Add user defined include paths
-    "${CMAKE_SOURCE_DIR}/Core/Inc"
-#    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/include"
-#    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure"
-    "${CMAKE_SOURCE_DIR}/Drivers/STM32H5xx_HAL_Driver/Inc"
-    "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Include"
-    "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32H5xx/Include"
-)
+#target_include_directories(freertos_plus_tcp
+#    INTERFACE
+#    # Add user defined include paths
+#    "${CMAKE_SOURCE_DIR}/Core/Inc"
+##    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/include"
+##    "${CMAKE_SOURCE_DIR}/Middleware/Third_Party/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure"
+#    "${CMAKE_SOURCE_DIR}/Drivers/STM32H5xx_HAL_Driver/Inc"
+#    "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Include"
+#    "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32H5xx/Include"
+#)
 
 
 # Link directories setup
@@ -96,7 +75,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    ${CMAKE_SOURCE_DIR}/Core/Src/App.c
+#    ${CMAKE_SOURCE_DIR}/Core/Src/App.c
     ${CMAKE_SOURCE_DIR}/Core/Src/fatfs.c
     ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio.c
     ${CMAKE_SOURCE_DIR}/Core/Src/FreeRTOS_CLI.c
@@ -118,12 +97,8 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
-    # Add user defined libraries
-    freertos_kernel
-    freertos_config
-    freertos_plus_tcp
-    fatfs
-#    freertos_plus_fat_port
-)
 
-set_property(TARGET freertos_kernel PROPERTY C_STANDARD 90)
+    # Add user defined libraries
+#    freertos_plus_tcp
+    fatfs
+)

@@ -19,12 +19,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "string.h"
+#include "cmsis_os2.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "fatfs.h"
 #include "FreeRTOS.h"
-#include "FreeRTOS_IP.h"
+//#include "FreeRTOS_IP.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -63,7 +64,7 @@ UART_HandleTypeDef huart3;
 PCD_HandleTypeDef hpcd_USB_DRD_FS;
 
 /* USER CODE BEGIN PV */
-
+#if 0
 /* The MAC address array is not declared const as the MAC address will
 normally be read from an EEPROM and not hard coded (in real deployed
 applications).*/
@@ -78,11 +79,12 @@ static const uint8_t ucGatewayAddress[ 4 ] = { 10, 10, 10, 1 };
 
 /* The following is the address of an OpenDNS server. */
 static const uint8_t ucDNSServerAddress[ 4 ] = { 208, 67, 222, 222 };
-
+#endif
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void MX_FREERTOS_Init(void);
 static void MX_GPIO_Init(void);
 static void MX_ICACHE_Init(void);
 static void MX_USART3_UART_Init(void);
@@ -105,6 +107,7 @@ static void MX_SDMMC1_SD_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+#if 0
 void vApplicationStackOverflowHook(TaskHandle_t xTask,
 								   char *pcTaskName)
 {
@@ -239,7 +242,7 @@ BaseType_t xApplicationGetRandomNumber( uint32_t * pulNumber )
 
     return pdTRUE;
 }
-
+#endif
 
 /* USER CODE END 0 */
 
@@ -282,18 +285,22 @@ int main(void)
   MX_SDMMC1_SD_Init();
   /* USER CODE BEGIN 2 */
   FATFS_Init();
-  /* Initialise the RTOS.  The tasks are created. */
-  FREERTOS_Init();
     /* Initialise the RTOS's TCP/IP stack.  The tasks that use the network
     are created in the vApplicationIPNetworkEventHook() hook function
     below.  The hook function is called when the network connects. */
-  FreeRTOS_IPInit( ucIPAddress,
-                    ucNetMask,
-                    ucGatewayAddress,
-                    ucDNSServerAddress,
-                    ucMACAddress );
+//  FreeRTOS_IPInit( ucIPAddress,
+//                    ucNetMask,
+//                    ucGatewayAddress,
+//                    ucDNSServerAddress,
+//                    ucMACAddress );
 
   /* USER CODE END 2 */
+
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* Call init function for freertos objects (in app_freertos.c) */
+  MX_FREERTOS_Init();
 
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
@@ -303,12 +310,14 @@ int main(void)
   /* Initialize User push-button without interrupt mode. */
   BSP_PB_Init(BUTTON_USER, BUTTON_MODE_GPIO);
 
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  
-  /* Start the scheduler. */
-  vTaskStartScheduler();
-  
+   
   while (1)
   {
 
