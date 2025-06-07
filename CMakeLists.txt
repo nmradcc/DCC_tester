@@ -44,10 +44,10 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+set(MYTHIRD_PARTY_PATH "${CMAKE_SOURCE_DIR}/MyMiddleware/Third_Party")
+
 # Add FatFs port library
 add_subdirectory(MyMiddleware/Third_Party/FatFs)
-
-set(THIRD_PARTY_PATH "${CMAKE_SOURCE_DIR}/MyMiddleware/Third_Party")
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
@@ -67,7 +67,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_SOURCE_DIR}/Core/Inc
-    ${THIRD_PARTY_PATH}/FatFs/src
+    ${MYTHIRD_PARTY_PATH}/FatFs/src
 )
 
 # Add project symbols (macros)
