@@ -49,8 +49,11 @@ To clone using HTTPS:
 git clone --recursive https://github.com/nmradcc/DCC_tester.git ./DCC_tester
 cd ./DCC_tester
 ```
+After cloning it is important to initialy generate the dependent driver code before building. (these driver directories are not archived by default!)
+Generate the code by launching the STM32CubeMX utility, open the DCC_testor.ioc file and press the GENERATE CODE button.
 
-This library is meant to be consumed with CMake,
+After code generation you can launch VSC and build.
+
 
 ### Build
 
