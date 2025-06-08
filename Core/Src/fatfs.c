@@ -1,3 +1,4 @@
+
 /**
   ******************************************************************************
   * @file   fatfs.c
@@ -5,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2025 STMicroelectronics.
+  * Copyright (c) 2024 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -14,62 +15,228 @@
   *
   ******************************************************************************
   */
-#include <stdio.h>
+/* Includes ------------------------------------------------------------------*/
 #include "fatfs.h"
+#include "stm32h5xx_nucleo.h"
 
-void Error_Handler(void);
+/* Private includes ----------------------------------------------------------*/
 
-uint8_t retSD;    /* Return value for SD */
+/* Private typedef -----------------------------------------------------------*/
+
+/* Private define ------------------------------------------------------------*/
+
+/* Private macro -------------------------------------------------------------*/
+
+/* Private variables ---------------------------------------------------------*/
+//TODO:static uint32_t PinDetect = {SD_DETECT_Pin};
+//TODO:static GPIO_TypeDef* SD_GPIO_PORT = {SD_DETECT_GPIO_Port};
+static const uint8_t wtext[] = "This is STM32 working with FatFs uSD + FreeRTOS"; /* File write buffer */
+
+uint32_t   osQueueMsg;
+
+osThreadId_t FSAppThreadHandle;
+const osThreadAttr_t uSDThread_attributes = {
+  .name = "uSDThread",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 256 * 8
+};
+
+/* Definitions for Mutex */
+osMessageQueueId_t QueueHandle;
+const osMessageQueueAttr_t Queue_attributes = {
+  .name = "osqueue"
+};
+
+FATFS SDFatFs;    /* File system object for SD logical drive */
+FIL SDFile;       /* File  object for SD */
 char SDPath[4];   /* SD logical drive path */
-FATFS SDFatFS;    /* File system object for SD logical drive */
-FIL SDFile;       /* File object for SD */
+const MKFS_PARM OptParm = {FM_ANY, 0, 0, 0, 0};
 
-uint32_t file_error = 0, sd_detection_error = 0; 
+static uint32_t CARD_CONNECTED= 0;
+static uint32_t CARD_DISCONNECTED= 1;
+static uint32_t CARD_STATUS_CHANGED= 2;
+
+static uint8_t isFsCreated = 0;
+static __IO uint8_t statusChanged = 0;
+static uint8_t workBuffer[2 * FF_MAX_SS];
+static  uint8_t rtext[100]; /* File read buffer */
+
+/* Private function prototypes -----------------------------------------------*/
+static void uSDThread_Entry(void *argument);
+static void FS_FileOperations(void);
+static uint8_t SD_IsDetected(void);
+
+/* Private user code ---------------------------------------------------------*/
 
 void FATFS_Init(void)
 {
-  /*## FatFS: Link the SD driver ###########################*/
-  retSD = FATFS_LinkDriver(&SD_Driver, SDPath);
-
-  if (retSD == 0)
+  /* additional user code for init */
+  /*## FatFS: Link the disk I/O driver(s)  ###########################*/
+  if (FATFS_LinkDriver(&SD_DMA_Driver, SDPath) == 0)
   {
-    /*## FatFS: Register the file system object to the FatFs module ############*/
-    if ((retSD = f_mount(&SDFatFS, (TCHAR const*)SDPath, 0)) != FR_OK)
-    {
-      /* FatFs mount Error */
-      printf("FatFs Driver f_mount failed with error code: %d\r\n", retSD);
+    /* creation of uSDThread */
+    FSAppThreadHandle = osThreadNew(uSDThread_Entry, NULL, &uSDThread_attributes);
 
+    /* Create Storage Message Queue */
+    QueueHandle = osMessageQueueNew(1U, sizeof(uint16_t), NULL);
+  }
+}
+
+/**
+  * @brief  Start task
+  * @param  pvParameters not used
+  * @retval None
+  */
+static void uSDThread_Entry(void *argument)
+{
+  (void)argument;
+  osStatus_t status;
+
+    if(SD_IsDetected())
+    {
+      osMessageQueuePut (QueueHandle, &CARD_CONNECTED, 100, 0U);
+    }
+
+  /* Infinite Loop */
+  for( ;; )
+  {
+    status = osMessageQueueGet(QueueHandle, &osQueueMsg, NULL, 100);
+
+    if ((status == osOK) && (osQueueMsg== CARD_STATUS_CHANGED))
+    {
+        if (SD_IsDetected())
+        {
+          osMessageQueuePut (QueueHandle, &CARD_CONNECTED, 100, 0U);
+        }
+        else
+        {
+          osMessageQueuePut (QueueHandle, &CARD_DISCONNECTED, 100, 0U);
+        }
+     }
+
+     if ((status == osOK) && (osQueueMsg== CARD_CONNECTED))
+     {
+        BSP_LED_On(LED_RED);
+        // HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+        FS_FileOperations();
+        statusChanged = 0;
+     }
+
+     if ((status == osOK) && (osQueueMsg== CARD_DISCONNECTED))
+     {
+        BSP_LED_On(LED_GREEN);
+        //HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+        BSP_LED_Toggle(LED_RED);
+        //HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+        osDelay(200);
+
+        f_mount(NULL, (TCHAR const*)"", 0);
+        statusChanged = 0;
+     }
+  }
+}
+
+/**
+  * @brief File system : file operation
+  * @retval File operation result
+  */
+static void FS_FileOperations(void)
+{
+  FRESULT res;                      /* FatFs function common result code */
+  uint32_t byteswritten, bytesread; /* File write/read counts */
+
+
+  /* Register the file system object to the FatFs module */
+  if(f_mount(&SDFatFs, (TCHAR const*)SDPath, 0) == FR_OK)
+  {
+    /* check whether the FS has been already created */
+    if (isFsCreated == 0)
+    {
+      if(f_mkfs(SDPath, &OptParm, workBuffer, sizeof(workBuffer)) != FR_OK)
+      {
+        BSP_LED_Off(LED_RED);
+        //HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+        return;
+      }
+      isFsCreated = 1;
+    }
+    /* Create and Open a new text file object with write access */
+    if(f_open(&SDFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) == FR_OK)
+    {
+      /* Write data to the text file */
+      res = f_write(&SDFile, (const void *)wtext, sizeof(wtext), (void *)&byteswritten);
+
+      if((byteswritten > 0) && (res == FR_OK))
+      {
+        /* Close the open text file */
+        f_close(&SDFile);
+
+        /* Open the text file object with read access */
+        if(f_open(&SDFile, "STM32.TXT", FA_READ) == FR_OK)
+        {
+          /* Read data from the text file */
+          res = f_read(&SDFile, ( void *)rtext, sizeof(rtext), (void *)&bytesread);
+
+          if((bytesread > 0) && (res == FR_OK))
+          {
+            /* Close the open text file */
+            f_close(&SDFile);
+
+            /* Compare read data with the expected data */
+            if(bytesread == byteswritten)
+            {
+              /* Success of the demo: no error occurrence */
+              BSP_LED_Off(LED_GREEN);
+              //HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+              return;
+            }
+          }
+        }
+      }
+    }
+  }
+  /* Error */
+  BSP_LED_Off(LED_RED);
+  //HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+}
+
+static uint8_t SD_IsDetected(void)
+{
+    uint8_t status;
+
+    //TODO:FIX
+    status = HAL_ERROR;   //error means card detected!
+#if 0
+    if (HAL_GPIO_ReadPin(SD_GPIO_PORT, PinDetect) == GPIO_PIN_RESET)
+    {
+      status = HAL_ERROR;
     }
     else
     {
-      /* FatFs Initialized successfully */
-      if((retSD = f_open(&SDFile, "test.txt", FA_READ)) == FR_OK)
-      {
-        printf("FatFs Driver f_open worked!!\r\n");
-        f_close(&SDFile);  
-      }
-      else /* Can't Open JPG file*/
-      {
-        printf("FatFs Driver f_open failed with error code: %d\r\n", retSD);
-      }       
+      status = HAL_OK;
     }
-  }
-  else
-  {
-    /* Driver linking failed */
-    printf("FatFs Driver linking failed with error code: %d\r\n", retSD);
-  } 
+#endif
+    return status;
 }
-
 
 /**
-  * @brief  Gets Time from RTC
-  * @param  None
-  * @retval Time in DWORD
+  * @brief  EXTI line detection callback.
+  * @param  GPIO_Pin: Specifies the port pin connected to corresponding EXTI line.
+  * @retval None.
   */
-DWORD get_fattime(void)
-{
-  return 0;
-}
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  //TODO:FIX
+  (void)GPIO_Pin;
+  #if 0
+  if(GPIO_Pin == SD_DETECT_Pin)
+  {
+     if (statusChanged == 0)
+     {
+       statusChanged = 1;
+       osMessageQueuePut ( QueueHandle, &CARD_STATUS_CHANGED, 100, 0U);
+     }
+  }
+#endif
+}

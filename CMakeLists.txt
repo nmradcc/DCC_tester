@@ -58,7 +58,8 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_SOURCE_DIR}/Core/Src/fatfs.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio.c
+#    ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio_dma_rtos.c
     ${CMAKE_SOURCE_DIR}/Core/Src/FreeRTOS_CLI.c
     ${CMAKE_SOURCE_DIR}/Core/Src/cli_app.c
 )
