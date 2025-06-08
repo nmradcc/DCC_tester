@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "cli_app.h"
 #include "cmsis_os2.h"
+#include "stm32h5xx_nucleo.h"
 
 /* USER CODE END Includes */
 
@@ -119,8 +120,8 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-      /* Toggle the green LED */
-      BSP_LED_Toggle(LED_GREEN);
+      /* Toggle the LED */
+      BSP_LED_Toggle(LED_YELLOW);
       osDelay(500);
   }
   /* USER CODE END defaultTask */

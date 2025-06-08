@@ -17,6 +17,7 @@
   */
 /* Includes ------------------------------------------------------------------*/
 #include "fatfs.h"
+#include "main.h"
 #include "stm32h5xx_nucleo.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -28,8 +29,6 @@
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
-//TODO:static uint32_t PinDetect = {SD_DETECT_Pin};
-//TODO:static GPIO_TypeDef* SD_GPIO_PORT = {SD_DETECT_GPIO_Port};
 static const uint8_t wtext[] = "This is STM32 working with FatFs uSD + FreeRTOS"; /* File write buffer */
 
 uint32_t   osQueueMsg;
@@ -204,10 +203,7 @@ static uint8_t SD_IsDetected(void)
 {
     uint8_t status;
 
-    //TODO:FIX
-    status = HAL_ERROR;   //error means card detected!
-#if 0
-    if (HAL_GPIO_ReadPin(SD_GPIO_PORT, PinDetect) == GPIO_PIN_RESET)
+    if (HAL_GPIO_ReadPin(SD_DETECT_GPIO_Port, SD_DETECT_Pin) == GPIO_PIN_RESET)
     {
       status = HAL_ERROR;
     }
@@ -215,7 +211,6 @@ static uint8_t SD_IsDetected(void)
     {
       status = HAL_OK;
     }
-#endif
     return status;
 }
 
@@ -225,11 +220,10 @@ static uint8_t SD_IsDetected(void)
   * @retval None.
   */
 
+  //TODO: not used at present, but can be used to detect SD card insertion/removal
+#if 0
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  //TODO:FIX
-  (void)GPIO_Pin;
-  #if 0
   if(GPIO_Pin == SD_DETECT_Pin)
   {
      if (statusChanged == 0)
@@ -238,5 +232,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
        osMessageQueuePut ( QueueHandle, &CARD_STATUS_CHANGED, 100, 0U);
      }
   }
-#endif
+
 }
+#endif
