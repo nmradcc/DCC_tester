@@ -4,3 +4,8 @@ mx.scratch
 .clangd
 !.settings
 
+# Ignore STM32CubeMX generated files
+cmake/
+Core/
+Drivers/
+Middlewares/
