@@ -1,10 +1,11 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    stm32h5xx_it.h
-  * @brief   This file contains the headers of the interrupt handlers.
+  * @file    app_azure_rtos.h
+  * @author  MCD Application Team
+  * @brief   app_azure_rtos application header file
   ******************************************************************************
-  * @attention
+   * @attention
   *
   * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
@@ -18,12 +19,20 @@
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32H5xx_IT_H
-#define __STM32H5xx_IT_H
-
+#ifndef APP_AZURE_RTOS_H
+#define APP_AZURE_RTOS_H
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Includes ------------------------------------------------------------------*/
+
+#include "app_threadx.h"
+#include "stm32h5xx_hal.h"
+#include "app_azure_rtos_config.h"
+#include "app_filex.h"
+
+#include "app_netxduo.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -46,22 +55,17 @@ extern "C" {
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
-void NMI_Handler(void);
-void HardFault_Handler(void);
-void MemManage_Handler(void);
-void BusFault_Handler(void);
-void UsageFault_Handler(void);
-void DebugMon_Handler(void);
-void EXTI13_IRQHandler(void);
-void TIM6_IRQHandler(void);
-void SDMMC1_IRQHandler(void);
-void ETH_IRQHandler(void);
+
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
 
+/* Private defines -----------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+
+/* USER CODE END PD */
+
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* __STM32H5xx_IT_H */
+#endif /* APP_AZURE_RTOS_H */

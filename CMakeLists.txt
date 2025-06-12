@@ -23,14 +23,10 @@ set(CMAKE_PROJECT_NAME DCC_tester)
 
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")
-#??add_compile_definitions(STM32H563xx)
 
 # Enable compile command to ease indexing with e.g. clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
-#??# Include FetchContent module for dependency management
-#??include(FetchContent)
-#??
 # Core project settings
 project(${CMAKE_PROJECT_NAME})
 message("Build type: " ${CMAKE_BUILD_TYPE})
@@ -44,11 +40,6 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
-set(MYTHIRD_PARTY_PATH "${CMAKE_SOURCE_DIR}/MyMiddleware/Third_Party")
-
-# Add FatFs port library
-add_subdirectory(MyMiddleware/Third_Party/FatFs)
-
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
@@ -57,18 +48,13 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    ${CMAKE_SOURCE_DIR}/Core/Src/fatfs.c
-#    ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio_dma_rtos.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/FreeRTOS_CLI.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/cli_app.c
+#    ${CMAKE_SOURCE_DIR}/Core/Src/cli_app.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
-    ${CMAKE_SOURCE_DIR}/Core/Inc
-    ${MYTHIRD_PARTY_PATH}/FatFs/src
+#    ${CMAKE_SOURCE_DIR}/Core/Inc
 )
 
 # Add project symbols (macros)
@@ -81,5 +67,4 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
-    fatfs
 )

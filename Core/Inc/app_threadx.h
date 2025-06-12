@@ -1,10 +1,11 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    stm32h5xx_it.h
-  * @brief   This file contains the headers of the interrupt handlers.
+  * @file    app_threadx.h
+  * @author  MCD Application Team
+  * @brief   ThreadX applicative header file
   ******************************************************************************
-  * @attention
+    * @attention
   *
   * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
@@ -18,12 +19,14 @@
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32H5xx_IT_H
-#define __STM32H5xx_IT_H
-
+#ifndef __APP_THREADX_H
+#define __APP_THREADX_H
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Includes ------------------------------------------------------------------*/
+#include "tx_api.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -40,28 +43,35 @@ extern "C" {
 
 /* USER CODE END EC */
 
+/* Private defines -----------------------------------------------------------*/
+
+/* USER CODE BEGIN PD */
+
+/* USER CODE END PD */
+
+/* Main thread defines -------------------------------------------------------*/
+/* USER CODE BEGIN MTD */
+
+/* USER CODE END MTD */
+
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
-void NMI_Handler(void);
-void HardFault_Handler(void);
-void MemManage_Handler(void);
-void BusFault_Handler(void);
-void UsageFault_Handler(void);
-void DebugMon_Handler(void);
-void EXTI13_IRQHandler(void);
-void TIM6_IRQHandler(void);
-void SDMMC1_IRQHandler(void);
-void ETH_IRQHandler(void);
+UINT App_ThreadX_Init(VOID *memory_ptr);
+void MX_ThreadX_Init(void);
+
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
 
+/* USER CODE BEGIN 1 */
+
+/* USER CODE END 1 */
+
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* __STM32H5xx_IT_H */
+#endif /* __APP_THREADX_H */
