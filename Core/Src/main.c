@@ -104,6 +104,10 @@ int main(void)
   MX_ICACHE_Init();
   MX_SDMMC1_SD_Init();
   /* USER CODE BEGIN 2 */
+  /* Initialize leds */
+  BSP_LED_Init(LED_GREEN);
+  BSP_LED_Init(LED_YELLOW);
+  BSP_LED_Init(LED_RED);
 
   /* USER CODE END 2 */
 

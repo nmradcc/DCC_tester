@@ -71,7 +71,12 @@
 #define TX_USER_H
 
 /* USER CODE BEGIN 1 */
+#define USE_MEMORY_POOL_ALLOCATION
+#define TX_BYTE_POOL_MIN            (1024) /* Minimum size of a byte pool block */ 
+#define RTOS2_BYTE_POOL_HEAP_SIZE   (1024 * 16) /* 16 KB for ThreadX byte pool heap */
+#define RTOS2_BYTE_POOL_STACK_SIZE  (1024 * 64) /* 64 KB for ThreadX byte pool stack */
 
+#define TX_THREAD_USER_EXTENSION ULONG tx_thread_detached_joinable;
 /* USER CODE END 1 */
 
 /* Define various build options for the ThreadX port.  The application should either make changes
@@ -111,7 +116,7 @@
 /* Override various options with default values already assigned in tx_port.h. Please also refer
    to tx_port.h for descriptions on each of these options.  */
 
-/*#define TX_MAX_PRIORITIES                32*/
+#define TX_MAX_PRIORITIES                64
 /*#define TX_TIMER_THREAD_STACK_SIZE                1024*/
 /*#define TX_TIMER_THREAD_PRIORITY                0*/
 
@@ -246,7 +251,7 @@
 
 /* Define the common timer tick reference for use by other middleware components. */
 
-/*#define TX_TIMER_TICKS_PER_SECOND                100*/
+#define TX_TIMER_TICKS_PER_SECOND                1000
 
 /* Determine if there is a FileX pointer in the thread control block.
    By default, the pointer is there for legacy/backwards compatibility.
