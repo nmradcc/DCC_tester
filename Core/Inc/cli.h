@@ -1,28 +1,3 @@
-/*
- * FreeRTOS V202212.00
- * Copyright (C) 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
- * the Software, and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
- * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- * https://www.FreeRTOS.org
- * https://github.com/FreeRTOS
- *
- */
 
 #ifndef COMMAND_INTERPRETER_H
 #define COMMAND_INTERPRETER_H
@@ -34,6 +9,11 @@
 #include "tx_api.h"
 
 #define configCOMMAND_INT_MAX_OUTPUT_SIZE   200
+
+typedef struct xSTATIC_LIST_ITEM {
+    int xDummy1;
+    void *pvDummy2[4];
+} StaticListItem_t;
 
 extern TX_QUEUE cli_queue;
 extern TX_MUTEX cli_mutex;
@@ -64,6 +44,9 @@ typedef struct xCOMMAND_INPUT_LIST
     struct xCOMMAND_INPUT_LIST * pxNext;
 } CLI_Definition_List_Item_t;
 
+
+
+
 /* For backward compatibility. */
 #define xCommandLineInput    CLI_Command_Definition_t
 
@@ -73,7 +56,7 @@ typedef struct xCOMMAND_INPUT_LIST
  * handled by the command interpreter.  Once a command has been registered it
  * can be executed from the command line.
  */
-int FreeRTOS_CLIRegisterCommandStatic( const CLI_Command_Definition_t * const pxCommandToRegister,
+int CLIRegisterCommandStatic( const CLI_Command_Definition_t * const pxCommandToRegister,
                                                   CLI_Definition_List_Item_t * pxCliDefinitionListItemBuffer );
 
 /*
@@ -82,12 +65,12 @@ int FreeRTOS_CLIRegisterCommandStatic( const CLI_Command_Definition_t * const px
  * xWriteBufferLen must indicate the size, in bytes, of the buffer pointed to
  * by pcWriteBuffer.
  *
- * FreeRTOS_CLIProcessCommand should be called repeatedly until it returns pdFALSE.
+ * CLIProcessCommand should be called repeatedly until it returns pdFALSE.
  *
  * pcCmdIntProcessCommand is not reentrant.  It must not be called from more
  * than one task - or at least - by more than one task at a time.
  */
-int FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
+int CLIProcessCommand( const char * const pcCommandInput,
                                        char * pcWriteBuffer,
                                        size_t xWriteBufferLen );
 
@@ -102,14 +85,14 @@ int FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
  * console interface can be used at any one time.  For that reason, no attempt
  * is made to provide any mutual exclusion mechanism on the output buffer.
  *
- * FreeRTOS_CLIGetOutputBuffer() returns the address of the output buffer.
+ * CLIGetOutputBuffer() returns the address of the output buffer.
  */
-char * FreeRTOS_CLIGetOutputBuffer( void );
+char * CLIGetOutputBuffer( void );
 
 /*
  * Return a pointer to the xParameterNumber'th word in pcCommandString.
  */
-const char * FreeRTOS_CLIGetParameter( const char * pcCommandString,
+const char * CLIGetParameter( const char * pcCommandString,
                                        unsigned int uxWantedParameter,
                                        int * pxParameterStringLength );
 

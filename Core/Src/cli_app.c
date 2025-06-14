@@ -10,7 +10,7 @@
 #include "main.h"
 #include "tx_api.h"
 #include "stm32h5xx_nucleo.h"
-#include "cli.h"
+#include "CLI.h"
 
 #define MAX_INPUT_LENGTH 50
 
@@ -20,7 +20,6 @@ TX_QUEUE cli_queue;
 TX_MUTEX cli_mutex;
 
 char cOutputBuffer[configCOMMAND_INT_MAX_OUTPUT_SIZE], pcInputString[MAX_INPUT_LENGTH];
-extern const CLI_Command_Definition_t xCommandList[];
 int8_t cRxedChar;
 const char * cli_prompt = "\r\ncli> ";
 /* CLI escape sequences*/
@@ -29,8 +28,8 @@ uint8_t backspace_tt[] = " \b";
 
 int _write(int file, char *data, int len)
 {
-    UNUSED(file);
-    // Transmit data using UART2
+    (void)(file);
+    // Transmit data using UART
     for (int i = 0; i < len; i++)
     {
         // Send the character
@@ -40,21 +39,18 @@ int _write(int file, char *data, int len)
     }
     return len;
 }
-//*****************************************************************************
-int cmd_clearScreen(char *pcWriteBuffer, size_t xWriteBufferLen,
+
+static int cmd_clearScreen(char *pcWriteBuffer, size_t xWriteBufferLen,
                                   const char *pcCommandString)
 {
-    /* Remove compile time warnings about unused parameters, and check the
-	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
-	write buffer length is adequate, so does not check for buffer overflows. */
     (void)pcCommandString;
     (void)xWriteBufferLen;
     memset(pcWriteBuffer, 0x00, xWriteBufferLen);
     printf("\033[2J\033[1;1H");
     return false;
 }
-//*****************************************************************************
-int cmd_toggle_led(char *pcWriteBuffer, size_t xWriteBufferLen,
+
+static int cmd_toggle_led(char *pcWriteBuffer, size_t xWriteBufferLen,
                                  const char *pcCommandString)
 {
     (void)pcCommandString; // comntains the command string
@@ -69,8 +65,8 @@ int cmd_toggle_led(char *pcWriteBuffer, size_t xWriteBufferLen,
     
     return false;
 }
-//*****************************************************************************
-int cmd_add(char *pcWriteBuffer, size_t xWriteBufferLen,
+
+static int cmd_add(char *pcWriteBuffer, size_t xWriteBufferLen,
                                  const char *pcCommandString)
 {
     (void)xWriteBufferLen;
@@ -79,7 +75,7 @@ int cmd_add(char *pcWriteBuffer, size_t xWriteBufferLen,
 
     /* Obtain the name of the source file, and the length of its name, from
     the command string. The name of the source file is the first parameter. */
-    pcParameter1 = FreeRTOS_CLIGetParameter
+    pcParameter1 = CLIGetParameter
                         (
                           /* The command string itself. */
                           pcCommandString,
@@ -88,7 +84,7 @@ int cmd_add(char *pcWriteBuffer, size_t xWriteBufferLen,
                           /* Store the parameter string length. */
                           &xParameter1StringLength
                         );
-    pcParameter2 = FreeRTOS_CLIGetParameter
+    pcParameter2 = CLIGetParameter
                         (
                           /* The command string itself. */
                           pcCommandString,
@@ -111,7 +107,8 @@ int cmd_add(char *pcWriteBuffer, size_t xWriteBufferLen,
     return false;
 }
 
-const CLI_Command_Definition_t xCommandList[] = {
+// Define commands
+static const CLI_Command_Definition_t xCommandList[] = {
     {
         .pcCommand = "cls", /* The command string to type. */
         .pcHelpString = "cls:\r\n Clears screen\r\n\r\n",
@@ -135,17 +132,25 @@ const CLI_Command_Definition_t xCommandList[] = {
     }
 };
 
+// Static list items for registration
+static CLI_Definition_List_Item_t xCommandListItems[sizeof(xCommandList) / sizeof(xCommandList[0])];
+
+void RegisterCommands(void) {
+    for (size_t i = 0; i < sizeof(xCommandList) / sizeof(xCommandList[0]); i++) {
+        CLIRegisterCommandStatic(&xCommandList[i], &xCommandListItems[i]);
+    }
+}
 
 void vRegisterCLICommands(void){
     //itterate thourgh the list of commands and register them
     tx_mutex_create(&cli_mutex, NULL, TX_INHERIT);
     tx_queue_create(&cli_queue, NULL, TX_1_ULONG, cli_queue_storage, sizeof(cli_queue_storage));
 
-    for (int i = 0; xCommandList[i].pcCommand != NULL; i++)
-    {
-        FreeRTOS_CLIRegisterCommandStatic(&xCommandList[i], &xCommandListItems[i].pxCommandLineDefinition);
+    for (size_t i = 0; i < sizeof(xCommandList) / sizeof(xCommandList[0]); i++) {
+        CLIRegisterCommandStatic(&xCommandList[i], &xCommandListItems[i]);
     }
 }
+
 /*************************************************************************************************/
 void cliWrite(const char *str)
 {
@@ -161,7 +166,7 @@ void handleNewline(const char *const pcInputString, char *cOutputBuffer, uint8_t
     int xMoreDataToFollow;
     do
     {     
-        xMoreDataToFollow = FreeRTOS_CLIProcessCommand(pcInputString, cOutputBuffer, configCOMMAND_INT_MAX_OUTPUT_SIZE);
+        xMoreDataToFollow = CLIProcessCommand(pcInputString, cOutputBuffer, configCOMMAND_INT_MAX_OUTPUT_SIZE);
         cliWrite(cOutputBuffer);
     } while (xMoreDataToFollow != false);
 
@@ -233,4 +238,6 @@ void vCommandConsoleTask(void *pvParameters)
         }
     }
 }
+
+
 #endif /* CLI_COMMANDS_H */

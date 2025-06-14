@@ -1,30 +1,4 @@
-/*
- * FreeRTOS V202212.00
- * Copyright (C) 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
- * the Software, and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
- * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- * https://www.FreeRTOS.org
- * https://github.com/FreeRTOS
- *
- */
 
-/* Standard includes. */
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
@@ -92,7 +66,7 @@ static char cOutputBuffer[ configCOMMAND_INT_MAX_OUTPUT_SIZE ];
 
 
 
-int FreeRTOS_CLIRegisterCommandStatic( const CLI_Command_Definition_t * const pxCommandToRegister,
+int CLIRegisterCommandStatic( const CLI_Command_Definition_t * const pxCommandToRegister,
                                                 CLI_Definition_List_Item_t * pxCliDefinitionListItemBuffer )
 {
     /* Check the parameters are not NULL. */
@@ -105,7 +79,7 @@ int FreeRTOS_CLIRegisterCommandStatic( const CLI_Command_Definition_t * const px
 }
 /*-----------------------------------------------------------*/
 
-int FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
+int CLIProcessCommand( const char * const pcCommandInput,
                                        char * pcWriteBuffer,
                                        size_t xWriteBufferLen )
 {
@@ -182,13 +156,13 @@ int FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
 }
 /*-----------------------------------------------------------*/
 
-char * FreeRTOS_CLIGetOutputBuffer( void )
+char * CLIGetOutputBuffer( void )
 {
     return cOutputBuffer;
 }
 /*-----------------------------------------------------------*/
 
-const char * FreeRTOS_CLIGetParameter( const char * pcCommandString,
+const char * CLIGetParameter( const char * pcCommandString,
                                        unsigned int uxWantedParameter,
                                        int * pxParameterStringLength )
 {
