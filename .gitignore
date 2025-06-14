@@ -4,9 +4,6 @@ mx.scratch
 **/Backup/
 .clangd
 
-# Ignore STM32CubeMX generated files
+# Ignore some STM32CubeMX generated files
 Drivers/
 Middlewares/
-FileX/
-NetXDuo/
-USBX/
