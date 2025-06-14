@@ -14,7 +14,7 @@
 
 #define MAX_INPUT_LENGTH 50
 
-ULONG cli_queue_storage[3];
+ULONG cli_queue_storage[5];
 
 TX_QUEUE cli_queue;
 TX_MUTEX cli_mutex;
@@ -144,7 +144,7 @@ void RegisterCommands(void) {
 void vRegisterCLICommands(void){
     //itterate thourgh the list of commands and register them
     tx_mutex_create(&cli_mutex, NULL, TX_INHERIT);
-    tx_queue_create(&cli_queue, NULL, TX_1_ULONG, cli_queue_storage, sizeof(cli_queue_storage));
+    tx_queue_create(&cli_queue, "Queue", TX_1_ULONG, cli_queue_storage, sizeof(cli_queue_storage));
 
     for (size_t i = 0; i < sizeof(xCommandList) / sizeof(xCommandList[0]); i++) {
         CLIRegisterCommandStatic(&xCommandList[i], &xCommandListItems[i]);

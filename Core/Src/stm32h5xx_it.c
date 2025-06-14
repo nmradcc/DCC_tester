@@ -42,7 +42,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+static char rxChar;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -202,11 +202,11 @@ void USART3_IRQHandler(void)
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
   // grab char from data register
-  char rxedValue = USART3->RDR & 0xFF;
+  rxChar = USART3->RDR & 0xFF;
   //get ready to receive another char
   HAL_UART_Receive_IT(&huart3, (uint8_t *)&huart3.Instance->RDR, 1);
   //send the char to the command line task
-  tx_queue_send(&cli_queue, &rxedValue, TX_NO_WAIT);
+  tx_queue_send(&cli_queue, &rxChar, TX_NO_WAIT);
 
   /* USER CODE END USART3_IRQn 1 */
 }
