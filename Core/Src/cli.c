@@ -27,23 +27,10 @@
 /* Standard includes. */
 #include <string.h>
 #include <stdint.h>
+#include <assert.h>
+#include <stdbool.h>
 
-/* FreeRTOS includes. */
-#include "FreeRTOS.h"
-#include "task.h"
-
-/* Utils includes. */
-#include "FreeRTOS_CLI.h"
-
-/* If the application writer needs to place the buffer used by the CLI at a
- * fixed address then set configAPPLICATION_PROVIDES_cOutputBuffer to 1 in
- * FreeRTOSConfig.h, then declare an array with the following name and size in
- * one of the application files:
- *  char cOutputBuffer[ configCOMMAND_INT_MAX_OUTPUT_SIZE ];
- */
-#ifndef configAPPLICATION_PROVIDES_cOutputBuffer
-    #define configAPPLICATION_PROVIDES_cOutputBuffer    0
-#endif
+#include "cli.h"
 
 /*
  * Register the command passed in using the pxCommandToRegister parameter
@@ -59,7 +46,7 @@ static void prvRegisterCommand( const CLI_Command_Definition_t * const pxCommand
  * The callback function that is executed when "help" is entered.  This is the
  * only default command that is always present.
  */
-static BaseType_t prvHelpCommand( char * pcWriteBuffer,
+static int prvHelpCommand( char * pcWriteBuffer,
                                   size_t xWriteBufferLen,
                                   const char * pcCommandString );
 
@@ -98,64 +85,32 @@ static CLI_Definition_List_Item_t xRegisteredCommands =
 * configAPPLICATION_PROVIDES_cOutputBuffer is provided to allow the application
 * writer to provide their own cOutputBuffer declaration in cases where the
 * buffer needs to be placed at a fixed address (rather than by the linker). */
-#if ( configAPPLICATION_PROVIDES_cOutputBuffer == 0 )
-    static char cOutputBuffer[ configCOMMAND_INT_MAX_OUTPUT_SIZE ];
-#else
-    extern char cOutputBuffer[ configCOMMAND_INT_MAX_OUTPUT_SIZE ];
-#endif
+static char cOutputBuffer[ configCOMMAND_INT_MAX_OUTPUT_SIZE ];
 
 
 /*-----------------------------------------------------------*/
 
-#if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
 
-    BaseType_t FreeRTOS_CLIRegisterCommand( const CLI_Command_Definition_t * const pxCommandToRegister )
-    {
-        BaseType_t xReturn = pdFAIL;
-        CLI_Definition_List_Item_t * pxNewListItem;
 
-        /* Check the parameter is not NULL. */
-        configASSERT( pxCommandToRegister != NULL );
+int FreeRTOS_CLIRegisterCommandStatic( const CLI_Command_Definition_t * const pxCommandToRegister,
+                                                CLI_Definition_List_Item_t * pxCliDefinitionListItemBuffer )
+{
+    /* Check the parameters are not NULL. */
+    assert( pxCommandToRegister != NULL );
+    assert( pxCliDefinitionListItemBuffer != NULL );
 
-        /* Create a new list item that will reference the command being registered. */
-        pxNewListItem = ( CLI_Definition_List_Item_t * ) pvPortMalloc( sizeof( CLI_Definition_List_Item_t ) );
-        configASSERT( pxNewListItem != NULL );
+    prvRegisterCommand( pxCommandToRegister, pxCliDefinitionListItemBuffer );
 
-        if( pxNewListItem != NULL )
-        {
-            prvRegisterCommand( pxCommandToRegister, pxNewListItem );
-            xReturn = pdPASS;
-        }
-
-        return xReturn;
-    }
-
-#endif /* #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) */
+    return true;
+}
 /*-----------------------------------------------------------*/
 
-#if ( configSUPPORT_STATIC_ALLOCATION == 1 )
-
-    BaseType_t FreeRTOS_CLIRegisterCommandStatic( const CLI_Command_Definition_t * const pxCommandToRegister,
-                                                  CLI_Definition_List_Item_t * pxCliDefinitionListItemBuffer )
-    {
-        /* Check the parameters are not NULL. */
-        configASSERT( pxCommandToRegister != NULL );
-        configASSERT( pxCliDefinitionListItemBuffer != NULL );
-
-        prvRegisterCommand( pxCommandToRegister, pxCliDefinitionListItemBuffer );
-
-        return pdPASS;
-    }
-
-#endif /* #if ( configSUPPORT_STATIC_ALLOCATION == 1 ) */
-/*-----------------------------------------------------------*/
-
-BaseType_t FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
+int FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
                                        char * pcWriteBuffer,
                                        size_t xWriteBufferLen )
 {
     static const CLI_Definition_List_Item_t * pxCommand = NULL;
-    BaseType_t xReturn = pdTRUE;
+    int xReturn = true;
     const char * pcRegisteredCommandString;
     size_t xCommandStringLength;
 
@@ -186,7 +141,7 @@ BaseType_t FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
                     {
                         if( prvGetNumberOfParameters( pcCommandInput ) != pxCommand->pxCommandLineDefinition->cExpectedNumberOfParameters )
                         {
-                            xReturn = pdFALSE;
+                            xReturn = false;
                         }
                     }
 
@@ -196,7 +151,7 @@ BaseType_t FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
         }
     }
 
-    if( ( pxCommand != NULL ) && ( xReturn == pdFALSE ) )
+    if( ( pxCommand != NULL ) && ( xReturn == false ) )
     {
         /* The command was found, but the number of parameters with the command
          * was incorrect. */
@@ -208,10 +163,10 @@ BaseType_t FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
         /* Call the callback function that is registered to this command. */
         xReturn = pxCommand->pxCommandLineDefinition->pxCommandInterpreter( pcWriteBuffer, xWriteBufferLen, pcCommandInput );
 
-        /* If xReturn is pdFALSE, then no further strings will be returned
+        /* If xReturn is false, then no further strings will be returned
          * after this one, and	pxCommand can be reset to NULL ready to search
          * for the next entered command. */
-        if( xReturn == pdFALSE )
+        if( xReturn == false )
         {
             pxCommand = NULL;
         }
@@ -220,7 +175,7 @@ BaseType_t FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
     {
         /* pxCommand was NULL, the command was not found. */
         strncpy( pcWriteBuffer, "Command not recognised.  Enter 'help' to view a list of available commands.\r\n\r\n", xWriteBufferLen );
-        xReturn = pdFALSE;
+        xReturn = false;
     }
 
     return xReturn;
@@ -234,10 +189,10 @@ char * FreeRTOS_CLIGetOutputBuffer( void )
 /*-----------------------------------------------------------*/
 
 const char * FreeRTOS_CLIGetParameter( const char * pcCommandString,
-                                       UBaseType_t uxWantedParameter,
-                                       BaseType_t * pxParameterStringLength )
+                                       unsigned int uxWantedParameter,
+                                       int * pxParameterStringLength )
 {
-    UBaseType_t uxParametersFound = 0;
+    unsigned int uxParametersFound = 0;
     const char * pcReturn = NULL;
 
     *pxParameterStringLength = 0;
@@ -298,10 +253,10 @@ static void prvRegisterCommand( const CLI_Command_Definition_t * const pxCommand
     static CLI_Definition_List_Item_t * pxLastCommandInList = &xRegisteredCommands;
 
     /* Check the parameters are not NULL. */
-    configASSERT( pxCommandToRegister != NULL );
-    configASSERT( pxCliDefinitionListItemBuffer != NULL );
+    assert( pxCommandToRegister != NULL );
+    assert( pxCliDefinitionListItemBuffer != NULL );
 
-    taskENTER_CRITICAL();
+    tx_mutex_get(&cli_mutex, TX_WAIT_FOREVER); // Enter critical section
     {
         /* Reference the command being registered from the newly created
          * list item. */
@@ -318,16 +273,16 @@ static void prvRegisterCommand( const CLI_Command_Definition_t * const pxCommand
         /* Set the end of list marker to the new list item. */
         pxLastCommandInList = pxCliDefinitionListItemBuffer;
     }
-    taskEXIT_CRITICAL();
+    tx_mutex_put(&cli_mutex); // Exit critical section
 }
 /*-----------------------------------------------------------*/
 
-static BaseType_t prvHelpCommand( char * pcWriteBuffer,
+static int prvHelpCommand( char * pcWriteBuffer,
                                   size_t xWriteBufferLen,
                                   const char * pcCommandString )
 {
     static const CLI_Definition_List_Item_t * pxCommand = NULL;
-    BaseType_t xReturn;
+    int xReturn;
 
     ( void ) pcCommandString;
 
@@ -345,12 +300,12 @@ static BaseType_t prvHelpCommand( char * pcWriteBuffer,
     if( pxCommand == NULL )
     {
         /* There are no more commands in the list, so there will be no more
-         *  strings to return after this one and pdFALSE should be returned. */
-        xReturn = pdFALSE;
+         *  strings to return after this one and false should be returned. */
+        xReturn = false;
     }
     else
     {
-        xReturn = pdTRUE;
+        xReturn = true;
     }
 
     return xReturn;
@@ -360,22 +315,22 @@ static BaseType_t prvHelpCommand( char * pcWriteBuffer,
 static int8_t prvGetNumberOfParameters( const char * pcCommandString )
 {
     int8_t cParameters = 0;
-    BaseType_t xLastCharacterWasSpace = pdFALSE;
+    int xLastCharacterWasSpace = false;
 
     /* Count the number of space delimited words in pcCommandString. */
     while( *pcCommandString != 0x00 )
     {
         if( ( *pcCommandString ) == ' ' )
         {
-            if( xLastCharacterWasSpace != pdTRUE )
+            if( xLastCharacterWasSpace != true )
             {
                 cParameters++;
-                xLastCharacterWasSpace = pdTRUE;
+                xLastCharacterWasSpace = true;
             }
         }
         else
         {
-            xLastCharacterWasSpace = pdFALSE;
+            xLastCharacterWasSpace = false;
         }
 
         pcCommandString++;
@@ -383,7 +338,7 @@ static int8_t prvGetNumberOfParameters( const char * pcCommandString )
 
     /* If the command string ended with spaces, then there will have been too
      * many parameters counted. */
-    if( xLastCharacterWasSpace == pdTRUE )
+    if( xLastCharacterWasSpace == true )
     {
         cParameters--;
     }

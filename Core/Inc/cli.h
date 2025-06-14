@@ -27,18 +27,23 @@
 #ifndef COMMAND_INTERPRETER_H
 #define COMMAND_INTERPRETER_H
 
-/* *INDENT-OFF* */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+#include "cmsis_os2.h"
+#include "tx_api.h"
+
+#define configCOMMAND_INT_MAX_OUTPUT_SIZE   200
+
+extern TX_QUEUE cli_queue;
+extern TX_MUTEX cli_mutex;
 
 /* The prototype to which callback functions used to process command line
  * commands must comply.  pcWriteBuffer is a buffer into which the output from
  * executing the command can be written, xWriteBufferLen is the length, in bytes of
  * the pcWriteBuffer buffer, and pcCommandString is the entire string as input by
  * the user (from which parameters can be extracted).*/
-typedef BaseType_t (* pdCOMMAND_LINE_CALLBACK)( char * pcWriteBuffer,
+typedef int (* pdCOMMAND_LINE_CALLBACK)( char * pcWriteBuffer,
                                                 size_t xWriteBufferLen,
                                                 const char * pcCommandString );
 
@@ -68,18 +73,8 @@ typedef struct xCOMMAND_INPUT_LIST
  * handled by the command interpreter.  Once a command has been registered it
  * can be executed from the command line.
  */
-#if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
-    BaseType_t FreeRTOS_CLIRegisterCommand( const CLI_Command_Definition_t * const pxCommandToRegister );
-#endif
-
-/*
- * Static version of the above function which allows the application writer
- * to supply the memory used for a command line list entry.
- */
-#if ( configSUPPORT_STATIC_ALLOCATION == 1 )
-    BaseType_t FreeRTOS_CLIRegisterCommandStatic( const CLI_Command_Definition_t * const pxCommandToRegister,
+int FreeRTOS_CLIRegisterCommandStatic( const CLI_Command_Definition_t * const pxCommandToRegister,
                                                   CLI_Definition_List_Item_t * pxCliDefinitionListItemBuffer );
-#endif
 
 /*
  * Runs the command interpreter for the command string "pcCommandInput".  Any
@@ -92,7 +87,7 @@ typedef struct xCOMMAND_INPUT_LIST
  * pcCmdIntProcessCommand is not reentrant.  It must not be called from more
  * than one task - or at least - by more than one task at a time.
  */
-BaseType_t FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
+int FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
                                        char * pcWriteBuffer,
                                        size_t xWriteBufferLen );
 
@@ -115,8 +110,8 @@ char * FreeRTOS_CLIGetOutputBuffer( void );
  * Return a pointer to the xParameterNumber'th word in pcCommandString.
  */
 const char * FreeRTOS_CLIGetParameter( const char * pcCommandString,
-                                       UBaseType_t uxWantedParameter,
-                                       BaseType_t * pxParameterStringLength );
+                                       unsigned int uxWantedParameter,
+                                       int * pxParameterStringLength );
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cmsis_os2.h"
+#include "cli_app.h"
 
 /* USER CODE END Includes */
 
@@ -34,6 +35,13 @@ osThreadAttr_t LED_thread_attr = {
         .priority = osPriorityNormal,
         .stack_size = 256 * 4 // 1 KB stack size        
     };
+
+/* Definitions for cmdLineTask */
+const osThreadAttr_t cmdLineTask_attributes = {
+  .name = "cmdLineTask",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
+};
 
 
 /* USER CODE END PTD */
@@ -51,7 +59,7 @@ osThreadAttr_t LED_thread_attr = {
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 osThreadId_t ledThreadHandle;
-
+osThreadId_t cmdLineTaskHandle;
 
 
 /* USER CODE END PV */
@@ -75,7 +83,11 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
 
   /* USER CODE END App_ThreadX_MEM_POOL */
   /* USER CODE BEGIN App_ThreadX_Init */
+
+  /* Create the led line task */  
   ledThreadHandle = osThreadNew(LedThread, NULL, &LED_thread_attr);  // Create thread with attributes
+  /* Create the command line task */
+  cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
 
   /* USER CODE END App_ThreadX_Init */
 

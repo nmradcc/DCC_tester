@@ -1,18 +1,24 @@
 #ifndef CLI_COMMANDS_H
 #define CLI_COMMANDS_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <assert.h>
+#include <string.h>
+
 #include "main.h"
-#include "FreeRTOS.h"
+#include "tx_api.h"
 #include "stm32h5xx_nucleo.h"
-#include "task.h"
-#include "FreeRTOS_CLI.h"
-#include "stdbool.h"
-#include "string.h"
-#include "stdio.h"
-#include "stdlib.h"
+#include "cli.h"
+
 #define MAX_INPUT_LENGTH 50
-#define USING_VS_CODE_TERMINAL 0
-#define USING_OTHER_TERMINAL 1 // e.g. Putty, TerraTerm
+
+ULONG cli_queue_storage[3];
+
+TX_QUEUE cli_queue;
+TX_MUTEX cli_mutex;
+
 char cOutputBuffer[configCOMMAND_INT_MAX_OUTPUT_SIZE], pcInputString[MAX_INPUT_LENGTH];
 extern const CLI_Command_Definition_t xCommandList[];
 int8_t cRxedChar;
@@ -35,7 +41,7 @@ int _write(int file, char *data, int len)
     return len;
 }
 //*****************************************************************************
-BaseType_t cmd_clearScreen(char *pcWriteBuffer, size_t xWriteBufferLen,
+int cmd_clearScreen(char *pcWriteBuffer, size_t xWriteBufferLen,
                                   const char *pcCommandString)
 {
     /* Remove compile time warnings about unused parameters, and check the
@@ -45,10 +51,10 @@ BaseType_t cmd_clearScreen(char *pcWriteBuffer, size_t xWriteBufferLen,
     (void)xWriteBufferLen;
     memset(pcWriteBuffer, 0x00, xWriteBufferLen);
     printf("\033[2J\033[1;1H");
-    return pdFALSE;
+    return false;
 }
 //*****************************************************************************
-BaseType_t cmd_toggle_led(char *pcWriteBuffer, size_t xWriteBufferLen,
+int cmd_toggle_led(char *pcWriteBuffer, size_t xWriteBufferLen,
                                  const char *pcCommandString)
 {
     (void)pcCommandString; // comntains the command string
@@ -61,15 +67,15 @@ BaseType_t cmd_toggle_led(char *pcWriteBuffer, size_t xWriteBufferLen,
     uint8_t string[] = "LED toggled\r\n";
     strcpy(pcWriteBuffer, (char *)string);
     
-    return pdFALSE;
+    return false;
 }
 //*****************************************************************************
-BaseType_t cmd_add(char *pcWriteBuffer, size_t xWriteBufferLen,
+int cmd_add(char *pcWriteBuffer, size_t xWriteBufferLen,
                                  const char *pcCommandString)
 {
     (void)xWriteBufferLen;
     const char *pcParameter1, *pcParameter2;
-    BaseType_t xParameter1StringLength, xParameter2StringLength;
+    int xParameter1StringLength, xParameter2StringLength;
 
     /* Obtain the name of the source file, and the length of its name, from
     the command string. The name of the source file is the first parameter. */
@@ -102,7 +108,7 @@ BaseType_t cmd_add(char *pcWriteBuffer, size_t xWriteBufferLen,
     // copy the result to the write buffer
     strcpy(pcWriteBuffer, cResultString);
     
-    return pdFALSE;
+    return false;
 }
 
 const CLI_Command_Definition_t xCommandList[] = {
@@ -129,11 +135,15 @@ const CLI_Command_Definition_t xCommandList[] = {
     }
 };
 
+
 void vRegisterCLICommands(void){
     //itterate thourgh the list of commands and register them
+    tx_mutex_create(&cli_mutex, NULL, TX_INHERIT);
+    tx_queue_create(&cli_queue, NULL, TX_1_ULONG, cli_queue_storage, sizeof(cli_queue_storage));
+
     for (int i = 0; xCommandList[i].pcCommand != NULL; i++)
     {
-        FreeRTOS_CLIRegisterCommand(&xCommandList[i]);
+        FreeRTOS_CLIRegisterCommandStatic(&xCommandList[i], &xCommandListItems[i].pxCommandLineDefinition);
     }
 }
 /*************************************************************************************************/
@@ -148,12 +158,12 @@ void handleNewline(const char *const pcInputString, char *cOutputBuffer, uint8_t
 {
     cliWrite("\r\n");
 
-    BaseType_t xMoreDataToFollow;
+    int xMoreDataToFollow;
     do
     {     
         xMoreDataToFollow = FreeRTOS_CLIProcessCommand(pcInputString, cOutputBuffer, configCOMMAND_INT_MAX_OUTPUT_SIZE);
         cliWrite(cOutputBuffer);
-    } while (xMoreDataToFollow != pdFALSE);
+    } while (xMoreDataToFollow != false);
 
     cliWrite(cli_prompt);
     *cInputIndex = 0;
@@ -167,18 +177,12 @@ void handleBackspace(uint8_t *cInputIndex, char *pcInputString)
         (*cInputIndex)--;
         pcInputString[*cInputIndex] = '\0';
 
-#if USING_VS_CODE_TERMINAL
-        cliWrite((char *)backspace);
-#elif USING_OTHER_TERMINAL
         cliWrite((char *)backspace_tt);
-#endif
     }
     else
     {
-#if USING_OTHER_TERMINAL
         uint8_t right[] = "\x1b\x5b\x43";
         cliWrite((char *)right);
-#endif
     }
 }
 /*************************************************************************************************/
@@ -204,17 +208,16 @@ void handleCharacterInput(uint8_t *cInputIndex, char *pcInputString)
 /*************************************************************************************************/
 void vCommandConsoleTask(void *pvParameters)
 {
+    (void)(pvParameters);
     uint8_t cInputIndex = 0; // simply used to keep track of the index of the input string
-    uint32_t receivedValue; // used to store the received value from the notification
-    UNUSED(pvParameters);
+    uint32_t receivedValue;  // used to store the received value from the notification
     vRegisterCLICommands();
     
     for (;;)
     {
-        xTaskNotifyWait(pdFALSE,    // Don't clear bits on entry
-                                  0,  // Clear all bits on exit
-                                  &receivedValue, // Receives the notification value
-                                  portMAX_DELAY); // Wait indefinitely
+        // Wait for data from ISR
+        tx_queue_receive(&cli_queue, &receivedValue, TX_WAIT_FOREVER);
+
         //echo recevied char
         cRxedChar = receivedValue & 0xFF;
         cliWrite((char *)&cRxedChar);
