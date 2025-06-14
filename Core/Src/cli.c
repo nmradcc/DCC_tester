@@ -20,7 +20,7 @@ static void prvRegisterCommand( const CLI_Command_Definition_t * const pxCommand
  * The callback function that is executed when "help" is entered.  This is the
  * only default command that is always present.
  */
-static int prvHelpCommand( char * pcWriteBuffer,
+static int cmd_help( char * pcWriteBuffer,
                                   size_t xWriteBufferLen,
                                   const char * pcCommandString );
 
@@ -35,7 +35,7 @@ static const CLI_Command_Definition_t xHelpCommand =
 {
     "help",
     "\r\nhelp:\r\n Lists all the registered commands\r\n\r\n",
-    prvHelpCommand,
+    cmd_help,
     0
 };
 
@@ -47,19 +47,7 @@ static CLI_Definition_List_Item_t xRegisteredCommands =
     NULL           /* The next pointer is initialised to NULL, as there are no other registered commands yet. */
 };
 
-/* A buffer into which command outputs can be written is declared here, rather
-* than in the command console implementation, to allow multiple command consoles
-* to share the same buffer.  For example, an application may allow access to the
-* command interpreter by UART and by Ethernet.  Sharing a buffer is done purely
-* to save RAM.  Note, however, that the command console itself is not re-entrant,
-* so only one command interpreter interface can be used at any one time.  For that
-* reason, no attempt at providing mutual exclusion to the cOutputBuffer array is
-* attempted.
-*
-* configAPPLICATION_PROVIDES_cOutputBuffer is provided to allow the application
-* writer to provide their own cOutputBuffer declaration in cases where the
-* buffer needs to be placed at a fixed address (rather than by the linker). */
-static char cOutputBuffer[ configCOMMAND_INT_MAX_OUTPUT_SIZE ];
+static char cOutputBuffer[ MAX_OUTPUT_SIZE ];
 
 
 /*-----------------------------------------------------------*/
@@ -88,29 +76,18 @@ int CLIProcessCommand( const char * const pcCommandInput,
     const char * pcRegisteredCommandString;
     size_t xCommandStringLength;
 
-    /* Note:  This function is not re-entrant.  It must not be called from more
-     * thank one task. */
-
     if( pxCommand == NULL )
     {
         /* Search for the command string in the list of registered commands. */
         for( pxCommand = &xRegisteredCommands; pxCommand != NULL; pxCommand = pxCommand->pxNext )
         {
             pcRegisteredCommandString = pxCommand->pxCommandLineDefinition->pcCommand;
-            xCommandStringLength = strlen( pcRegisteredCommandString );
+            xCommandStringLength = strnlen( pcRegisteredCommandString, MAX_INPUT_SIZE );
 
-            /* To ensure the string lengths match exactly, so as not to pick up
-             * a sub-string of a longer command, check the byte after the expected
-             * end of the string is either the end of the string or a space before
-             * a parameter. */
             if( strncmp( pcCommandInput, pcRegisteredCommandString, xCommandStringLength ) == 0 )
             {
                 if( ( pcCommandInput[ xCommandStringLength ] == ' ' ) || ( pcCommandInput[ xCommandStringLength ] == 0x00 ) )
                 {
-                    /* The command has been found.  Check it has the expected
-                     * number of parameters.  If cExpectedNumberOfParameters is -1,
-                     * then there could be a variable number of parameters and no
-                     * check is made. */
                     if( pxCommand->pxCommandLineDefinition->cExpectedNumberOfParameters >= 0 )
                     {
                         if( prvGetNumberOfParameters( pcCommandInput ) != pxCommand->pxCommandLineDefinition->cExpectedNumberOfParameters )
@@ -232,18 +209,9 @@ static void prvRegisterCommand( const CLI_Command_Definition_t * const pxCommand
 
     tx_mutex_get(&cli_mutex, TX_WAIT_FOREVER); // Enter critical section
     {
-        /* Reference the command being registered from the newly created
-         * list item. */
         pxCliDefinitionListItemBuffer->pxCommandLineDefinition = pxCommandToRegister;
-
-        /* The new list item will get added to the end of the list, so
-         * pxNext has nowhere to point. */
         pxCliDefinitionListItemBuffer->pxNext = NULL;
-
-        /* Add the newly created list item to the end of the already existing
-         * list. */
         pxLastCommandInList->pxNext = pxCliDefinitionListItemBuffer;
-
         /* Set the end of list marker to the new list item. */
         pxLastCommandInList = pxCliDefinitionListItemBuffer;
     }
@@ -251,7 +219,7 @@ static void prvRegisterCommand( const CLI_Command_Definition_t * const pxCommand
 }
 /*-----------------------------------------------------------*/
 
-static int prvHelpCommand( char * pcWriteBuffer,
+static int cmd_help( char * pcWriteBuffer,
                                   size_t xWriteBufferLen,
                                   const char * pcCommandString )
 {

@@ -12,14 +12,13 @@
 #include "stm32h5xx_nucleo.h"
 #include "CLI.h"
 
-#define MAX_INPUT_LENGTH 50
 
 ULONG cli_queue_storage[5];
 
 TX_QUEUE cli_queue;
 TX_MUTEX cli_mutex;
 
-char cOutputBuffer[configCOMMAND_INT_MAX_OUTPUT_SIZE], pcInputString[MAX_INPUT_LENGTH];
+char cOutputBuffer[MAX_OUTPUT_SIZE], pcInputString[MAX_INPUT_SIZE];
 int8_t cRxedChar;
 const char * cli_prompt = "\r\ncli> ";
 /* CLI escape sequences*/
@@ -166,13 +165,13 @@ void handleNewline(const char *const pcInputString, char *cOutputBuffer, uint8_t
     int xMoreDataToFollow;
     do
     {     
-        xMoreDataToFollow = CLIProcessCommand(pcInputString, cOutputBuffer, configCOMMAND_INT_MAX_OUTPUT_SIZE);
+        xMoreDataToFollow = CLIProcessCommand(pcInputString, cOutputBuffer, MAX_OUTPUT_SIZE);
         cliWrite(cOutputBuffer);
     } while (xMoreDataToFollow != false);
 
     cliWrite(cli_prompt);
     *cInputIndex = 0;
-    memset((void*)pcInputString, 0x00, MAX_INPUT_LENGTH);
+    memset((void*)pcInputString, 0x00, MAX_INPUT_SIZE);
 }
 /*************************************************************************************************/
 void handleBackspace(uint8_t *cInputIndex, char *pcInputString)
@@ -203,7 +202,7 @@ void handleCharacterInput(uint8_t *cInputIndex, char *pcInputString)
     }
     else
     {
-        if (*cInputIndex < MAX_INPUT_LENGTH)
+        if (*cInputIndex < MAX_INPUT_SIZE)
         {
             pcInputString[*cInputIndex] = cRxedChar;
             (*cInputIndex)++;

@@ -8,12 +8,8 @@
 #include "cmsis_os2.h"
 #include "tx_api.h"
 
-#define configCOMMAND_INT_MAX_OUTPUT_SIZE   200
-
-typedef struct xSTATIC_LIST_ITEM {
-    int xDummy1;
-    void *pvDummy2[4];
-} StaticListItem_t;
+#define MAX_INPUT_SIZE    50
+#define MAX_OUTPUT_SIZE   512
 
 extern TX_QUEUE cli_queue;
 extern TX_MUTEX cli_mutex;
@@ -43,9 +39,6 @@ typedef struct xCOMMAND_INPUT_LIST
     const CLI_Command_Definition_t * pxCommandLineDefinition;
     struct xCOMMAND_INPUT_LIST * pxNext;
 } CLI_Definition_List_Item_t;
-
-
-
 
 /* For backward compatibility. */
 #define xCommandLineInput    CLI_Command_Definition_t
