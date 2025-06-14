@@ -78,46 +78,76 @@ void HAL_MspInit(void)
 }
 
 /**
-  * @brief DCACHE MSP Initialization
+  * @brief ADC MSP Initialization
   * This function configures the hardware resources used in this example
-  * @param hdcache: DCACHE handle pointer
+  * @param hadc: ADC handle pointer
   * @retval None
   */
-void HAL_DCACHE_MspInit(DCACHE_HandleTypeDef* hdcache)
+void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
 {
-  if(hdcache->Instance==DCACHE1)
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+  if(hadc->Instance==ADC1)
   {
-    /* USER CODE BEGIN DCACHE1_MspInit 0 */
+    /* USER CODE BEGIN ADC1_MspInit 0 */
 
-    /* USER CODE END DCACHE1_MspInit 0 */
+    /* USER CODE END ADC1_MspInit 0 */
+
+  /** Initializes the peripherals clock
+  */
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_ADCDAC;
+    PeriphClkInitStruct.AdcDacClockSelection = RCC_ADCDACCLKSOURCE_HCLK;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
     /* Peripheral clock enable */
-    __HAL_RCC_DCACHE1_CLK_ENABLE();
-    /* USER CODE BEGIN DCACHE1_MspInit 1 */
+    __HAL_RCC_ADC_CLK_ENABLE();
 
-    /* USER CODE END DCACHE1_MspInit 1 */
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    /**ADC1 GPIO Configuration
+    PA0     ------> ADC1_INP0
+    PA4     ------> ADC1_INP18
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_0|VBUS_SENSE_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    /* USER CODE BEGIN ADC1_MspInit 1 */
+
+    /* USER CODE END ADC1_MspInit 1 */
 
   }
 
 }
 
 /**
-  * @brief DCACHE MSP De-Initialization
+  * @brief ADC MSP De-Initialization
   * This function freeze the hardware resources used in this example
-  * @param hdcache: DCACHE handle pointer
+  * @param hadc: ADC handle pointer
   * @retval None
   */
-void HAL_DCACHE_MspDeInit(DCACHE_HandleTypeDef* hdcache)
+void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
 {
-  if(hdcache->Instance==DCACHE1)
+  if(hadc->Instance==ADC1)
   {
-    /* USER CODE BEGIN DCACHE1_MspDeInit 0 */
+    /* USER CODE BEGIN ADC1_MspDeInit 0 */
 
-    /* USER CODE END DCACHE1_MspDeInit 0 */
+    /* USER CODE END ADC1_MspDeInit 0 */
     /* Peripheral clock disable */
-    __HAL_RCC_DCACHE1_CLK_DISABLE();
-    /* USER CODE BEGIN DCACHE1_MspDeInit 1 */
+    __HAL_RCC_ADC_CLK_DISABLE();
 
-    /* USER CODE END DCACHE1_MspDeInit 1 */
+    /**ADC1 GPIO Configuration
+    PA0     ------> ADC1_INP0
+    PA4     ------> ADC1_INP18
+    */
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_0|VBUS_SENSE_Pin);
+
+    /* USER CODE BEGIN ADC1_MspDeInit 1 */
+
+    /* USER CODE END ADC1_MspDeInit 1 */
   }
 
 }
@@ -237,6 +267,141 @@ void HAL_ETH_MspDeInit(ETH_HandleTypeDef* heth)
     /* USER CODE BEGIN ETH_MspDeInit 1 */
 
     /* USER CODE END ETH_MspDeInit 1 */
+  }
+
+}
+
+/**
+  * @brief FDCAN MSP Initialization
+  * This function configures the hardware resources used in this example
+  * @param hfdcan: FDCAN handle pointer
+  * @retval None
+  */
+void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef* hfdcan)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+  if(hfdcan->Instance==FDCAN1)
+  {
+    /* USER CODE BEGIN FDCAN1_MspInit 0 */
+
+    /* USER CODE END FDCAN1_MspInit 0 */
+
+  /** Initializes the peripherals clock
+  */
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_FDCAN;
+    PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_HSE;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    /* Peripheral clock enable */
+    __HAL_RCC_FDCAN_CLK_ENABLE();
+
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+    /**FDCAN1 GPIO Configuration
+    PD0     ------> FDCAN1_RX
+    PD1     ------> FDCAN1_TX
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF9_FDCAN1;
+    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+    /* USER CODE BEGIN FDCAN1_MspInit 1 */
+
+    /* USER CODE END FDCAN1_MspInit 1 */
+
+  }
+
+}
+
+/**
+  * @brief FDCAN MSP De-Initialization
+  * This function freeze the hardware resources used in this example
+  * @param hfdcan: FDCAN handle pointer
+  * @retval None
+  */
+void HAL_FDCAN_MspDeInit(FDCAN_HandleTypeDef* hfdcan)
+{
+  if(hfdcan->Instance==FDCAN1)
+  {
+    /* USER CODE BEGIN FDCAN1_MspDeInit 0 */
+
+    /* USER CODE END FDCAN1_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_FDCAN_CLK_DISABLE();
+
+    /**FDCAN1 GPIO Configuration
+    PD0     ------> FDCAN1_RX
+    PD1     ------> FDCAN1_TX
+    */
+    HAL_GPIO_DeInit(GPIOD, GPIO_PIN_0|GPIO_PIN_1);
+
+    /* USER CODE BEGIN FDCAN1_MspDeInit 1 */
+
+    /* USER CODE END FDCAN1_MspDeInit 1 */
+  }
+
+}
+
+/**
+  * @brief RTC MSP Initialization
+  * This function configures the hardware resources used in this example
+  * @param hrtc: RTC handle pointer
+  * @retval None
+  */
+void HAL_RTC_MspInit(RTC_HandleTypeDef* hrtc)
+{
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+  if(hrtc->Instance==RTC)
+  {
+    /* USER CODE BEGIN RTC_MspInit 0 */
+
+    /* USER CODE END RTC_MspInit 0 */
+
+  /** Initializes the peripherals clock
+  */
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    /* Peripheral clock enable */
+    __HAL_RCC_RTC_ENABLE();
+    __HAL_RCC_RTCAPB_CLK_ENABLE();
+    /* USER CODE BEGIN RTC_MspInit 1 */
+
+    /* USER CODE END RTC_MspInit 1 */
+
+  }
+
+}
+
+/**
+  * @brief RTC MSP De-Initialization
+  * This function freeze the hardware resources used in this example
+  * @param hrtc: RTC handle pointer
+  * @retval None
+  */
+void HAL_RTC_MspDeInit(RTC_HandleTypeDef* hrtc)
+{
+  if(hrtc->Instance==RTC)
+  {
+    /* USER CODE BEGIN RTC_MspDeInit 0 */
+
+    /* USER CODE END RTC_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_RTC_DISABLE();
+    __HAL_RCC_RTCAPB_CLK_DISABLE();
+    /* USER CODE BEGIN RTC_MspDeInit 1 */
+
+    /* USER CODE END RTC_MspDeInit 1 */
   }
 
 }
@@ -427,6 +592,64 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
     /* USER CODE BEGIN USART3_MspDeInit 1 */
 
     /* USER CODE END USART3_MspDeInit 1 */
+  }
+
+}
+
+/**
+  * @brief PCD MSP Initialization
+  * This function configures the hardware resources used in this example
+  * @param hpcd: PCD handle pointer
+  * @retval None
+  */
+void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
+{
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+  if(hpcd->Instance==USB_DRD_FS)
+  {
+    /* USER CODE BEGIN USB_DRD_FS_MspInit 0 */
+
+    /* USER CODE END USB_DRD_FS_MspInit 0 */
+
+  /** Initializes the peripherals clock
+  */
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USB;
+    PeriphClkInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    /* Enable VDDUSB */
+    HAL_PWREx_EnableVddUSB();
+    /* Peripheral clock enable */
+    __HAL_RCC_USB_CLK_ENABLE();
+    /* USER CODE BEGIN USB_DRD_FS_MspInit 1 */
+
+    /* USER CODE END USB_DRD_FS_MspInit 1 */
+
+  }
+
+}
+
+/**
+  * @brief PCD MSP De-Initialization
+  * This function freeze the hardware resources used in this example
+  * @param hpcd: PCD handle pointer
+  * @retval None
+  */
+void HAL_PCD_MspDeInit(PCD_HandleTypeDef* hpcd)
+{
+  if(hpcd->Instance==USB_DRD_FS)
+  {
+    /* USER CODE BEGIN USB_DRD_FS_MspDeInit 0 */
+
+    /* USER CODE END USB_DRD_FS_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_USB_CLK_DISABLE();
+    /* USER CODE BEGIN USB_DRD_FS_MspDeInit 1 */
+
+    /* USER CODE END USB_DRD_FS_MspDeInit 1 */
   }
 
 }
