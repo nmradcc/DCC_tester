@@ -107,7 +107,7 @@ void LedThread(void *argument)
     (void)argument;
     while (1)
     {
-        BSP_LED_Toggle(LED_RED);
+        BSP_LED_Toggle(LED_YELLOW);
         osDelay(1000);  // Delay for 1 second
     }
 }
