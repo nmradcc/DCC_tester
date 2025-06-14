@@ -562,7 +562,8 @@ static void MX_USART3_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART3_Init 2 */
-
+  // ---> enable reception interruptions
+  huart3.Instance->CR1 |= USART_CR1_RXNEIE;
   /* USER CODE END USART3_Init 2 */
 
 }
