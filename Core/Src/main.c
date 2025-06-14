@@ -48,6 +48,8 @@ ETH_DMADescTypeDef  DMATxDscrTab[ETH_TX_DESC_CNT]; /* Ethernet Tx DMA Descriptor
 COM_InitTypeDef BspCOMInit;
 __IO uint32_t BspButtonState = BUTTON_RELEASED;
 
+DCACHE_HandleTypeDef hdcache1;
+
 ETH_HandleTypeDef heth;
 
 SD_HandleTypeDef hsd1;
@@ -62,6 +64,7 @@ static void MX_GPIO_Init(void);
 static void MX_ETH_Init(void);
 static void MX_ICACHE_Init(void);
 static void MX_SDMMC1_SD_Init(void);
+static void MX_DCACHE1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -103,6 +106,7 @@ int main(void)
   MX_ETH_Init();
   MX_ICACHE_Init();
   MX_SDMMC1_SD_Init();
+  MX_DCACHE1_Init();
   /* USER CODE BEGIN 2 */
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
@@ -220,6 +224,33 @@ void SystemClock_Config(void)
   /** Configure the programming delay
   */
   __HAL_FLASH_SET_PROGRAM_DELAY(FLASH_PROGRAMMING_DELAY_2);
+}
+
+/**
+  * @brief DCACHE1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_DCACHE1_Init(void)
+{
+
+  /* USER CODE BEGIN DCACHE1_Init 0 */
+
+  /* USER CODE END DCACHE1_Init 0 */
+
+  /* USER CODE BEGIN DCACHE1_Init 1 */
+
+  /* USER CODE END DCACHE1_Init 1 */
+  hdcache1.Instance = DCACHE1;
+  hdcache1.Init.ReadBurstType = DCACHE_READ_BURST_WRAP;
+  if (HAL_DCACHE_Init(&hdcache1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN DCACHE1_Init 2 */
+
+  /* USER CODE END DCACHE1_Init 2 */
+
 }
 
 /**
