@@ -58,7 +58,7 @@ static int cmd_toggle_led(char *pcWriteBuffer, size_t xWriteBufferLen,
     (void)xWriteBufferLen; // contains the length of the write buffer
     
     /* Toggle the LED */
-    BSP_LED_Toggle(LED_YELLOW);
+    BSP_LED_Toggle(LED_GREEN);
   
     /* Write the response to the buffer */
     uint8_t string[] = "LED toggled\r\n";

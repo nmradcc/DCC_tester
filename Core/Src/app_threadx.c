@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "cmsis_os2.h"
 #include "cli_app.h"
+#include "stm32h5xx_nucleo.h"
 
 /* USER CODE END Includes */
 
