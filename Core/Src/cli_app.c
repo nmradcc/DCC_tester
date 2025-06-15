@@ -54,15 +54,33 @@ static int cmd_clearScreen(char *pcWriteBuffer, size_t xWriteBufferLen,
 static int cmd_toggle_led(char *pcWriteBuffer, size_t xWriteBufferLen,
                                  const char *pcCommandString)
 {
-    (void)pcCommandString; // comntains the command string
     (void)xWriteBufferLen; // contains the length of the write buffer
     
-    /* Toggle the LED */
-    BSP_LED_Toggle(LED_GREEN);
+    const char *pcParameter1;
+    int xParameter1StringLength;
+
+    pcParameter1 = CLIGetParameter
+                        (
+                          /* The command string itself. */
+                          pcCommandString,
+                          /* Return the first parameter. */
+                          1,
+                          /* Store the parameter string length. */
+                          &xParameter1StringLength
+                        );
+    // convert the string to a number
+    int32_t xValue1 = strtol(pcParameter1, NULL, 10);
+
+    for (int i = 0; i < xValue1*2; i++)
+    {
+        /* Toggle the LED */
+        BSP_LED_Toggle(LED_GREEN);
+        // Delay for a short time
+        HAL_Delay(500);
+    }
   
     /* Write the response to the buffer */
-    uint8_t string[] = "LED toggled\r\n";
-    strcpy(pcWriteBuffer, (char *)string);
+    sprintf(pcWriteBuffer, "LED toggled %d times\r\n", (int)xValue1);
     
     return false;
 }
@@ -74,8 +92,6 @@ static int cmd_add(char *pcWriteBuffer, size_t xWriteBufferLen,
     const char *pcParameter1, *pcParameter2;
     int xParameter1StringLength, xParameter2StringLength;
 
-    /* Obtain the name of the source file, and the length of its name, from
-    the command string. The name of the source file is the first parameter. */
     pcParameter1 = CLIGetParameter
                         (
                           /* The command string itself. */
@@ -120,7 +136,7 @@ static const CLI_Command_Definition_t xCommandList[] = {
         .pcCommand = "toggleled", /* The command string to type. */
         .pcHelpString = "toggleled n:\r\n toggles led n amount of times\r\n\r\n",
         .pxCommandInterpreter = cmd_toggle_led, /* The function to run. */
-        .cExpectedNumberOfParameters = 0 /* No parameters are expected. */
+        .cExpectedNumberOfParameters = 1 /* No parameters are expected. */
     },
     {
         .pcCommand = "add", /* The command string to type. */

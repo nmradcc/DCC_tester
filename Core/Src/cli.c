@@ -33,10 +33,10 @@ static int8_t prvGetNumberOfParameters( const char * pcCommandString );
  * of the list of registered commands. */
 static const CLI_Command_Definition_t xHelpCommand =
 {
-    "help",
-    "\r\nhelp:\r\n Lists all the registered commands\r\n\r\n",
-    cmd_help,
-    0
+    .pcCommand = "help",
+    .pcHelpString = "\r\nhelp:\r\n Lists all the registered commands\r\n\r\n",
+    .pxCommandInterpreter = cmd_help,
+    .cExpectedNumberOfParameters = 0
 };
 
 /* The definition of the list of commands.  Commands that are registered are
