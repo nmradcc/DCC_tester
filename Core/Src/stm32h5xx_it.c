@@ -22,7 +22,7 @@
 #include "stm32h5xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "cli.h"
+#include "cli_app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -206,7 +206,7 @@ void USART3_IRQHandler(void)
   //get ready to receive another char
   HAL_UART_Receive_IT(&huart3, (uint8_t *)&huart3.Instance->RDR, 1);
   //send the char to the command line task
-  tx_queue_send(&cli_queue, &rxChar, TX_NO_WAIT);
+  uart_receive_callback(&rxChar);
 
   /* USER CODE END USART3_IRQn 1 */
 }

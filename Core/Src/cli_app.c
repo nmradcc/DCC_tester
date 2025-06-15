@@ -27,6 +27,10 @@ const char * cli_prompt = "\r\ncli> ";
 uint8_t backspace[] = "\b \b";
 uint8_t backspace_tt[] = " \b";
 
+void uart_receive_callback(char *input) {
+    tx_queue_send(&cli_queue, input, TX_NO_WAIT);
+}
+
 int _write(int file, char *data, int len)
 {
     (void)(file);
