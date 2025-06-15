@@ -18,7 +18,9 @@ ULONG cli_queue_storage[5];
 TX_QUEUE cli_queue;
 TX_MUTEX cli_mutex;
 
-char cOutputBuffer[MAX_OUTPUT_SIZE], pcInputString[MAX_INPUT_SIZE];
+char OutputBuffer[MAX_OUTPUT_SIZE];
+char InputBuffer[MAX_INPUT_SIZE];
+
 int8_t cRxedChar;
 const char * cli_prompt = "\r\ncli> ";
 /* CLI escape sequences*/
@@ -158,28 +160,28 @@ void cliWrite(const char *str)
    fflush(stdout);
 }
 /*************************************************************************************************/
-void handleNewline(const char *const pcInputString, char *cOutputBuffer, uint8_t *cInputIndex)
+void handleNewline(const char *const InputBuffer, char *OutputBuffer, uint8_t *cInputIndex)
 {
     cliWrite("\r\n");
 
     int xMoreDataToFollow;
     do
     {     
-        xMoreDataToFollow = CLIProcessCommand(pcInputString, cOutputBuffer, MAX_OUTPUT_SIZE);
-        cliWrite(cOutputBuffer);
+        xMoreDataToFollow = CLIProcessCommand(InputBuffer, OutputBuffer, MAX_OUTPUT_SIZE);
+        cliWrite(OutputBuffer);
     } while (xMoreDataToFollow != false);
 
     cliWrite(cli_prompt);
     *cInputIndex = 0;
-    memset((void*)pcInputString, 0x00, MAX_INPUT_SIZE);
+    memset((void*)InputBuffer, 0x00, MAX_INPUT_SIZE);
 }
 /*************************************************************************************************/
-void handleBackspace(uint8_t *cInputIndex, char *pcInputString)
+void handleBackspace(uint8_t *cInputIndex, char *InputBuffer)
 {
     if (*cInputIndex > 0)
     {
         (*cInputIndex)--;
-        pcInputString[*cInputIndex] = '\0';
+        InputBuffer[*cInputIndex] = '\0';
 
         cliWrite((char *)backspace_tt);
     }
@@ -190,7 +192,7 @@ void handleBackspace(uint8_t *cInputIndex, char *pcInputString)
     }
 }
 /*************************************************************************************************/
-void handleCharacterInput(uint8_t *cInputIndex, char *pcInputString)
+void handleCharacterInput(uint8_t *cInputIndex, char *InputBuffer)
 {
     if (cRxedChar == '\r')
     {
@@ -198,13 +200,13 @@ void handleCharacterInput(uint8_t *cInputIndex, char *pcInputString)
     }
     else if (cRxedChar == (uint8_t)0x08 || cRxedChar == (uint8_t)0x7F)
     {
-        handleBackspace(cInputIndex, pcInputString);
+        handleBackspace(cInputIndex, InputBuffer);
     }
     else
     {
         if (*cInputIndex < MAX_INPUT_SIZE)
         {
-            pcInputString[*cInputIndex] = cRxedChar;
+            InputBuffer[*cInputIndex] = cRxedChar;
             (*cInputIndex)++;
         }
     }
@@ -228,12 +230,12 @@ void vCommandConsoleTask(void *pvParameters)
         if (cRxedChar == '\r' || cRxedChar == '\n')
         {
             // user pressed enter, process the command
-            handleNewline(pcInputString, cOutputBuffer, &cInputIndex);
+            handleNewline(InputBuffer, OutputBuffer, &cInputIndex);
         }
         else
         {
             // user pressed a character add it to the input string
-            handleCharacterInput(&cInputIndex, pcInputString);
+            handleCharacterInput(&cInputIndex, InputBuffer);
         }
     }
 }

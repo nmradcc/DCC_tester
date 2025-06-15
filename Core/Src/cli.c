@@ -47,7 +47,7 @@ static CLI_Definition_List_Item_t xRegisteredCommands =
     NULL           /* The next pointer is initialised to NULL, as there are no other registered commands yet. */
 };
 
-static char cOutputBuffer[ MAX_OUTPUT_SIZE ];
+static char OutputBuffer[ MAX_OUTPUT_SIZE ];
 
 
 /*-----------------------------------------------------------*/
@@ -135,7 +135,7 @@ int CLIProcessCommand( const char * const pcCommandInput,
 
 char * CLIGetOutputBuffer( void )
 {
-    return cOutputBuffer;
+    return OutputBuffer;
 }
 /*-----------------------------------------------------------*/
 

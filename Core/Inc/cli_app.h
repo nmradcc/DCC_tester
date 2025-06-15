@@ -4,8 +4,8 @@
 #include "stdint.h"
 
 void processRxedChar(uint8_t rxChar);
-void handleNewline(const char *const pcInputString, char *cOutputBuffer, uint8_t *cInputIndex);
-void handleCharacterInput(uint8_t *cInputIndex, char *pcInputString);
+void handleNewline(const char *const InputBuffer, char *OutputBuffer, uint8_t *cInputIndex);
+void handleCharacterInput(uint8_t *cInputIndex, char *InputBuffer);
 void vRegisterCLICommands(void);
 void vCommandConsoleTask(void *pvParameters);
 #endif // CLI_APP_H
