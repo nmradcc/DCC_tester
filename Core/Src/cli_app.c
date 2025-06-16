@@ -13,24 +13,30 @@
 
 typedef struct Command {
     const char *name;
-    void (*execute)(void);
+    void (*execute)(const char *args);
     struct Command *next;
 } Command;
 
+typedef struct {
+    char command[32];
+    char arg1[32];
+    char arg2[32];
+} ParsedInput;
 
 ULONG command_queue_storage[5];
 TX_QUEUE command_queue;
 
-static char InputBuffer[32];
+static char InputBuffer[64];
 static char OutputBuffer[32];
 static unsigned int inputIndex = 0;
+static ParsedInput parsed = {0};
 
 void uart_receive_callback(char *input) {
     tx_queue_send(&command_queue, input, TX_NO_WAIT);
 }
 
-void hello_command(void) {
-    printf("Hello from ThreadX CLI!\n");
+void hello_command(const char *args) {
+    printf("Hello, %s!\n", args[0] ? args : "ThreadX User");
 }
 
 Command cmd_hello = {"hello", hello_command, NULL};
@@ -53,6 +59,10 @@ int _write(int file, char *data, int len)
         while (!(USART3->ISR & USART_ISR_TXE));
     }
     return len;
+}
+
+static void parse_input(const char *input, ParsedInput *parsed) {
+    sscanf(input, "%s %31s %31s", parsed->command, parsed->arg1, parsed->arg2);
 }
 
 void vCommandConsoleTask(void *pvParameters)
@@ -86,16 +96,25 @@ void vCommandConsoleTask(void *pvParameters)
                 inputIndex = 0; // Reset input index for next command
                 _write(0, &N_char, 1); // Echo the character to the console
                 // Here you can add code to parse and execute the command
+
+                parse_input(InputBuffer, &parsed);
+    
                 Command *current = command_list;
-//                bool command_found = false;
+                bool command_found = false;
                 while (current != NULL) {
-                    if (strcmp(InputBuffer, current->name) == 0) {
-                        current->execute();
-//                        command_found = true;
+                    if (strcmp(parsed.command, current->name) == 0) {
+                        current->execute(parsed.arg1);
+                        command_found = true;
                         break;
                     }
                     current = current->next;
                 }
+                if (!command_found) {
+//                    printf("Unknown command: %s\n", parsed.command);
+                }
+                memset(InputBuffer, 0, sizeof(InputBuffer)); // Clear the input buffer
+                memset(&parsed, 0, sizeof(parsed)); // Reset parsed input
+                inputIndex = 0; // Reset input index for next command
             }   
         }
         else if (inputIndex >= sizeof(InputBuffer) - 1) {
