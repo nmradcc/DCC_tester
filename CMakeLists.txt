@@ -49,7 +49,6 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/cmsis_os2.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/cli.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/cli_app.c
 )
 
