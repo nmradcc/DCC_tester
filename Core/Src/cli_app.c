@@ -1,6 +1,7 @@
 #ifndef CLI_COMMANDS_H
 #define CLI_COMMANDS_H
 
+#include <sys/unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -9,11 +10,15 @@
 
 #include "tx_api.h"
 #include "stm32h5xx_nucleo.h"
+#include "stm32h5xx_hal.h"
+#include "custom_write.h"
 #include "cli_app.h"
+#include "version.h"
 
 typedef struct Command {
     const char *name;
     void (*execute)(const char *arg1, const char *arg2);
+    const char *help; // Optional help text
     struct Command *next;
 } Command;
 
@@ -31,6 +36,8 @@ static char OutputBuffer[32];
 static unsigned int inputIndex = 0;
 static ParsedInput parsed = {0};
 
+static void print_help(void);
+
 void uart_receive_callback(char *input) {
     tx_queue_send(&command_queue, input, TX_NO_WAIT);
 }
@@ -40,7 +47,8 @@ void uart_receive_callback(char *input) {
 void help_command(const char *arg1, const char *arg2) {
     (void)arg1; // Unused
     (void)arg2; // Unused
-    printf("Help...\n");
+    printf("Firmware version: %s\n", FW_VERSION_STRING);
+    print_help();
 }
 
 void hello_command(const char *arg1, const char *arg2) {
@@ -56,28 +64,45 @@ void set_command(const char *arg1, const char *arg2) {
     printf("Setting %s to %s\n", arg1[0] ? arg1 : "default", arg2[0] ? arg2 : "value");
 }
 
-// Register commands in a linked list!
-Command cmd_help = {"help", help_command, NULL};
-Command cmd_hello = {"hello", hello_command, &cmd_help};
-Command cmd_status = {"status", status_command, &cmd_hello};
-Command cmd_set = {"set", set_command, &cmd_status};
+// Statically Register commands in a linked list!
+Command cmd_help = {
+    .name = "help", 
+    .execute = help_command,
+    .help = NULL,
+    .next = NULL
+};
+Command cmd_hello = {
+    .name ="hello", 
+    .execute = hello_command,
+    .help = NULL,
+    .next = &cmd_help
+};
+Command cmd_status = {
+    .name = "status",
+    .execute = status_command,
+    .help = NULL,
+    .next = &cmd_hello
+};
+Command cmd_set = {
+    .name = "set",
+    .execute = set_command,
+    .help = NULL,
+    .next = &cmd_status
+};
 
 Command *command_list = &cmd_set;
 
-
-// Function to write data to UART
-int _write(int file, char *data, int len)
-{
-    (void)(file);
-    // Transmit data using UART
-    for (int i = 0; i < len; i++)
-    {
-        // Send the character
-        USART3->TDR = (uint16_t)data[i];
-        // Wait for the transmit buffer to be empty
-        while (!(USART3->ISR & USART_ISR_TXE));
+static void print_help(void) {
+    Command *current = command_list;
+    printf("Available commands:\n");
+    while (current != NULL) {
+        printf("  %s\n", current->name);
+        if (current->help) {
+            printf("    %s\n", current->help);
+        }
+        current = current->next;
     }
-    return len;
+    printf("Type 'help' for this message.\n");
 }
 
 static void parse_input(const char *input, ParsedInput *parsed) {
@@ -139,8 +164,6 @@ void vCommandConsoleTask(void *pvParameters)
         else if (inputIndex >= sizeof(InputBuffer) - 1) {
             // input buffer is full, ignore further input
         }
-
-
     }
 }
 

@@ -7,11 +7,20 @@ cmake_minimum_required(VERSION 3.22)
 # User is free to modify the file as much as necessary
 #
 
+set(PROJECT_VERSION_MAJOR 1)
+set(PROJECT_VERSION_MINOR 0)
+set(PROJECT_VERSION_PATCH 0)
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Inc/version.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/version.h
+    @ONLY
+)
+
 # Setup compiler settings
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
-
 
 # Define the build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -37,6 +46,7 @@ enable_language(C ASM)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME})
 
+
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
@@ -50,12 +60,14 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/cmsis_os2.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/cli_app.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/custom_write.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
-    ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/bsp/stm32hXX_nUCLEO
+    ${CMAKE_CURRENT_BINARY_DIR}/generated
+    ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/bsp/stm32hXX_Nucleo
 )
 
 # Add project symbols (macros)
@@ -66,6 +78,6 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
-
     # Add user defined libraries
+
 )
