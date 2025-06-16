@@ -1,6 +1,7 @@
 #ifndef CLI_COMMANDS_H
 #define CLI_COMMANDS_H
 
+#include <sys/unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -9,6 +10,8 @@
 
 #include "tx_api.h"
 #include "stm32h5xx_nucleo.h"
+#include "stm32h5xx_hal.h"
+#include "custom_write.h"
 #include "cli_app.h"
 #include "version.h"
 
@@ -29,7 +32,7 @@ ULONG command_queue_storage[5];
 TX_QUEUE command_queue;
 
 static char InputBuffer[64];
-//static char OutputBuffer[32];
+static char OutputBuffer[32];
 static unsigned int inputIndex = 0;
 static ParsedInput parsed = {0};
 
@@ -110,7 +113,7 @@ void vCommandConsoleTask(void *pvParameters)
 {
     (void)(pvParameters);
     uint32_t receivedChar;  // used to store the received value from the notification
-//    char N_char = '\n';
+    char N_char = '\n';
     tx_queue_create(&command_queue, "Queue", TX_1_ULONG, command_queue_storage, sizeof(command_queue_storage));
 
     for (;;)
@@ -122,23 +125,20 @@ void vCommandConsoleTask(void *pvParameters)
             if (inputIndex > 0) {
                 inputIndex--;
                 InputBuffer[inputIndex] = '\0'; // Null terminate the string
-//                sprintf(OutputBuffer,"\b \b"); // Move cursor back, print space to overwrite, and move back again
-//                _write(0, OutputBuffer, strlen(OutputBuffer)); // Echo backspace to console
-                printf("\b \b"); // Move cursor back, print space to overwrite, and move back again
+                sprintf(OutputBuffer,"\b \b"); // Move cursor back, print space to overwrite, and move back again
+                _write(0, OutputBuffer, strlen(OutputBuffer)); // Echo backspace to console
             }
         }
         else if (inputIndex < sizeof(InputBuffer) - 1) {
             // user pressed a character add it to the input string
             InputBuffer[inputIndex++] = receivedChar;
             InputBuffer[inputIndex] = '\0'; // Null terminate the string
-//            _write(0, (char *)&receivedChar, 1); // Echo the character to the console
-            printf("%c", (int)receivedChar); // Echo the character to the console
+            _write(0, (char *)&receivedChar, 1); // Echo the character to the console
             if (receivedChar == '\r' || receivedChar == '\n') {
                 // Process the command when Enter is pressed
                 InputBuffer[inputIndex - 1] = '\0'; // Null terminate the string
                 inputIndex = 0; // Reset input index for next command
-//                _write(0, &N_char, 1); // Echo the character to the console
-                printf("\n"); // Echo the newline to the console
+                _write(0, &N_char, 1); // Echo the character to the console
                 // Here you can add code to parse and execute the command
 
                 parse_input(InputBuffer, &parsed);
@@ -164,8 +164,6 @@ void vCommandConsoleTask(void *pvParameters)
         else if (inputIndex >= sizeof(InputBuffer) - 1) {
             // input buffer is full, ignore further input
         }
-
-
     }
 }
 
