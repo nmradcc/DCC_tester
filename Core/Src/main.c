@@ -22,6 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "version.h"
 
 /* USER CODE END Includes */
 
@@ -82,6 +83,22 @@ static void MX_USB_PCD_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+// Function to write data to UART
+int _write(int file, char *data, int len)
+{
+    (void)(file);
+    // Transmit data using UART
+    for (int i = 0; i < len; i++)
+    {
+        // Send the character
+        USART3->TDR = (uint16_t)data[i];
+        // Wait for the transmit buffer to be empty
+        while (!(USART3->ISR & USART_ISR_TXE));
+    }
+    return len;
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -129,9 +146,9 @@ int main(void)
   /* Initialize User push-button without interrupt mode. */
   BSP_PB_Init(BUTTON_USER, BUTTON_MODE_GPIO);
 
-  /* -- Sample board code to send message over COM1 port ---- */
+  /* -- Sample board code to send message over COM port ---- */
   printf("Welcome to DCC tester world !\n\r");
-
+  printf("Firmware version: %s\n", FW_VERSION_STRING);
   /* USER CODE END 2 */
 
   MX_ThreadX_Init();
