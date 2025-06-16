@@ -41,7 +41,7 @@ osThreadAttr_t LED_thread_attr = {
 const osThreadAttr_t cmdLineTask_attributes = {
   .name = "cmdLineTask",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
+  .stack_size = 512 * 4
 };
 
 
