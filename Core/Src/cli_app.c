@@ -11,6 +11,12 @@
 #include "stm32h5xx_nucleo.h"
 #include "cli_app.h"
 
+typedef struct Command {
+    const char *name;
+    void (*execute)(void);
+    struct Command *next;
+} Command;
+
 
 ULONG command_queue_storage[5];
 TX_QUEUE command_queue;
@@ -22,6 +28,17 @@ static unsigned int inputIndex = 0;
 void uart_receive_callback(char *input) {
     tx_queue_send(&command_queue, input, TX_NO_WAIT);
 }
+
+void hello_command(void) {
+    printf("Hello from ThreadX CLI!\n");
+}
+
+Command cmd_hello = {"hello", hello_command, NULL};
+Command *command_list = &cmd_hello;  // Add more commands here
+
+
+
+
 
 // Function to write data to UART
 int _write(int file, char *data, int len)
@@ -69,6 +86,16 @@ void vCommandConsoleTask(void *pvParameters)
                 inputIndex = 0; // Reset input index for next command
                 _write(0, &N_char, 1); // Echo the character to the console
                 // Here you can add code to parse and execute the command
+                Command *current = command_list;
+//                bool command_found = false;
+                while (current != NULL) {
+                    if (strcmp(InputBuffer, current->name) == 0) {
+                        current->execute();
+//                        command_found = true;
+                        break;
+                    }
+                    current = current->next;
+                }
             }   
         }
         else if (inputIndex >= sizeof(InputBuffer) - 1) {
