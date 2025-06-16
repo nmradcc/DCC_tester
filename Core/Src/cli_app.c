@@ -162,15 +162,6 @@ void RegisterCommands(void) {
     }
 }
 
-void vRegisterCLICommands(void){
-    //itterate thourgh the list of commands and register them
-    tx_mutex_create(&cli_mutex, NULL, TX_INHERIT);
-    tx_queue_create(&cli_queue, "Queue", TX_1_ULONG, cli_queue_storage, sizeof(cli_queue_storage));
-
-    for (size_t i = 0; i < sizeof(xCommandList) / sizeof(xCommandList[0]); i++) {
-        CLIRegisterCommandStatic(&xCommandList[i], &xCommandListItems[i]);
-    }
-}
 
 /*************************************************************************************************/
 void cliWrite(const char *str)
@@ -237,8 +228,9 @@ void vCommandConsoleTask(void *pvParameters)
     (void)(pvParameters);
     uint8_t cInputIndex = 0; // simply used to keep track of the index of the input string
     uint32_t receivedValue;  // used to store the received value from the notification
-    vRegisterCLICommands();
-    
+
+    tx_queue_create(&cli_queue, "Queue", TX_1_ULONG, cli_queue_storage, sizeof(cli_queue_storage));
+
     for (;;)
     {
         // Wait for data from ISR

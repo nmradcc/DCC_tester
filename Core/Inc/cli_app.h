@@ -4,9 +4,5 @@
 #include "stdint.h"
 
 void uart_receive_callback(char *input);
-void processRxedChar(uint8_t rxChar);
-void handleNewline(const char *const InputBuffer, char *OutputBuffer, uint8_t *cInputIndex);
-void handleCharacterInput(uint8_t *cInputIndex, char *InputBuffer);
-void vRegisterCLICommands(void);
 void vCommandConsoleTask(void *pvParameters);
 #endif // CLI_APP_H
