@@ -22,8 +22,7 @@
 #include "stm32h5xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "app_freertos.h"
-#include "task.h"
+#include "cli_app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,7 +42,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+static char rxChar;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,6 +56,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern ETH_HandleTypeDef heth;
 extern SD_HandleTypeDef hsd1;
 extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim6;
@@ -171,7 +171,7 @@ void EXTI13_IRQHandler(void)
   /* USER CODE BEGIN EXTI13_IRQn 0 */
 
   /* USER CODE END EXTI13_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);
+  BSP_PB_IRQHandler(BUTTON_USER);
   /* USER CODE BEGIN EXTI13_IRQn 1 */
 
   /* USER CODE END EXTI13_IRQn 1 */
@@ -202,11 +202,11 @@ void USART3_IRQHandler(void)
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
   // grab char from data register
-  char rxedValue = USART3->RDR & 0xFF;
+  rxChar = USART3->RDR & 0xFF;
   //get ready to receive another char
   HAL_UART_Receive_IT(&huart3, (uint8_t *)&huart3.Instance->RDR, 1);
   //send the char to the command line task
-  xTaskNotifyFromISR(cmdLineTaskHandle, (uint32_t)rxedValue, eSetValueWithOverwrite , NULL);
+  uart_receive_callback(&rxChar);
 
   /* USER CODE END USART3_IRQn 1 */
 }
@@ -223,6 +223,20 @@ void SDMMC1_IRQHandler(void)
   /* USER CODE BEGIN SDMMC1_IRQn 1 */
 
   /* USER CODE END SDMMC1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles Ethernet global interrupt.
+  */
+void ETH_IRQHandler(void)
+{
+  /* USER CODE BEGIN ETH_IRQn 0 */
+
+  /* USER CODE END ETH_IRQn 0 */
+  HAL_ETH_IRQHandler(&heth);
+  /* USER CODE BEGIN ETH_IRQn 1 */
+
+  /* USER CODE END ETH_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

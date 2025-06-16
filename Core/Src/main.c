@@ -17,15 +17,12 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+#include "app_threadx.h"
 #include "main.h"
-#include "string.h"
-#include "cmsis_os2.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "fatfs.h"
-#include "FreeRTOS.h"
-//#include "FreeRTOS_IP.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,10 +42,10 @@
 
 /* Private variables ---------------------------------------------------------*/
 
-ETH_TxPacketConfigTypeDef TxConfig;
 ETH_DMADescTypeDef  DMARxDscrTab[ETH_RX_DESC_CNT]; /* Ethernet Rx DMA Descriptors */
 ETH_DMADescTypeDef  DMATxDscrTab[ETH_TX_DESC_CNT]; /* Ethernet Tx DMA Descriptors */
 
+__IO uint32_t BspButtonState = BUTTON_RELEASED;
 ADC_HandleTypeDef hadc1;
 
 ETH_HandleTypeDef heth;
@@ -69,16 +66,15 @@ PCD_HandleTypeDef hpcd_USB_DRD_FS;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void MX_FREERTOS_Init(void);
 static void MX_GPIO_Init(void);
-static void MX_ICACHE_Init(void);
-static void MX_USART3_UART_Init(void);
 static void MX_ETH_Init(void);
+static void MX_ICACHE_Init(void);
+static void MX_SDMMC1_SD_Init(void);
+static void MX_USART3_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_FDCAN1_Init(void);
 static void MX_RTC_Init(void);
 static void MX_USB_PCD_Init(void);
-static void MX_SDMMC1_SD_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -117,47 +113,62 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_ICACHE_Init();
-  MX_USART3_UART_Init();
   MX_ETH_Init();
+  MX_ICACHE_Init();
+  MX_SDMMC1_SD_Init();
+  MX_USART3_UART_Init();
   MX_ADC1_Init();
   MX_FDCAN1_Init();
   MX_RTC_Init();
   MX_USB_PCD_Init();
-  MX_SDMMC1_SD_Init();
   /* USER CODE BEGIN 2 */
-  FATFS_Init();
-    /* Initialise the RTOS's TCP/IP stack.  The tasks that use the network
-    are created in the vApplicationIPNetworkEventHook() hook function
-    below.  The hook function is called when the network connects. */
+  /* Initialize leds */
+  BSP_LED_Init(LED_GREEN);
+  BSP_LED_Init(LED_YELLOW);
+  BSP_LED_Init(LED_RED);
+  /* Initialize User push-button without interrupt mode. */
+  BSP_PB_Init(BUTTON_USER, BUTTON_MODE_GPIO);
+
+  /* -- Sample board code to send message over COM1 port ---- */
+  printf("Welcome to DCC tester world !\n\r");
 
   /* USER CODE END 2 */
 
-  /* Init scheduler */
-  osKernelInitialize();
-
-  /* Call init function for freertos objects (in app_freertos.c) */
-  MX_FREERTOS_Init();
+  MX_ThreadX_Init();
 
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
   BSP_LED_Init(LED_YELLOW);
   BSP_LED_Init(LED_RED);
 
-  /* Initialize User push-button without interrupt mode. */
-  BSP_PB_Init(BUTTON_USER, BUTTON_MODE_GPIO);
+  /* Initialize USER push-button, will be used to trigger an interrupt each time it's pressed.*/
+  BSP_PB_Init(BUTTON_USER, BUTTON_MODE_EXTI);
 
-  /* Start scheduler */
-  osKernelStart();
+  /* USER CODE BEGIN BSP */
+  /* -- Sample board code to switch on leds ---- */
+  BSP_LED_On(LED_GREEN);
+  BSP_LED_On(LED_YELLOW);
+  BSP_LED_On(LED_RED);
+  /* USER CODE END BSP */
 
   /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-   
   while (1)
   {
 
+    /* -- Sample board code for User push-button in interrupt mode ---- */
+    if (BspButtonState == BUTTON_PRESSED)
+    {
+      /* Update button state */
+      BspButtonState = BUTTON_RELEASED;
+      /* -- Sample board code to toggle leds ---- */
+      BSP_LED_Toggle(LED_GREEN);
+      BSP_LED_Toggle(LED_YELLOW);
+      BSP_LED_Toggle(LED_RED);
+      /* ..... Perform your action ..... */
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -321,11 +332,6 @@ static void MX_ETH_Init(void)
   {
     Error_Handler();
   }
-
-  memset(&TxConfig, 0 , sizeof(ETH_TxPacketConfigTypeDef));
-  TxConfig.Attributes = ETH_TX_PACKETS_FEATURES_CSUM | ETH_TX_PACKETS_FEATURES_CRCPAD;
-  TxConfig.ChecksumCtrl = ETH_CHECKSUM_IPHDR_PAYLOAD_INSERT_PHDR_CALC;
-  TxConfig.CRCPadCtrl = ETH_CRC_PAD_INSERT;
   /* USER CODE BEGIN ETH_Init 2 */
 
   /* USER CODE END ETH_Init 2 */
@@ -556,9 +562,8 @@ static void MX_USART3_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART3_Init 2 */
-// ---> enable reception interruptions
-huart3.Instance->CR1 |= USART_CR1_RXNEIE;
-
+  // ---> enable reception interruptions
+  huart3.Instance->CR1 |= USART_CR1_RXNEIE;
   /* USER CODE END USART3_Init 2 */
 
 }
@@ -614,41 +619,11 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_4, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : PC13 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PF4 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : UCPD_CC1_Pin UCPD_CC2_Pin */
   GPIO_InitStruct.Pin = UCPD_CC1_Pin|UCPD_CC2_Pin;
@@ -661,13 +636,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(SD_DETECT_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PG4 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
   /*Configure GPIO pin : UCPD_FLT_Pin */
   GPIO_InitStruct.Pin = UCPD_FLT_Pin;
@@ -690,10 +658,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.Alternate = GPIO_AF8_LPUART1;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI13_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(EXTI13_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -727,6 +691,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 /**
+  * @brief  BSP Push Button callback
+  * @param  Button Specifies the pressed button
+  * @retval None
+  */
+void BSP_PB_Callback(Button_TypeDef Button)
+{
+  if (Button == BUTTON_USER)
+  {
+    BspButtonState = BUTTON_PRESSED;
+  }
+}
+
+/**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
   */
@@ -735,6 +712,7 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+  BSP_LED_On(LED_RED);
   while (1)
   {
   }
@@ -752,10 +730,16 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  (void)file;
-  (void)line;
   /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  printf("Wrong parameters value: file %s on line %lu\r\n", file, line);
+  /* Infinite loop */
+  while (1)
+  {
+    BSP_LED_Toggle(LED_RED);
+    HAL_Delay(100);
+  }
+
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

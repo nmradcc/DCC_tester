@@ -1,30 +1,75 @@
 #ifndef CLI_COMMANDS_H
 #define CLI_COMMANDS_H
 
-#include "main.h"
-#include "FreeRTOS.h"
-#include "stm32h5xx_nucleo.h"
-#include "task.h"
-#include "FreeRTOS_CLI.h"
-#include "stdbool.h"
-#include "string.h"
-#include "stdio.h"
-#include "stdlib.h"
-#define MAX_INPUT_LENGTH 50
-#define USING_VS_CODE_TERMINAL 0
-#define USING_OTHER_TERMINAL 1 // e.g. Putty, TerraTerm
-char cOutputBuffer[configCOMMAND_INT_MAX_OUTPUT_SIZE], pcInputString[MAX_INPUT_LENGTH];
-extern const CLI_Command_Definition_t xCommandList[];
-int8_t cRxedChar;
-const char * cli_prompt = "\r\ncli> ";
-/* CLI escape sequences*/
-uint8_t backspace[] = "\b \b";
-uint8_t backspace_tt[] = " \b";
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <assert.h>
+#include <string.h>
 
+#include "tx_api.h"
+#include "stm32h5xx_nucleo.h"
+#include "cli_app.h"
+
+typedef struct Command {
+    const char *name;
+    void (*execute)(const char *arg1, const char *arg2);
+    struct Command *next;
+} Command;
+
+typedef struct {
+    char command[32];
+    char arg1[32];
+    char arg2[32];
+} ParsedInput;
+
+ULONG command_queue_storage[5];
+TX_QUEUE command_queue;
+
+static char InputBuffer[64];
+static char OutputBuffer[32];
+static unsigned int inputIndex = 0;
+static ParsedInput parsed = {0};
+
+void uart_receive_callback(char *input) {
+    tx_queue_send(&command_queue, input, TX_NO_WAIT);
+}
+
+
+// Command implementations
+void help_command(const char *arg1, const char *arg2) {
+    (void)arg1; // Unused
+    (void)arg2; // Unused
+    printf("Help...\n");
+}
+
+void hello_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    printf("Hello, %s!\n", arg1[0] ? arg1 : "ThreadX User");
+}
+
+void status_command(const char *arg1, const char *arg2) {
+    printf("System Status: %s %s\n", arg1[0] ? arg1 : "OK", arg2[0] ? arg2 : "");
+}
+
+void set_command(const char *arg1, const char *arg2) {
+    printf("Setting %s to %s\n", arg1[0] ? arg1 : "default", arg2[0] ? arg2 : "value");
+}
+
+// Register commands in a linked list!
+Command cmd_help = {"help", help_command, NULL};
+Command cmd_hello = {"hello", hello_command, &cmd_help};
+Command cmd_status = {"status", status_command, &cmd_hello};
+Command cmd_set = {"set", set_command, &cmd_status};
+
+Command *command_list = &cmd_set;
+
+
+// Function to write data to UART
 int _write(int file, char *data, int len)
 {
-    UNUSED(file);
-    // Transmit data using UART2
+    (void)(file);
+    // Transmit data using UART
     for (int i = 0; i < len; i++)
     {
         // Send the character
@@ -34,200 +79,70 @@ int _write(int file, char *data, int len)
     }
     return len;
 }
-//*****************************************************************************
-BaseType_t cmd_clearScreen(char *pcWriteBuffer, size_t xWriteBufferLen,
-                                  const char *pcCommandString)
-{
-    /* Remove compile time warnings about unused parameters, and check the
-	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
-	write buffer length is adequate, so does not check for buffer overflows. */
-    (void)pcCommandString;
-    (void)xWriteBufferLen;
-    memset(pcWriteBuffer, 0x00, xWriteBufferLen);
-    printf("\033[2J\033[1;1H");
-    return pdFALSE;
-}
-//*****************************************************************************
-BaseType_t cmd_toggle_led(char *pcWriteBuffer, size_t xWriteBufferLen,
-                                 const char *pcCommandString)
-{
-    (void)pcCommandString; // comntains the command string
-    (void)xWriteBufferLen; // contains the length of the write buffer
-    
-    /* Toggle the LED */
-    BSP_LED_Toggle(LED_YELLOW);
-  
-    /* Write the response to the buffer */
-    uint8_t string[] = "LED toggled\r\n";
-    strcpy(pcWriteBuffer, (char *)string);
-    
-    return pdFALSE;
-}
-//*****************************************************************************
-BaseType_t cmd_add(char *pcWriteBuffer, size_t xWriteBufferLen,
-                                 const char *pcCommandString)
-{
-    (void)xWriteBufferLen;
-    const char *pcParameter1, *pcParameter2;
-    BaseType_t xParameter1StringLength, xParameter2StringLength;
 
-    /* Obtain the name of the source file, and the length of its name, from
-    the command string. The name of the source file is the first parameter. */
-    pcParameter1 = FreeRTOS_CLIGetParameter
-                        (
-                          /* The command string itself. */
-                          pcCommandString,
-                          /* Return the first parameter. */
-                          1,
-                          /* Store the parameter string length. */
-                          &xParameter1StringLength
-                        );
-    pcParameter2 = FreeRTOS_CLIGetParameter
-                        (
-                          /* The command string itself. */
-                          pcCommandString,
-                          /* Return the first parameter. */
-                          2,
-                          /* Store the parameter string length. */
-                          &xParameter2StringLength
-                        );
-    // convert the string to a number
-    int32_t xValue1 = strtol(pcParameter1, NULL, 10);
-    int32_t xValue2 = strtol(pcParameter2, NULL, 10);
-    // add the two numbers
-    int32_t xResultValue = xValue1 + xValue2;
-    // convert the result to a string
-    char cResultString[10];
-    itoa(xResultValue, cResultString, 10);
-    // copy the result to the write buffer
-    strcpy(pcWriteBuffer, cResultString);
-    
-    return pdFALSE;
+static void parse_input(const char *input, ParsedInput *parsed) {
+    sscanf(input, "%s %31s %31s", parsed->command, parsed->arg1, parsed->arg2);
 }
 
-const CLI_Command_Definition_t xCommandList[] = {
-    {
-        .pcCommand = "cls", /* The command string to type. */
-        .pcHelpString = "cls:\r\n Clears screen\r\n\r\n",
-        .pxCommandInterpreter = cmd_clearScreen, /* The function to run. */
-        .cExpectedNumberOfParameters = 0 /* No parameters are expected. */
-    },
-    {
-        .pcCommand = "toggleled", /* The command string to type. */
-        .pcHelpString = "toggleled n:\r\n toggles led n amount of times\r\n\r\n",
-        .pxCommandInterpreter = cmd_toggle_led, /* The function to run. */
-        .cExpectedNumberOfParameters = 0 /* No parameters are expected. */
-    },
-    {
-        .pcCommand = "add", /* The command string to type. */
-        .pcHelpString = "add n:\r\n add two numbers\r\n\r\n",
-        .pxCommandInterpreter = cmd_add, /* The function to run. */
-        .cExpectedNumberOfParameters = 2 /* 2 parameters are expected. */
-    },
-    {
-        .pcCommand = NULL /* simply used as delimeter for end of array*/
-    }
-};
-
-void vRegisterCLICommands(void){
-    //itterate thourgh the list of commands and register them
-    for (int i = 0; xCommandList[i].pcCommand != NULL; i++)
-    {
-        FreeRTOS_CLIRegisterCommand(&xCommandList[i]);
-    }
-}
-/*************************************************************************************************/
-void cliWrite(const char *str)
-{
-   printf("%s", str);
-   // flush stdout
-   fflush(stdout);
-}
-/*************************************************************************************************/
-void handleNewline(const char *const pcInputString, char *cOutputBuffer, uint8_t *cInputIndex)
-{
-    cliWrite("\r\n");
-
-    BaseType_t xMoreDataToFollow;
-    do
-    {     
-        xMoreDataToFollow = FreeRTOS_CLIProcessCommand(pcInputString, cOutputBuffer, configCOMMAND_INT_MAX_OUTPUT_SIZE);
-        cliWrite(cOutputBuffer);
-    } while (xMoreDataToFollow != pdFALSE);
-
-    cliWrite(cli_prompt);
-    *cInputIndex = 0;
-    memset((void*)pcInputString, 0x00, MAX_INPUT_LENGTH);
-}
-/*************************************************************************************************/
-void handleBackspace(uint8_t *cInputIndex, char *pcInputString)
-{
-    if (*cInputIndex > 0)
-    {
-        (*cInputIndex)--;
-        pcInputString[*cInputIndex] = '\0';
-
-#if USING_VS_CODE_TERMINAL
-        cliWrite((char *)backspace);
-#elif USING_OTHER_TERMINAL
-        cliWrite((char *)backspace_tt);
-#endif
-    }
-    else
-    {
-#if USING_OTHER_TERMINAL
-        uint8_t right[] = "\x1b\x5b\x43";
-        cliWrite((char *)right);
-#endif
-    }
-}
-/*************************************************************************************************/
-void handleCharacterInput(uint8_t *cInputIndex, char *pcInputString)
-{
-    if (cRxedChar == '\r')
-    {
-        return;
-    }
-    else if (cRxedChar == (uint8_t)0x08 || cRxedChar == (uint8_t)0x7F)
-    {
-        handleBackspace(cInputIndex, pcInputString);
-    }
-    else
-    {
-        if (*cInputIndex < MAX_INPUT_LENGTH)
-        {
-            pcInputString[*cInputIndex] = cRxedChar;
-            (*cInputIndex)++;
-        }
-    }
-}
-/*************************************************************************************************/
 void vCommandConsoleTask(void *pvParameters)
 {
-    uint8_t cInputIndex = 0; // simply used to keep track of the index of the input string
-    uint32_t receivedValue; // used to store the received value from the notification
-    UNUSED(pvParameters);
-    vRegisterCLICommands();
-    
+    (void)(pvParameters);
+    uint32_t receivedChar;  // used to store the received value from the notification
+    char N_char = '\n';
+    tx_queue_create(&command_queue, "Queue", TX_1_ULONG, command_queue_storage, sizeof(command_queue_storage));
+
     for (;;)
     {
-        xTaskNotifyWait(pdFALSE,    // Don't clear bits on entry
-                                  0,  // Clear all bits on exit
-                                  &receivedValue, // Receives the notification value
-                                  portMAX_DELAY); // Wait indefinitely
-        //echo recevied char
-        cRxedChar = receivedValue & 0xFF;
-        cliWrite((char *)&cRxedChar);
-        if (cRxedChar == '\r' || cRxedChar == '\n')
-        {
-            // user pressed enter, process the command
-            handleNewline(pcInputString, cOutputBuffer, &cInputIndex);
+        // Wait for data from ISR
+        tx_queue_receive(&command_queue, &receivedChar, TX_WAIT_FOREVER);
+        if (receivedChar == '\b' || receivedChar == 0x7F) {
+            // user pressed backspace, remove last character from input string
+            if (inputIndex > 0) {
+                inputIndex--;
+                InputBuffer[inputIndex] = '\0'; // Null terminate the string
+                sprintf(OutputBuffer,"\b \b"); // Move cursor back, print space to overwrite, and move back again
+                _write(0, OutputBuffer, strlen(OutputBuffer)); // Echo backspace to console
+            }
         }
-        else
-        {
+        else if (inputIndex < sizeof(InputBuffer) - 1) {
             // user pressed a character add it to the input string
-            handleCharacterInput(&cInputIndex, pcInputString);
+            InputBuffer[inputIndex++] = receivedChar;
+            InputBuffer[inputIndex] = '\0'; // Null terminate the string
+            _write(0, (char *)&receivedChar, 1); // Echo the character to the console
+            if (receivedChar == '\r' || receivedChar == '\n') {
+                // Process the command when Enter is pressed
+                InputBuffer[inputIndex - 1] = '\0'; // Null terminate the string
+                inputIndex = 0; // Reset input index for next command
+                _write(0, &N_char, 1); // Echo the character to the console
+                // Here you can add code to parse and execute the command
+
+                parse_input(InputBuffer, &parsed);
+    
+                Command *current = command_list;
+                bool command_found = false;
+                while (current != NULL) {
+                    if (strcmp(parsed.command, current->name) == 0) {
+                        current->execute(parsed.arg1, parsed.arg2);
+                        command_found = true;
+                        break;
+                    }
+                    current = current->next;
+                }
+                if (!command_found) {
+//                    printf("Unknown command: %s\n", parsed.command);
+                }
+                memset(InputBuffer, 0, sizeof(InputBuffer)); // Clear the input buffer
+                memset(&parsed, 0, sizeof(parsed)); // Reset parsed input
+                inputIndex = 0; // Reset input index for next command
+            }   
         }
+        else if (inputIndex >= sizeof(InputBuffer) - 1) {
+            // input buffer is full, ignore further input
+        }
+
+
     }
 }
+
+
 #endif /* CLI_COMMANDS_H */

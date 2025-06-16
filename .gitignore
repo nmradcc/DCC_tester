@@ -1,9 +1,9 @@
 build
-**/Backup/
 mx.scratch
-.clangd
 !.settings
+**/Backup/
+.clangd
 
-# Ignore STM32CubeMX generated files
+# Ignore some STM32CubeMX generated files
 Drivers/
 Middlewares/
