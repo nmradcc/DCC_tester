@@ -13,7 +13,7 @@
 
 typedef struct Command {
     const char *name;
-    void (*execute)(const char *args);
+    void (*execute)(const char *arg1, const char *arg2);
     struct Command *next;
 } Command;
 
@@ -35,15 +35,34 @@ void uart_receive_callback(char *input) {
     tx_queue_send(&command_queue, input, TX_NO_WAIT);
 }
 
-void hello_command(const char *args) {
-    printf("Hello, %s!\n", args[0] ? args : "ThreadX User");
+
+// Command implementations
+void help_command(const char *arg1, const char *arg2) {
+    (void)arg1; // Unused
+    (void)arg2; // Unused
+    printf("Help...\n");
 }
 
-Command cmd_hello = {"hello", hello_command, NULL};
-Command *command_list = &cmd_hello;  // Add more commands here
+void hello_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    printf("Hello, %s!\n", arg1[0] ? arg1 : "ThreadX User");
+}
 
+void status_command(const char *arg1, const char *arg2) {
+    printf("System Status: %s %s\n", arg1[0] ? arg1 : "OK", arg2[0] ? arg2 : "");
+}
 
+void set_command(const char *arg1, const char *arg2) {
+    printf("Setting %s to %s\n", arg1[0] ? arg1 : "default", arg2[0] ? arg2 : "value");
+}
 
+// Register commands in a linked list!
+Command cmd_help = {"help", help_command, NULL};
+Command cmd_hello = {"hello", hello_command, &cmd_help};
+Command cmd_status = {"status", status_command, &cmd_hello};
+Command cmd_set = {"set", set_command, &cmd_status};
+
+Command *command_list = &cmd_set;
 
 
 // Function to write data to UART
@@ -103,7 +122,7 @@ void vCommandConsoleTask(void *pvParameters)
                 bool command_found = false;
                 while (current != NULL) {
                     if (strcmp(parsed.command, current->name) == 0) {
-                        current->execute(parsed.arg1);
+                        current->execute(parsed.arg1, parsed.arg2);
                         command_found = true;
                         break;
                     }
