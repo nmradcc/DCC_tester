@@ -5,7 +5,7 @@
   * @author  MCD Application Team
   * @brief   ThreadX applicative file
   ******************************************************************************
-    * @attention
+  * @attention
   *
   * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
@@ -121,7 +121,7 @@ void LedThread(void *argument)
     while (1)
     {
         BSP_LED_Toggle(LED_YELLOW);
-        osDelay(1000);  // Delay for 1 second
+        osDelay(100);  // Delay for 1 second
     }
 }
 

@@ -85,7 +85,7 @@ INT fx_stm32_sd_get_status(UINT instance)
 
   /* USER CODE BEGIN PRE_GET_STATUS */
   UNUSED(instance);
-  return ret;
+
   /* USER CODE END PRE_GET_STATUS */
 
   if(HAL_SD_GetCardState(&hsd1) != HAL_SD_CARD_TRANSFER)

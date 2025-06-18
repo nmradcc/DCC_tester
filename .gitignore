@@ -3,7 +3,3 @@ mx.scratch
 !.settings
 **/Backup/
 .clangd
-
-# Ignore some STM32CubeMX generated files
-Drivers/
-Middlewares/

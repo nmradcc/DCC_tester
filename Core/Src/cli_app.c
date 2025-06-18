@@ -11,7 +11,6 @@
 #include "tx_api.h"
 #include "stm32h5xx_nucleo.h"
 #include "stm32h5xx_hal.h"
-#include "custom_write.h"
 #include "cli_app.h"
 #include "version.h"
 

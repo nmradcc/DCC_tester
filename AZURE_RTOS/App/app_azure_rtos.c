@@ -95,6 +95,7 @@ VOID tx_application_define(VOID *first_unused_memory)
   if (tx_byte_pool_create(&tx_app_byte_pool, "Tx App memory pool", tx_byte_pool_buffer, TX_APP_MEM_POOL_SIZE) != TX_SUCCESS)
   {
     /* USER CODE BEGIN TX_Byte_Pool_Error */
+    Error_Handler();
 
     /* USER CODE END TX_Byte_Pool_Error */
   }
@@ -128,7 +129,7 @@ VOID tx_application_define(VOID *first_unused_memory)
   else
   {
     /* USER CODE BEGIN FX_Byte_Pool_Success */
-
+#if 0
     /* USER CODE END FX_Byte_Pool_Success */
 
     memory_ptr = (VOID *)&fx_app_byte_pool;
@@ -142,13 +143,14 @@ VOID tx_application_define(VOID *first_unused_memory)
       /* USER CODE END  MX_FileX_Init_Error */
     }
     /* USER CODE BEGIN  MX_FileX_Init_Success */
-
+#endif
     /* USER CODE END  MX_FileX_Init_Success */
   }
 
   if (tx_byte_pool_create(&nx_app_byte_pool, "Nx App memory pool", nx_byte_pool_buffer, NX_APP_MEM_POOL_SIZE) != TX_SUCCESS)
   {
     /* USER CODE BEGIN NX_Byte_Pool_Error */
+    Error_Handler();
 
     /* USER CODE END NX_Byte_Pool_Error */
   }
