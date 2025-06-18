@@ -14,6 +14,9 @@
 #include "cli_app.h"
 #include "version.h"
 
+// Declare _write prototype to avoid implicit declaration error
+int _write(int file, char *ptr, int len);
+
 typedef struct Command {
     const char *name;
     void (*execute)(const char *arg1, const char *arg2);
@@ -114,6 +117,8 @@ void vCommandConsoleTask(void *pvParameters)
     uint32_t receivedChar;  // used to store the received value from the notification
     char N_char = '\n';
     tx_queue_create(&command_queue, "Queue", TX_1_ULONG, command_queue_storage, sizeof(command_queue_storage));
+
+    print_help(); // Print help on startup
 
     for (;;)
     {

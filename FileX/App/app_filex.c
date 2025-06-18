@@ -145,8 +145,8 @@ UINT MX_FileX_Init(VOID *memory_ptr)
  * @param thread_input: ULONG user argument used by the thread entry
  * @retval none
 */
- void fx_thread_entry(ULONG thread_input)
- {
+void fx_thread_entry(ULONG thread_input)
+{
 
   UINT sd_status = FX_SUCCESS;
 
@@ -172,21 +172,22 @@ UINT MX_FileX_Init(VOID *memory_ptr)
   }
 
 /* USER CODE BEGIN fx_thread_entry 1*/
+
   fx_media_close_notify_set(&sdio_disk, media_close_callback);
   if(SD_IsDetected(FX_STM32_SD_INSTANCE) == HAL_OK)
   {
     /* SD card is already inserted, place the info into the queue */
     tx_queue_send(&tx_msg_queue, &s_msg, TX_NO_WAIT);
-  }
+    printf("SD CARD detected!!\r\n");  }
   else
   {
     /* Indicate that SD card is not inserted from start */
-    printf("No SD CARD!!/r/n");
+    printf("No SD CARD!!\r\n");
   }
 
-  /* Infinite Loop */
-  for( ;; )
-  {
+//  /* Infinite Loop */
+//  for( ;; )
+//  {
 
     /* We wait here for a valid SD card insertion event, if it is not inserted already */
     while(1)
@@ -215,7 +216,7 @@ UINT MX_FileX_Init(VOID *memory_ptr)
           /* We have a valid SD insertion event, start processing.. */
           /* Update last known sd_status */
           last_status = CARD_STATUS_CONNECTED;
-          BSP_LED_Off(LED_RED);
+          printf("SD CARD inserted!!\r\n");
           break;
         }
         else
@@ -223,8 +224,7 @@ UINT MX_FileX_Init(VOID *memory_ptr)
           /* Update last known sd_status */
           last_status = CARD_STATUS_DISCONNECTED;
           
-          BSP_LED_Off(LED_GREEN);
-          BSP_LED_On(LED_RED);
+          printf("SD CARD ejected!!\r\n");
         }
       }
 
@@ -243,7 +243,7 @@ UINT MX_FileX_Init(VOID *memory_ptr)
       }
       media_status = MEDIA_OPENED;
     }
-
+#if 0
     sd_status =  fx_file_create(&sdio_disk, "STM32.TXT");
 
     /* Check the create sd_status. */
@@ -306,7 +306,7 @@ UINT MX_FileX_Init(VOID *memory_ptr)
       /* Error closing the file, call error handler. */
       Error_Handler();
     }
-
+#endif
     /* Open the test file.  */
     sd_status =  fx_file_open(&sdio_disk, &fx_file, "STM32.TXT", FX_OPEN_FOR_READ);
 
@@ -357,9 +357,12 @@ UINT MX_FileX_Init(VOID *memory_ptr)
       Error_Handler();
     }
 
-  }
+    printf("FileX SD card example completed successfully!\r\n");
+    printf("Read data: %s\r\n", read_buffer);
+
+
 /* USER CODE END fx_thread_entry 1*/
-  }
+}
 
 /* USER CODE BEGIN 1 */
 

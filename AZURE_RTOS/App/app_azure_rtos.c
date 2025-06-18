@@ -129,7 +129,7 @@ VOID tx_application_define(VOID *first_unused_memory)
   else
   {
     /* USER CODE BEGIN FX_Byte_Pool_Success */
-#if 0
+
     /* USER CODE END FX_Byte_Pool_Success */
 
     memory_ptr = (VOID *)&fx_app_byte_pool;
@@ -143,7 +143,7 @@ VOID tx_application_define(VOID *first_unused_memory)
       /* USER CODE END  MX_FileX_Init_Error */
     }
     /* USER CODE BEGIN  MX_FileX_Init_Success */
-#endif
+
     /* USER CODE END  MX_FileX_Init_Success */
   }
 
