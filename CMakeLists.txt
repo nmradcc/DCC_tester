@@ -22,13 +22,14 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
+
 # Define the build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
 # Set the project name
-set(CMAKE_PROJECT_NAME DCC_tester)
+set(CMAKE_PROJECT_NAME Nx_UDP_Echo_Server)
 
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")
@@ -60,7 +61,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/cmsis_os2.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/cli_app.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/custom_write.c
 )
 
 # Add include paths
@@ -78,6 +78,6 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
-    # Add user defined libraries
 
+    # Add user defined libraries
 )

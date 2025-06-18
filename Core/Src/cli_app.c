@@ -11,9 +11,11 @@
 #include "tx_api.h"
 #include "stm32h5xx_nucleo.h"
 #include "stm32h5xx_hal.h"
-#include "custom_write.h"
 #include "cli_app.h"
 #include "version.h"
+
+// Declare _write prototype to avoid implicit declaration error
+int _write(int file, char *ptr, int len);
 
 typedef struct Command {
     const char *name;
@@ -115,6 +117,8 @@ void vCommandConsoleTask(void *pvParameters)
     uint32_t receivedChar;  // used to store the received value from the notification
     char N_char = '\n';
     tx_queue_create(&command_queue, "Queue", TX_1_ULONG, command_queue_storage, sizeof(command_queue_storage));
+
+    print_help(); // Print help on startup
 
     for (;;)
     {

@@ -86,9 +86,7 @@
 
 /* If defined, the link driver is able to specify extra capability, such as
    checksum offloading features. */
-/*
 #define NX_ENABLE_INTERFACE_CAPABILITY
-*/
 
 /* NX_PHYSICAL_HEADER Specifies the size in bytes of the physical header of
    the frame. */
@@ -296,7 +294,13 @@
 
 /* This defines specifies the number of ThreadX timer ticks in one second.
    The default value is based on ThreadX timer interrupt. */
-#define NX_IP_PERIODIC_RATE                     100
+/*
+#ifdef TX_TIMER_TICKS_PER_SECOND
+#define NX_IP_PERIODIC_RATE         			TX_TIMER_TICKS_PER_SECOND
+#else
+#define NX_IP_PERIODIC_RATE         			100
+#endif
+*/
 
 /* Defined, NX_ENABLE_IP_RAW_PACKET_FILTER allows an application to install a
    filter for incoming raw packets. This feature is disabled by default. */
@@ -924,9 +928,7 @@
    license 'state' including time remaining on the lease, and restore this
    state between DHCP Client application reboots.
    The default value is disabled. */
-/*
 #define NX_DHCP_CLIENT_RESTORE_STATE
-*/
 
 /* If set, the DHCP Client will not create its own packet pool. The host
    application must use the nx_dhcp_packet_pool_set service to set the DHCP

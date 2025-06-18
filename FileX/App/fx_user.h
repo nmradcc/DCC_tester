@@ -101,7 +101,7 @@
    https://www.microsoft.com/en-us/legal/intellectualproperty/mtl/exfat-licensing.aspx
 */
 
-#define FX_ENABLE_EXFAT
+/* #define FX_ENABLE_EXFAT */
 
 /* Defined, enables FileX fault tolerant service.  */
 
@@ -184,7 +184,7 @@
    FX_UPDATE_RATE_IN_SECONDS defined previously. By default, the ThreadX timer tick is 10ms,
    so the default value for this constant is 1000.  */
 
-#define FX_UPDATE_RATE_IN_TICKS     10000
+/* #define FX_UPDATE_RATE_IN_TICKS         1000 */
 
 /* If defined, cache is disabled.  */
 
