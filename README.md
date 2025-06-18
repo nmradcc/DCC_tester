@@ -1,6 +1,6 @@
 # DCC
 
-<img src="https://github.com/nmra/DCC_tester/raw/main/data/images/logo.gif" align="right"/>
+<img src="https://github.com/nmradcc/DCC_tester/raw/main/data/images/logo.gif" align="right"/>
 
 DCC is an acronym for [Digital Command Control](https://en.wikipedia.org/wiki/Digital_Command_Control), a standardized protocol for controlling digital model railways. This library contains code to test DCC decoders for compliance to the NMRA standards. Test software runs on an STMicrosystems STM32H5xx Nucleo development board with an additional custom hardware daughterboard.
 
