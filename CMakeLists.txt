@@ -29,7 +29,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Set the project name
-set(CMAKE_PROJECT_NAME Nx_UDP_Echo_Server)
+set(CMAKE_PROJECT_NAME DCC_tester)
 
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")
