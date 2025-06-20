@@ -114,14 +114,6 @@ INT fx_stm32_sd_read_blocks(UINT instance, UINT *buffer, UINT start_block, UINT 
 
   /* USER CODE BEGIN PRE_READ_BLOCKS */
 	UNUSED(instance);
-  /* DO NOT use DMA ... for now */
-  if(HAL_SD_ReadBlocks_IT(&hsd1, (uint8_t *)buffer, start_block, total_blocks) != HAL_OK)
-  {
-    ret = 1;
-  }
-  return ret;
-  /* DO NOT use DMA ... for now */
-  /* !!!!!!!!!!!!!!!!!!! */
 
   /* USER CODE END PRE_READ_BLOCKS */
 
@@ -151,14 +143,7 @@ INT fx_stm32_sd_write_blocks(UINT instance, UINT *buffer, UINT start_block, UINT
 
   /* USER CODE BEGIN PRE_WRITE_BLOCKS */
 	UNUSED(instance);
-  /* DO NOT use DMA ... for now */
-  if(HAL_SD_WriteBlocks(&hsd1, (uint8_t *)buffer, start_block, total_blocks, HAL_MAX_DELAY) != HAL_OK)
-  {
-    ret = 1;
-  }
-  return ret;
-  /* DO NOT use DMA ... for now */
-  /* !!!!!!!!!!!!!!!!!!! */
+
   /* USER CODE END PRE_WRITE_BLOCKS */
 
   if(HAL_SD_WriteBlocks_DMA(&hsd1, (uint8_t *)buffer, start_block, total_blocks) != HAL_OK)
@@ -181,7 +166,7 @@ INT fx_stm32_sd_write_blocks(UINT instance, UINT *buffer, UINT start_block, UINT
 void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd)
 {
   /* USER CODE BEGIN PRE_TX_CMPLT */
-
+  (void)hsd; // Suppress unused parameter warning
   /* USER CODE END PRE_TX_CMPLT */
 
   tx_semaphore_put(&sd_tx_semaphore);
@@ -199,8 +184,8 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd)
 void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd)
 {
 
-   /* USER CODE BEGIN PRE_RX_CMPLT */
-
+  /* USER CODE BEGIN PRE_RX_CMPLT */
+  (void)hsd; // Suppress unused parameter warning
   /* USER CODE END PRE_RX_CMPLT */
 
   tx_semaphore_put(&sd_rx_semaphore);
