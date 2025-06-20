@@ -145,8 +145,8 @@ UINT MX_FileX_Init(VOID *memory_ptr)
  * @param thread_input: ULONG user argument used by the thread entry
  * @retval none
 */
-void fx_thread_entry(ULONG thread_input)
-{
+ void fx_thread_entry(ULONG thread_input)
+ {
 
   UINT sd_status = FX_SUCCESS;
 
@@ -243,7 +243,7 @@ void fx_thread_entry(ULONG thread_input)
       }
       media_status = MEDIA_OPENED;
     }
-#if 0
+
     sd_status =  fx_file_create(&sdio_disk, "STM32.TXT");
 
     /* Check the create sd_status. */
@@ -306,7 +306,7 @@ void fx_thread_entry(ULONG thread_input)
       /* Error closing the file, call error handler. */
       Error_Handler();
     }
-#endif
+
     /* Open the test file.  */
     sd_status =  fx_file_open(&sdio_disk, &fx_file, "STM32.TXT", FX_OPEN_FOR_READ);
 
@@ -362,7 +362,7 @@ void fx_thread_entry(ULONG thread_input)
 
 
 /* USER CODE END fx_thread_entry 1*/
-}
+  }
 
 /* USER CODE BEGIN 1 */
 

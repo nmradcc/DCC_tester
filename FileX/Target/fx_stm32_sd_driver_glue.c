@@ -184,7 +184,7 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd)
 void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd)
 {
 
-  /* USER CODE BEGIN PRE_RX_CMPLT */
+   /* USER CODE BEGIN PRE_RX_CMPLT */
   (void)hsd; // Suppress unused parameter warning
   /* USER CODE END PRE_RX_CMPLT */
 
