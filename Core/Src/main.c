@@ -139,6 +139,10 @@ int main(void)
   /* -- Sample board code to send message over COM port ---- */
   printf("Welcome to DCC tester world !\n\r");
   printf("Firmware version: %s\n", FW_VERSION_STRING);
+  printf("SystemCoreClock: %lu Hz\n", (unsigned long)SystemCoreClock);
+  printf("CPU ID: 0x%X\n", (unsigned int)HAL_GetDEVID());
+  printf("Revision ID: 0x%X\n", (unsigned int)HAL_GetREVID());
+  printf("Compiled at %s %s\n\n", __DATE__, __TIME__);
   /* USER CODE END 2 */
 
   MX_ThreadX_Init();
@@ -184,12 +188,12 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 250;
+  RCC_OscInitStruct.PLL.PLLM = 2;
+  RCC_OscInitStruct.PLL.PLLN = 40;
   RCC_OscInitStruct.PLL.PLLP = 2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
-  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_1;
+  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_3;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
   RCC_OscInitStruct.PLL.PLLFRACN = 0;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
