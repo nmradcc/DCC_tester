@@ -271,7 +271,7 @@
 /*#define TX_SAFETY_CRITICAL*/
 
 /* USER CODE BEGIN 2 */
-
+#define TX_TIMER_TICKS_PER_SECOND                1000
 /* USER CODE END 2 */
 
 #endif
