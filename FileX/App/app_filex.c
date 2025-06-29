@@ -40,9 +40,9 @@
 #define DEFAULT_QUEUE_LENGTH      16
 /* Message content*/
 typedef enum {
-CARD_STATUS_CHANGED             = 99,
-CARD_STATUS_DISCONNECTED        = 88,
-CARD_STATUS_CONNECTED           = 77
+  CARD_STATUS_CHANGED             = 99,
+  CARD_STATUS_DISCONNECTED        = 88,
+  CARD_STATUS_CONNECTED           = 77
 } SD_ConnectionStateTypeDef;
 
 /* USER CODE END PD */
@@ -57,17 +57,16 @@ CARD_STATUS_CONNECTED           = 77
 /* Main thread global data structures.  */
 TX_THREAD       fx_app_thread;
 
+/* USER CODE BEGIN PV */
 /* Buffer for FileX FX_MEDIA sector cache. */
 ALIGN_32BYTES (uint32_t fx_sd_media_memory[FX_STM32_SD_DEFAULT_SECTOR_SIZE / sizeof(uint32_t)]);
 /* Define FileX global data structures.  */
-FX_MEDIA        sdio_disk;
-
-/* USER CODE BEGIN PV */
-static UINT media_status;
+FX_MEDIA    sdio_disk;
 /* Define FileX global data structures. */
-FX_FILE fx_file;
+FX_FILE     fx_file;
 /* Define ThreadX global data structures. */
-TX_QUEUE tx_msg_queue;
+TX_QUEUE    tx_msg_queue;
+static UINT     media_status;
 
 /* USER CODE END PV */
 
@@ -148,85 +147,80 @@ UINT MX_FileX_Init(VOID *memory_ptr)
  void fx_thread_entry(ULONG thread_input)
  {
 
-  UINT sd_status = FX_SUCCESS;
-
 /* USER CODE BEGIN fx_thread_entry 0*/
   (void) thread_input;
 
-  (void)thread_input;
   ULONG r_msg;
   ULONG s_msg = CARD_STATUS_CHANGED;
   ULONG last_status = CARD_STATUS_DISCONNECTED;
   ULONG bytes_read;
   CHAR read_buffer[32];
   CHAR data[] = "This is FileX working on STM32";
-
-  // Wait for card if not inserted
-  while (SD_IsDetected(FX_STM32_SD_INSTANCE) != HAL_OK)
-  {
-      tx_thread_sleep(100);
-  }
-
-  // Let the card power up / stabilize (esp. for hot insertions)
-  HAL_Delay(50);
-
-  // Initialize the SD peripheral
-  MX_SDMMC1_SD_Init();
-
-  tx_queue_send(&tx_msg_queue, &s_msg, TX_NO_WAIT);
-
-/* USER CODE END fx_thread_entry 0*/
-
-/* Open the SD disk driver */
-  sd_status =  fx_media_open(&sdio_disk, FX_SD_VOLUME_NAME, fx_stm32_sd_driver, (VOID *)FX_NULL, (VOID *) fx_sd_media_memory, sizeof(fx_sd_media_memory));
-
-/* Check the media open sd_status */
-  if (sd_status != FX_SUCCESS)
-  {
-     /* USER CODE BEGIN SD DRIVER get info error */
-    Error_Handler();
-
-    /* USER CODE END SD DRIVER get info error */
-  }
-
-/* USER CODE BEGIN fx_thread_entry 1*/
+  UINT sd_status = FX_SUCCESS;
 
   fx_media_close_notify_set(&sdio_disk, media_close_callback);
 
-//  while(1)
-//  {
-    /* We wait here for a valid SD card event, if it is not inserted already */
-    while(1)
+/* USER CODE END fx_thread_entry 0*/
+
+/* USER CODE BEGIN fx_thread_entry 1*/
+
+  while(1)
+  {
+    if (last_status == CARD_STATUS_CONNECTED && SD_IsDetected(FX_STM32_SD_INSTANCE) != HAL_OK)
     {
+      /* SD card was connected but now it is not detected, send a message */
+      tx_queue_send(&tx_msg_queue, &s_msg, TX_NO_WAIT);
+    }
+    else if (last_status == CARD_STATUS_DISCONNECTED && SD_IsDetected(FX_STM32_SD_INSTANCE) == HAL_OK)
+    {
+      /* SD card was disconnected but now it is detected, send a message */
+      tx_queue_send(&tx_msg_queue, &s_msg, TX_NO_WAIT);
+    }
+    else
+    {
+      tx_thread_sleep(100);
+      continue;
+    }
 
-      tx_queue_receive(&tx_msg_queue, &r_msg, TX_WAIT_FOREVER);
+    tx_queue_receive(&tx_msg_queue, &r_msg, TX_TIMER_TICKS_PER_SECOND / 2);
 
-      /* check if we received the correct event message */
-      if(r_msg == CARD_STATUS_CHANGED)
+    /* check if we received the correct event message */
+    if (r_msg == CARD_STATUS_CHANGED)
+    {
+      /* reset the sd_status */
+      r_msg = 0;
+
+      /* for debouncing purpose we wait a bit till it settles down */
+      tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND / 2);
+
+      if (SD_IsDetected(FX_STM32_SD_INSTANCE) == HAL_OK)
       {
-        /* reset the sd_status */
-        r_msg = 0;
+        /* We have a valid SD insertion event, start processing.. */
+        /* Open the SD disk driver */
+        MX_SDMMC1_SD_Init();
 
-        /* for debouncing purpose we wait a bit till it settles down */
-        tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND / 2);
-
-        if(SD_IsDetected(FX_STM32_SD_INSTANCE) == HAL_OK)
+        /* Check the media open sd_status */
+        sd_status = fx_media_open(&sdio_disk, FX_SD_VOLUME_NAME, fx_stm32_sd_driver, (VOID *)FX_NULL, (VOID *) fx_sd_media_memory, sizeof(fx_sd_media_memory));
+        if (sd_status != FX_SUCCESS)
         {
-          /* We have a valid SD insertion event, start processing.. */
-          /* Update last known sd_status */
-          last_status = CARD_STATUS_CONNECTED;
-          printf("SD CARD inserted!!\r\n");
-          break;
+          Error_Handler();
         }
-        else
-        {
-          /* Update last known sd_status */
-          last_status = CARD_STATUS_DISCONNECTED;
-          
-          printf("SD CARD ejected!!\r\n");
-        }
+        media_status = MEDIA_OPENED;
+        /* Update last known sd_status */
+        last_status = CARD_STATUS_CONNECTED;
+        printf("SD CARD inserted!!\r\n");
       }
-
+      else
+      {
+        HAL_SD_DeInit(&hsd1);
+        /* Update last known sd_status */
+        last_status = CARD_STATUS_DISCONNECTED;
+        printf("SD CARD ejected!!\r\n");
+        continue;
+      }
+    }
+    else {
+      continue;
     }
 
     /* Create a file called STM32.TXT in the root directory. */
@@ -359,7 +353,7 @@ UINT MX_FileX_Init(VOID *memory_ptr)
     printf("FileX SD card example completed successfully!\r\n");
     printf("Read data: %s\r\n", read_buffer);
 
-//  }
+  }
 
 
 /* USER CODE END fx_thread_entry 1*/
@@ -393,36 +387,6 @@ static uint8_t SD_IsDetected(uint32_t Instance)
   }
 
   return ret;
-}
-
-/**
-  * @brief  EXTI line detection callback.
-  * @param  GPIO_Pin: Specifies the port pin connected to corresponding EXTI line.
-  * @retval None
-  */
-void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
-{
-  ULONG s_msg = CARD_STATUS_CHANGED;
-
-  if(GPIO_Pin == SD_DETECT_Pin)
-  {
-    tx_queue_send(&tx_msg_queue, &s_msg, TX_NO_WAIT);
-  }
-}
-
-/**
-  * @brief  EXTI line detection callback.
-  * @param  GPIO_Pin: Specifies the port pin connected to corresponding EXTI line.
-  * @retval None
-  */
-void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
-{
-  ULONG s_msg = CARD_STATUS_CHANGED;
-
-  if(GPIO_Pin == SD_DETECT_Pin)
-  {
-    tx_queue_send(&tx_msg_queue, &s_msg, TX_NO_WAIT);
-  }
 }
 
 /**

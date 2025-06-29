@@ -77,21 +77,8 @@ UINT MX_FileX_Init(VOID *memory_ptr);
   #define FX_APP_PREEMPTION_THRESHOLD FX_APP_THREAD_PRIO
 #endif
 
-/* fx sd volume name */
-#ifndef FX_SD_VOLUME_NAME
-  #define FX_SD_VOLUME_NAME "STM32_SDIO_DISK"
-#endif
-/* fx sd number of FATs */
-#ifndef FX_SD_NUMBER_OF_FATS
-  #define FX_SD_NUMBER_OF_FATS                1
-#endif
-
-/* fx sd Hidden sectors */
-#ifndef FX_SD_HIDDEN_SECTORS
-  #define FX_SD_HIDDEN_SECTORS               0
-#endif
-
 /* USER CODE BEGIN PD */
+#define FX_SD_VOLUME_NAME "STM32_SDIO_DISK"
 #define SD_PRESENT                       1UL
 #define SD_NOT_PRESENT                   0UL
 /* USER CODE END PD */

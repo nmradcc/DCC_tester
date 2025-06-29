@@ -165,20 +165,6 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles EXTI Line2 interrupt.
-  */
-void EXTI2_IRQHandler(void)
-{
-  /* USER CODE BEGIN EXTI2_IRQn 0 */
-
-  /* USER CODE END EXTI2_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(SD_DETECT_Pin);
-  /* USER CODE BEGIN EXTI2_IRQn 1 */
-
-  /* USER CODE END EXTI2_IRQn 1 */
-}
-
-/**
   * @brief This function handles TIM2 global interrupt.
   */
 void TIM2_IRQHandler(void)
