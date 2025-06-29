@@ -76,6 +76,7 @@ osThreadId_t cmdStationTaskHandle;
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
 void LedThreadTask(void *argument);
+void tick_profiler_init(void);
 
 
 /* USER CODE END PFP */
@@ -98,7 +99,7 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   /* Create the command line task */
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
   /* Create the command station task */
-//  cmdStationTaskHandle = osThreadNew(cmdStationTask, NULL, &cmdStationTask_attributes);
+  cmdStationTaskHandle = osThreadNew(cmdStationTask, NULL, &cmdStationTask_attributes);
 
   /* USER CODE END App_ThreadX_Init */
 
