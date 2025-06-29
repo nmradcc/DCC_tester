@@ -38,6 +38,7 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+extern TIM_HandleTypeDef htim2;
 
 /* USER CODE END ET */
 
@@ -51,16 +52,23 @@ extern "C" {
 
 /* USER CODE END EM */
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
+void MX_SDMMC1_SD_Init(void);
 
 /* USER CODE BEGIN EFP */
+void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define TRACK_Pin GPIO_PIN_0
+#define TRACK_GPIO_Port GPIOA
 #define SD_DETECT_Pin GPIO_PIN_2
 #define SD_DETECT_GPIO_Port GPIOG
+#define SD_DETECT_EXTI_IRQn EXTI2_IRQn
 
 /* USER CODE BEGIN Private defines */
 

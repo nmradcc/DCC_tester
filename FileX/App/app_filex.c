@@ -151,6 +151,8 @@ UINT MX_FileX_Init(VOID *memory_ptr)
   UINT sd_status = FX_SUCCESS;
 
 /* USER CODE BEGIN fx_thread_entry 0*/
+  (void) thread_input;
+
   (void)thread_input;
   ULONG r_msg;
   ULONG s_msg = CARD_STATUS_CHANGED;
@@ -158,6 +160,21 @@ UINT MX_FileX_Init(VOID *memory_ptr)
   ULONG bytes_read;
   CHAR read_buffer[32];
   CHAR data[] = "This is FileX working on STM32";
+
+  // Wait for card if not inserted
+  while (SD_IsDetected(FX_STM32_SD_INSTANCE) != HAL_OK)
+  {
+      tx_thread_sleep(100);
+  }
+
+  // Let the card power up / stabilize (esp. for hot insertions)
+  HAL_Delay(50);
+
+  // Initialize the SD peripheral
+  MX_SDMMC1_SD_Init();
+
+  tx_queue_send(&tx_msg_queue, &s_msg, TX_NO_WAIT);
+
 /* USER CODE END fx_thread_entry 0*/
 
 /* Open the SD disk driver */
@@ -167,40 +184,22 @@ UINT MX_FileX_Init(VOID *memory_ptr)
   if (sd_status != FX_SUCCESS)
   {
      /* USER CODE BEGIN SD DRIVER get info error */
-     Error_Handler();
+    Error_Handler();
+
     /* USER CODE END SD DRIVER get info error */
   }
 
 /* USER CODE BEGIN fx_thread_entry 1*/
 
   fx_media_close_notify_set(&sdio_disk, media_close_callback);
-  if(SD_IsDetected(FX_STM32_SD_INSTANCE) == HAL_OK)
-  {
-    /* SD card is already inserted, place the info into the queue */
-    tx_queue_send(&tx_msg_queue, &s_msg, TX_NO_WAIT);
-    printf("SD CARD detected!!\r\n");  }
-  else
-  {
-    /* Indicate that SD card is not inserted from start */
-    printf("No SD CARD!!\r\n");
-  }
 
-//  /* Infinite Loop */
-//  for( ;; )
+//  while(1)
 //  {
-
-    /* We wait here for a valid SD card insertion event, if it is not inserted already */
+    /* We wait here for a valid SD card event, if it is not inserted already */
     while(1)
     {
 
-      while(tx_queue_receive(&tx_msg_queue, &r_msg, TX_TIMER_TICKS_PER_SECOND / 2) != TX_SUCCESS)
-      {
-        /* Toggle GREEN LED to indicate idle state after a successful operation */
-        if(last_status == CARD_STATUS_CONNECTED)
-        {
-          BSP_LED_Toggle(LED_GREEN);
-        }
-      }
+      tx_queue_receive(&tx_msg_queue, &r_msg, TX_WAIT_FOREVER);
 
       /* check if we received the correct event message */
       if(r_msg == CARD_STATUS_CHANGED)
@@ -359,6 +358,8 @@ UINT MX_FileX_Init(VOID *memory_ptr)
 
     printf("FileX SD card example completed successfully!\r\n");
     printf("Read data: %s\r\n", read_buffer);
+
+//  }
 
 
 /* USER CODE END fx_thread_entry 1*/

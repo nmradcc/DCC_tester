@@ -26,6 +26,7 @@
 #include "cmsis_os2.h"
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
+#include "tx_api.h"
 
 /* USER CODE END Includes */
 
@@ -41,6 +42,13 @@ osThreadAttr_t LED_thread_attr = {
 const osThreadAttr_t cmdLineTask_attributes = {
   .name = "cmdLineTask",
   .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 512 * 4
+};
+
+/* Definitions for cmdLineTask */
+const osThreadAttr_t cmdStationTask_attributes = {
+  .name = "cmdStationTask",
+  .priority = (osPriority_t) osPriorityHigh,
   .stack_size = 512 * 4
 };
 
@@ -61,13 +69,13 @@ const osThreadAttr_t cmdLineTask_attributes = {
 /* USER CODE BEGIN PV */
 osThreadId_t ledThreadHandle;
 osThreadId_t cmdLineTaskHandle;
-
+osThreadId_t cmdStationTaskHandle;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-void LedThread(void *argument);
+void LedThreadTask(void *argument);
 
 
 /* USER CODE END PFP */
@@ -86,9 +94,11 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   /* USER CODE BEGIN App_ThreadX_Init */
 
   /* Create the led line task */  
-  ledThreadHandle = osThreadNew(LedThread, NULL, &LED_thread_attr);  // Create thread with attributes
+  ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes
   /* Create the command line task */
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
+  /* Create the command station task */
+//  cmdStationTaskHandle = osThreadNew(cmdStationTask, NULL, &cmdStationTask_attributes);
 
   /* USER CODE END App_ThreadX_Init */
 
@@ -115,13 +125,14 @@ void MX_ThreadX_Init(void)
 }
 
 /* USER CODE BEGIN 1 */
-void LedThread(void *argument)
+void LedThreadTask(void *argument)
 {
     (void)argument;
     while (1)
     {
         BSP_LED_Toggle(LED_YELLOW);
-        osDelay(100);  // Delay for 1 second
+//        tx_thread_sleep(500);
+        osDelay(500);  // Delay for 500ms
     }
 }
 
