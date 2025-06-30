@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "version.h"
+#include "command_station.h"
 
 /* USER CODE END Includes */
 
@@ -574,7 +575,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-
+  if (htim->Instance == TIM2)
+  {
+    CS_HAL_TIM_PeriodElapsedCallback(htim);
+  }
   /* USER CODE END Callback 1 */
 }
 

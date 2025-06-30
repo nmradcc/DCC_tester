@@ -31,13 +31,12 @@ void CommandStation::biDiEnd() {}
 CommandStation command_station;
 
 
-extern "C" {
-void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * /*htim*/)
+/* only use callback if NOT using custom interrupt handler! */
+extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   auto const arr{command_station.transmit()};
-  htim2.Instance->ARR = arr * 2;
-  htim2.Instance->CCR1 = arr;
-}
+  htim->Instance->ARR = arr * 2;
+  htim->Instance->CCR1 = arr;
 }
 
 void CommandStationThread(void *argument) {
@@ -49,7 +48,7 @@ void CommandStationThread(void *argument) {
   });
 
   // Block until externally started
-  osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
+//  osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
   //  printf("Command station: init\n");
   
   // Enable update interrupt
@@ -93,14 +92,14 @@ void CommandStationThread(void *argument) {
 }
 
 // Called at system init
-void CommandStationThread_Init(void)
+extern "C" void CommandStationThread_Init(void)
 {
     commandStationStart_sem = osSemaphoreNew(1, 0, NULL);  // Start locked
     commandStationThread_id = osThreadNew(CommandStationThread, NULL, &cmdStationTask_attributes);
 }
 
 // Can be called from anywhere
-void CommandStationThread_Start(void)
+extern "C" void CommandStationThread_Start(void)
 {
     osSemaphoreRelease(commandStationStart_sem);
 }
