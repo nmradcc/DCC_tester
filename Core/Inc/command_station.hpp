@@ -2,6 +2,7 @@
 
 #include <dcc/dcc.hpp>
 
+ 
 struct CommandStation : dcc::tx::CrtpBase<CommandStation> {
   friend dcc::tx::CrtpBase<CommandStation>;
 
@@ -26,7 +27,8 @@ private:
 extern "C" {
 #endif
 
-void cmdStationTask(void *argument);
+void CommandStationThread_Init(void);
+void CommandStationThread_Start(void);
 
 #ifdef __cplusplus
 }

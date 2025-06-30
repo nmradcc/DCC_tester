@@ -27,6 +27,7 @@
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
 #include "tx_api.h"
+#include "command_station.h"
 
 /* USER CODE END Includes */
 
@@ -42,13 +43,6 @@ osThreadAttr_t LED_thread_attr = {
 const osThreadAttr_t cmdLineTask_attributes = {
   .name = "cmdLineTask",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 512 * 4
-};
-
-/* Definitions for cmdLineTask */
-const osThreadAttr_t cmdStationTask_attributes = {
-  .name = "cmdStationTask",
-  .priority = (osPriority_t) osPriorityHigh,
   .stack_size = 512 * 4
 };
 
@@ -98,8 +92,8 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes
   /* Create the command line task */
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
-  /* Create the command station task */
-  cmdStationTaskHandle = osThreadNew(cmdStationTask, NULL, &cmdStationTask_attributes);
+  /* Create the command station task ... but don't start it */
+  CommandStationThread_Init();
 
   /* USER CODE END App_ThreadX_Init */
 

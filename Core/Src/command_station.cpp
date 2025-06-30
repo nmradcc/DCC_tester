@@ -3,6 +3,15 @@
 #include "cmsis_os2.h"
 #include "main.h"
 
+static osThreadId_t commandStationThread_id;
+static osSemaphoreId_t commandStationStart_sem;
+
+/* Definitions for cmdStationTask */
+const osThreadAttr_t cmdStationTask_attributes = {
+  .name = "cmdStationTask",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityHigh
+};
 
 
 void CommandStation::trackOutputs(bool N, bool P) 
@@ -33,16 +42,17 @@ void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
 }
 
-void cmdStationTask(void *argument) {
+void CommandStationThread(void *argument) {
   command_station.init({
     .num_preamble = DCC_TX_MIN_PREAMBLE_BITS,
     .bit1_duration = 58u,
     .bit0_duration = 100u,
     .flags = {.invert = false, .bidi = true},
   });
-  printf("Command station: init\n");
-  printf("SystemCoreClock = %lu Hz\r\n", SystemCoreClock);
-  
+
+  // Block until externally started
+  osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
+  //  printf("Command station: init\n");
   
   // Enable update interrupt
   __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
@@ -55,8 +65,8 @@ void cmdStationTask(void *argument) {
   // Send a few packets to test the command station
   // This is not part of the command station functionality, but rather a test
   // to see if the command station is working correctly.
-
-dcc::Packet packet{};
+  BSP_LED_On(LED_GREEN);
+  dcc::Packet packet{};
   for (;;) {
     // Accelerate
     packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
@@ -83,3 +93,18 @@ dcc::Packet packet{};
     osDelay(2000u);
   }
 }
+
+// Called at system init
+void CommandStationThread_Init(void)
+{
+    commandStationStart_sem = osSemaphoreNew(1, 0, NULL);  // Start locked
+    commandStationThread_id = osThreadNew(CommandStationThread, NULL, &cmdStationTask_attributes);
+}
+
+// Can be called from anywhere
+void CommandStationThread_Start(void)
+{
+    osSemaphoreRelease(commandStationStart_sem);
+}
+
+
