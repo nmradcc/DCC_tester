@@ -294,13 +294,17 @@
 
 /* This defines specifies the number of ThreadX timer ticks in one second.
    The default value is based on ThreadX timer interrupt. */
-#define NX_IP_PERIODIC_RATE                     100
+/*
+#ifdef TX_TIMER_TICKS_PER_SECOND
+#define NX_IP_PERIODIC_RATE         			TX_TIMER_TICKS_PER_SECOND
+#else
+#define NX_IP_PERIODIC_RATE         			100
+#endif
+*/
 
 /* Defined, NX_ENABLE_IP_RAW_PACKET_FILTER allows an application to install a
    filter for incoming raw packets. This feature is disabled by default. */
-/*
 #define NX_ENABLE_IP_RAW_PACKET_FILTER
-*/
 
 /* This define specifies the maximum number of RAW packets can be queued for
    receive. The default value is 20.  */

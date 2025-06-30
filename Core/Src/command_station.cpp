@@ -31,15 +31,13 @@ void CommandStation::biDiEnd() {}
 CommandStation command_station;
 
 
-/* only use callback if NOT using custom interrupt handler! */
-void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+extern "C" {
+void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * /*htim*/)
 {
-    if (htim->Instance == TIM2)
-    {
-      auto const arr{command_station.transmit()};
-      htim2.Instance->ARR = arr * 2;
-      htim2.Instance->CCR1 = arr;
-    }
+  auto const arr{command_station.transmit()};
+  htim2.Instance->ARR = arr * 2;
+  htim2.Instance->CCR1 = arr;
+}
 }
 
 void CommandStationThread(void *argument) {

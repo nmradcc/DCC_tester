@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cli_app.h"
+#include "command_station.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -174,7 +175,7 @@ void TIM2_IRQHandler(void)
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
-
+  CS_HAL_TIM_PeriodElapsedCallback(&htim2);
   /* USER CODE END TIM2_IRQn 1 */
 }
 
@@ -202,6 +203,12 @@ void USART3_IRQHandler(void)
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
+  // grab char from data register
+  rxChar = USART3->RDR & 0xFF;
+  //get ready to receive another char
+  HAL_UART_Receive_IT(&huart3, (uint8_t *)&huart3.Instance->RDR, 1);
+  //send the char to the command line task
+  uart_receive_callback(&rxChar);
 
   /* USER CODE END USART3_IRQn 1 */
 }

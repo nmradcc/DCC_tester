@@ -59,7 +59,6 @@ void Error_Handler(void);
 void MX_SDMMC1_SD_Init(void);
 
 /* USER CODE BEGIN EFP */
-void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 
 /* USER CODE END EFP */
 
