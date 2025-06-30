@@ -31,6 +31,7 @@ void CommandStation::biDiEnd() {}
 CommandStation command_station;
 
 
+#if 0
 /* only use callback if NOT using custom interrupt handler! */
 extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -38,6 +39,19 @@ extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   htim->Instance->ARR = arr * 2;
   htim->Instance->CCR1 = arr;
 }
+#endif
+
+extern "C" void TIM2_IRQHandler(void) 
+{
+//  if (TIM2->SR & TIM_SR_UIF)  // Check update interrupt flag
+//      TIM2->SR &= static_cast<uint32_t>(~TIM_SR_UIF);  // Clear the flag
+
+  auto const arr{command_station.transmit()};
+  TIM2->ARR = arr * 2;
+  TIM2->CCR1 = arr;
+  TIM2->SR &= static_cast<uint32_t>(~TIM_SR_UIF);  // Clear the flag
+}
+
 
 void CommandStationThread(void *argument) {
   command_station.init({
@@ -48,7 +62,7 @@ void CommandStationThread(void *argument) {
   });
 
   // Block until externally started
-//  osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
+  osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
   //  printf("Command station: init\n");
   
   // Enable update interrupt
