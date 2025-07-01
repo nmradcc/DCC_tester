@@ -22,6 +22,7 @@
 #include "stm32h5xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
 #include "cli_app.h"
 
 /* USER CODE END Includes */
@@ -43,7 +44,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-static char rxChar;
+static char rx_char;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -59,6 +60,7 @@ static char rxChar;
 /* External variables --------------------------------------------------------*/
 extern ETH_HandleTypeDef heth;
 extern SD_HandleTypeDef hsd1;
+extern DMA_HandleTypeDef handle_GPDMA1_Channel0;
 extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim6;
 
@@ -165,6 +167,20 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles GPDMA1 Channel 0 global interrupt.
+  */
+void GPDMA1_Channel0_IRQHandler(void)
+{
+  /* USER CODE BEGIN GPDMA1_Channel0_IRQn 0 */
+
+  /* USER CODE END GPDMA1_Channel0_IRQn 0 */
+  HAL_DMA_IRQHandler(&handle_GPDMA1_Channel0);
+  /* USER CODE BEGIN GPDMA1_Channel0_IRQn 1 */
+
+  /* USER CODE END GPDMA1_Channel0_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM6 global interrupt.
   */
 void TIM6_IRQHandler(void)
@@ -184,16 +200,25 @@ void TIM6_IRQHandler(void)
 void USART3_IRQHandler(void)
 {
   /* USER CODE BEGIN USART3_IRQn 0 */
+  // RXNE: Receive interrupt
+  if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_RXNE) &&
+      __HAL_UART_GET_IT_SOURCE(&huart3, UART_IT_RXNE)) 
+      {
+//    HAL_UART_Receive_IT(&huart3, (uint8_t *)&rx_char, 1);
+        rx_char = (char)(huart3.Instance->RDR);  // Read received byte
+        uart_receive_callback(&rx_char);
+      }
 
+  // Check if Transmit Complete interrupt is active
+  if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_TC) &&
+      __HAL_UART_GET_IT_SOURCE(&huart3, UART_IT_TC)) 
+      {
+        __HAL_UART_CLEAR_FLAG(&huart3, UART_FLAG_TC);  // Clear the flag
+    HAL_UART_TxCpltCallback(&huart3);       // Manually call the callback
+      }
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
-  // grab char from data register
-  rxChar = USART3->RDR & 0xFF;
-  //get ready to receive another char
-  HAL_UART_Receive_IT(&huart3, (uint8_t *)&huart3.Instance->RDR, 1);
-  //send the char to the command line task
-  uart_receive_callback(&rxChar);
 
   /* USER CODE END USART3_IRQn 1 */
 }

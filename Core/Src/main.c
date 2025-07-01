@@ -23,8 +23,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdbool.h>
 #include "version.h"
 #include "command_station.h"
+#include "stm32h5xx_hal_dma.h"
 
 /* USER CODE END Includes */
 
@@ -55,21 +57,30 @@ SD_HandleTypeDef hsd1;
 TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart3;
+DMA_HandleTypeDef handle_GPDMA1_Channel0;
 
 PCD_HandleTypeDef hpcd_USB_DRD_FS;
 
 /* USER CODE BEGIN PV */
+#define TX_BUFFER_SIZE 512
+
+static uint8_t tx_buffer[TX_BUFFER_SIZE];
+static volatile uint16_t tx_head = 0;
+static volatile uint16_t tx_tail = 0;
+static volatile bool tx_dma_busy = false;
+
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+static void MX_GPDMA1_Init(void);
 static void MX_GPIO_Init(void);
 static void MX_ICACHE_Init(void);
 static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
-static void MX_USB_PCD_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_USB_PCD_Init(void);
 /* USER CODE BEGIN PFP */
 #if defined(__ICCARM__)
 /* New definition from EWARM V9, compatible with EWARM8 */
@@ -85,15 +96,61 @@ int iar_fputc(int ch);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void Success_Handler(void)
-{
-  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_4, GPIO_PIN_RESET);
-  while(1)
-  {
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-    tx_thread_sleep(50);
-  }
+
+void tx_start_dma(void) {
+    if (tx_head == tx_tail) return;  // Buffer empty, nothing to send
+
+    tx_dma_busy = true;
+
+    uint16_t size;
+
+    if (tx_head > tx_tail) {
+        size = tx_head - tx_tail;
+    } else {
+        size = TX_BUFFER_SIZE - tx_tail;
+    }
+
+    // ---> enable TC interrupts
+    huart3.Instance->CR1 |= USART_CR1_TCIE;
+    HAL_UART_Transmit_DMA(&huart3, &tx_buffer[tx_tail], size);
 }
+
+void tx_enqueue(const uint8_t *data, size_t len) {
+    osMutexAcquire(tx_mutex, osWaitForever);
+
+    for (size_t i = 0; i < len; i++) {
+        uint16_t next_head = (uint16_t)((tx_head + 1) % TX_BUFFER_SIZE);
+        if (next_head == tx_tail) break;  // Buffer full
+        tx_buffer[tx_head] = data[i];
+        tx_head = next_head;
+    }
+
+    if (!tx_dma_busy) {
+        tx_start_dma();
+    }
+
+    osMutexRelease(tx_mutex);
+}
+
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance != USART3) return;
+
+    uint16_t size = huart->TxXferSize;
+
+    // Advance tail safely
+    tx_tail = (tx_tail + size) % TX_BUFFER_SIZE;
+
+    // Restart DMA if more data is pending
+    if (tx_tail != tx_head) {
+        tx_start_dma();
+    } else {
+        tx_dma_busy = false;
+//        huart3.Instance->CR1 &= ~USART_CR1_TCIE;
+    }
+
+}
+
 
 /* USER CODE END 0 */
 
@@ -125,12 +182,14 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
+  MX_GPDMA1_Init();
   MX_GPIO_Init();
   MX_ICACHE_Init();
   MX_ETH_Init();
   MX_USART3_UART_Init();
-  MX_USB_PCD_Init();
   MX_TIM2_Init();
+  MX_SDMMC1_SD_Init();
+  MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
@@ -146,6 +205,7 @@ int main(void)
   printf("CPU ID: 0x%X\n", (unsigned int)HAL_GetDEVID());
   printf("Revision ID: 0x%X\n", (unsigned int)HAL_GetREVID());
   printf("Compiled at %s %s\n\n", __DATE__, __TIME__);
+
   /* USER CODE END 2 */
 
   MX_ThreadX_Init();
@@ -266,6 +326,34 @@ static void MX_ETH_Init(void)
   /* USER CODE BEGIN ETH_Init 2 */
 
   /* USER CODE END ETH_Init 2 */
+
+}
+
+/**
+  * @brief GPDMA1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPDMA1_Init(void)
+{
+
+  /* USER CODE BEGIN GPDMA1_Init 0 */
+
+  /* USER CODE END GPDMA1_Init 0 */
+
+  /* Peripheral clock enable */
+  __HAL_RCC_GPDMA1_CLK_ENABLE();
+
+  /* GPDMA1 interrupt Init */
+    HAL_NVIC_SetPriority(GPDMA1_Channel0_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
+
+  /* USER CODE BEGIN GPDMA1_Init 1 */
+
+  /* USER CODE END GPDMA1_Init 1 */
+  /* USER CODE BEGIN GPDMA1_Init 2 */
+
+  /* USER CODE END GPDMA1_Init 2 */
 
 }
 
@@ -434,8 +522,9 @@ static void MX_USART3_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART3_Init 2 */
-  // ---> enable reception interruptions
+  // ---> enable reception interrupts
   huart3.Instance->CR1 |= USART_CR1_RXNEIE;
+
   /* USER CODE END USART3_Init 2 */
 
 }
@@ -506,6 +595,8 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+#if 0
 /**
   * @brief  Retargets the C library __write function to the IAR function iar_fputc.
   * @param  file: file descriptor.
@@ -524,6 +615,22 @@ int _write(int file, char *data, int len)
         // Wait for the transmit buffer to be empty
         while (!(USART3->ISR & USART_ISR_TXE));
     }
+    return len;
+}
+#endif
+int _write(int file, char *ptr, int len) {
+    (void)file;
+  if (osKernelGetState() == osKernelInactive) 
+  {
+    // Transmit data using UART
+    for (int i = 0; i < len; i++)
+    {
+      HAL_UART_Transmit(&huart3, (const uint8_t *)ptr++, 1, 0xFFFF);
+    }
+  }
+  else {
+    tx_enqueue((uint8_t *)ptr, (size_t)len);
+  }
     return len;
 }
 

@@ -52,7 +52,7 @@ extern void cmdStationTask(void *argument);
 
 /* Main thread defines -------------------------------------------------------*/
 /* USER CODE BEGIN MTD */
-
+extern osMutexId_t tx_mutex;
 /* USER CODE END MTD */
 
 /* Exported macro ------------------------------------------------------------*/

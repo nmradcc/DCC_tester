@@ -64,13 +64,13 @@ const osThreadAttr_t cmdLineTask_attributes = {
 osThreadId_t ledThreadHandle;
 osThreadId_t cmdLineTaskHandle;
 osThreadId_t cmdStationTaskHandle;
+osMutexId_t tx_mutex;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
 void LedThreadTask(void *argument);
-void tick_profiler_init(void);
 
 
 /* USER CODE END PFP */
@@ -110,6 +110,8 @@ void MX_ThreadX_Init(void)
   /* USER CODE BEGIN Before_Kernel_Start */
   /* needed for CMSIS-RTOS2 support */
   osKernelInitialize();  // Initialize the ThreadX kernel
+
+  tx_mutex = osMutexNew(NULL);
   /* USER CODE END Before_Kernel_Start */
 
   tx_kernel_enter();

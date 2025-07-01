@@ -384,11 +384,12 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
       ret =  nx_udp_socket_send(&UDPSocket, data_packet, source_ip_address, source_port);
 
       /* toggle the green led to monitor visually the traffic */
-      BSP_LED_Toggle(LED_GREEN);    }
+//      BSP_LED_Toggle(LED_GREEN);    
+    }
     else
     {
         /* the server is in idle state, toggle the green led */
-        BSP_LED_Toggle(LED_GREEN);
+//        BSP_LED_Toggle(LED_GREEN);
     }
   }
 }
