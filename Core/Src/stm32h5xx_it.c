@@ -60,7 +60,7 @@ static char rx_char;
 /* External variables --------------------------------------------------------*/
 extern ETH_HandleTypeDef heth;
 extern SD_HandleTypeDef hsd1;
-extern DMA_HandleTypeDef handle_GPDMA1_Channel0;
+extern TIM_HandleTypeDef htim2;
 extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim6;
 
@@ -167,17 +167,17 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles GPDMA1 Channel 0 global interrupt.
+  * @brief This function handles TIM2 global interrupt.
   */
-void GPDMA1_Channel0_IRQHandler(void)
+void TIM2_IRQHandler(void)
 {
-  /* USER CODE BEGIN GPDMA1_Channel0_IRQn 0 */
+  /* USER CODE BEGIN TIM2_IRQn 0 */
 
-  /* USER CODE END GPDMA1_Channel0_IRQn 0 */
-  HAL_DMA_IRQHandler(&handle_GPDMA1_Channel0);
-  /* USER CODE BEGIN GPDMA1_Channel0_IRQn 1 */
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
 
-  /* USER CODE END GPDMA1_Channel0_IRQn 1 */
+  /* USER CODE END TIM2_IRQn 1 */
 }
 
 /**
@@ -209,13 +209,6 @@ void USART3_IRQHandler(void)
         uart_receive_callback(&rx_char);
       }
 
-  // Check if Transmit Complete interrupt is active
-  if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_TC) &&
-      __HAL_UART_GET_IT_SOURCE(&huart3, UART_IT_TC)) 
-      {
-        __HAL_UART_CLEAR_FLAG(&huart3, UART_FLAG_TC);  // Clear the flag
-    HAL_UART_TxCpltCallback(&huart3);       // Manually call the callback
-      }
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */

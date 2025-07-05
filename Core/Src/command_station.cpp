@@ -9,7 +9,7 @@ static osSemaphoreId_t commandStationStart_sem;
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
   .name = "cmdStationTask",
-  .stack_size = 512 * 4,
+  .stack_size = 8192,
   .priority = (osPriority_t) osPriorityHigh
 };
 
@@ -31,7 +31,6 @@ void CommandStation::biDiEnd() {}
 CommandStation command_station;
 
 
-#if 0
 /* only use callback if NOT using custom interrupt handler! */
 extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -39,8 +38,9 @@ extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   htim->Instance->ARR = arr * 2;
   htim->Instance->CCR1 = arr;
 }
-#endif
 
+
+#if 0
 extern "C" void TIM2_IRQHandler(void) 
 {
 //  if (TIM2->SR & TIM_SR_UIF)  // Check update interrupt flag
@@ -50,7 +50,9 @@ extern "C" void TIM2_IRQHandler(void)
   TIM2->ARR = arr * 2;
   TIM2->CCR1 = arr;
   TIM2->SR &= static_cast<uint32_t>(~TIM_SR_UIF);  // Clear the flag
+  HAL_TIM_IRQHandler(&htim2);
 }
+#endif
 
 
 void CommandStationThread(void *argument) {
@@ -63,7 +65,6 @@ void CommandStationThread(void *argument) {
 
   // Block until externally started
   osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
-  //  printf("Command station: init\n");
   
   // Enable update interrupt
   __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
@@ -76,35 +77,34 @@ void CommandStationThread(void *argument) {
   // Send a few packets to test the command station
   // This is not part of the command station functionality, but rather a test
   // to see if the command station is working correctly.
-//  BSP_LED_On(LED_GREEN);
   dcc::Packet packet{};
   for (;;) {
     // Accelerate
     BSP_LED_Toggle(LED_GREEN);
     packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
     command_station.packet(packet);
-//    printf("\nCommand station: accelerate to speed step 42\n");
+    printf("\nCommand station: accelerate to speed step 42\n");
     osDelay(2000u);
 
     // Set function F3
     BSP_LED_Toggle(LED_GREEN);
     packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'1000u);
     command_station.packet(packet);
-//    printf("Command station: set function F3\n");
+    printf("Command station: set function F3\n");
     osDelay(2000u);
 
     // Decelerate
     BSP_LED_Toggle(LED_GREEN);
     packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 0u);
     command_station.packet(packet);
-//    printf("Command station: stop\n");
+    printf("Command station: stop\n");
     osDelay(2000u);
 
     // Clear function
     BSP_LED_Toggle(LED_GREEN);
     packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
     command_station.packet(packet);
-//    printf("Command station: clear function F3\n");
+    printf("Command station: clear function F3\n");
     osDelay(2000u);
   }
 }

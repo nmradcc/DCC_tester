@@ -52,7 +52,7 @@ extern void cmdStationTask(void *argument);
 
 /* Main thread defines -------------------------------------------------------*/
 /* USER CODE BEGIN MTD */
-extern osMutexId_t tx_mutex;
+
 /* USER CODE END MTD */
 
 /* Exported macro ------------------------------------------------------------*/
@@ -63,6 +63,7 @@ extern osMutexId_t tx_mutex;
 /* Exported functions prototypes ---------------------------------------------*/
 UINT App_ThreadX_Init(VOID *memory_ptr);
 void MX_ThreadX_Init(void);
+void valueNotSetted(ULONG thread_input);
 
 /* USER CODE BEGIN EFP */
 

@@ -26,7 +26,6 @@
 #include <stdbool.h>
 #include "version.h"
 #include "command_station.h"
-#include "stm32h5xx_hal_dma.h"
 
 /* USER CODE END Includes */
 
@@ -57,24 +56,15 @@ SD_HandleTypeDef hsd1;
 TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart3;
-DMA_HandleTypeDef handle_GPDMA1_Channel0;
 
 PCD_HandleTypeDef hpcd_USB_DRD_FS;
 
 /* USER CODE BEGIN PV */
-#define TX_BUFFER_SIZE 512
-
-static uint8_t tx_buffer[TX_BUFFER_SIZE];
-static volatile uint16_t tx_head = 0;
-static volatile uint16_t tx_tail = 0;
-static volatile bool tx_dma_busy = false;
-
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPDMA1_Init(void);
 static void MX_GPIO_Init(void);
 static void MX_ICACHE_Init(void);
 static void MX_ETH_Init(void);
@@ -96,61 +86,6 @@ int iar_fputc(int ch);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-void tx_start_dma(void) {
-    if (tx_head == tx_tail) return;  // Buffer empty, nothing to send
-
-    tx_dma_busy = true;
-
-    uint16_t size;
-
-    if (tx_head > tx_tail) {
-        size = tx_head - tx_tail;
-    } else {
-        size = TX_BUFFER_SIZE - tx_tail;
-    }
-
-    // ---> enable TC interrupts
-    huart3.Instance->CR1 |= USART_CR1_TCIE;
-    HAL_UART_Transmit_DMA(&huart3, &tx_buffer[tx_tail], size);
-}
-
-void tx_enqueue(const uint8_t *data, size_t len) {
-    osMutexAcquire(tx_mutex, osWaitForever);
-
-    for (size_t i = 0; i < len; i++) {
-        uint16_t next_head = (uint16_t)((tx_head + 1) % TX_BUFFER_SIZE);
-        if (next_head == tx_tail) break;  // Buffer full
-        tx_buffer[tx_head] = data[i];
-        tx_head = next_head;
-    }
-
-    if (!tx_dma_busy) {
-        tx_start_dma();
-    }
-
-    osMutexRelease(tx_mutex);
-}
-
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
-    if (huart->Instance != USART3) return;
-
-    uint16_t size = huart->TxXferSize;
-
-    // Advance tail safely
-    tx_tail = (tx_tail + size) % TX_BUFFER_SIZE;
-
-    // Restart DMA if more data is pending
-    if (tx_tail != tx_head) {
-        tx_start_dma();
-    } else {
-        tx_dma_busy = false;
-//        huart3.Instance->CR1 &= ~USART_CR1_TCIE;
-    }
-
-}
-
 
 /* USER CODE END 0 */
 
@@ -182,7 +117,6 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPDMA1_Init();
   MX_GPIO_Init();
   MX_ICACHE_Init();
   MX_ETH_Init();
@@ -330,34 +264,6 @@ static void MX_ETH_Init(void)
 }
 
 /**
-  * @brief GPDMA1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPDMA1_Init(void)
-{
-
-  /* USER CODE BEGIN GPDMA1_Init 0 */
-
-  /* USER CODE END GPDMA1_Init 0 */
-
-  /* Peripheral clock enable */
-  __HAL_RCC_GPDMA1_CLK_ENABLE();
-
-  /* GPDMA1 interrupt Init */
-    HAL_NVIC_SetPriority(GPDMA1_Channel0_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
-
-  /* USER CODE BEGIN GPDMA1_Init 1 */
-
-  /* USER CODE END GPDMA1_Init 1 */
-  /* USER CODE BEGIN GPDMA1_Init 2 */
-
-  /* USER CODE END GPDMA1_Init 2 */
-
-}
-
-/**
   * @brief ICACHE Initialization Function
   * @param None
   * @retval None
@@ -398,6 +304,8 @@ void MX_SDMMC1_SD_Init(void)
 {
 
   /* USER CODE BEGIN SDMMC1_Init 0 */
+  if (HAL_GPIO_ReadPin(SD_DETECT_GPIO_Port, SD_DETECT_Pin) == GPIO_PIN_SET)
+    return;
 
   /* USER CODE END SDMMC1_Init 0 */
 
@@ -442,7 +350,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 75;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 4294967295;
+  htim2.Init.Period = 118;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -465,7 +373,7 @@ static void MX_TIM2_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 32768;
+  sConfigOC.Pulse = 58;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_ENABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
@@ -619,19 +527,14 @@ int _write(int file, char *data, int len)
 }
 #endif
 int _write(int file, char *ptr, int len) {
-    (void)file;
-  if (osKernelGetState() == osKernelInactive) 
+  (void)file;
+  // Transmit data using UART
+  for (int i = 0; i < len; i++)
   {
-    // Transmit data using UART
-    for (int i = 0; i < len; i++)
-    {
-      HAL_UART_Transmit(&huart3, (const uint8_t *)ptr++, 1, 0xFFFF);
-    }
+    HAL_UART_Transmit(&huart3, (const uint8_t *)ptr++, 1, 0xFFFF);
   }
-  else {
-    tx_enqueue((uint8_t *)ptr, (size_t)len);
-  }
-    return len;
+
+  return len;
 }
 
 
@@ -682,6 +585,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
+  if (htim->Instance == TIM2)
+  {
+    CS_HAL_TIM_PeriodElapsedCallback(htim);
+  }
 
   /* USER CODE END Callback 1 */
 }

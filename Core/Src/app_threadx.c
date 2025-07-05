@@ -64,7 +64,6 @@ const osThreadAttr_t cmdLineTask_attributes = {
 osThreadId_t ledThreadHandle;
 osThreadId_t cmdLineTaskHandle;
 osThreadId_t cmdStationTaskHandle;
-osMutexId_t tx_mutex;
 
 /* USER CODE END PV */
 
@@ -83,9 +82,11 @@ void LedThreadTask(void *argument);
 UINT App_ThreadX_Init(VOID *memory_ptr)
 {
   UINT ret = TX_SUCCESS;
+
   /* USER CODE BEGIN App_ThreadX_MEM_POOL */
   (void)memory_ptr;
   /* USER CODE END App_ThreadX_MEM_POOL */
+
   /* USER CODE BEGIN App_ThreadX_Init */
 
   /* Create the led line task */  
@@ -111,7 +112,6 @@ void MX_ThreadX_Init(void)
   /* needed for CMSIS-RTOS2 support */
   osKernelInitialize();  // Initialize the ThreadX kernel
 
-  tx_mutex = osMutexNew(NULL);
   /* USER CODE END Before_Kernel_Start */
 
   tx_kernel_enter();

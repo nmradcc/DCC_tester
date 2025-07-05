@@ -1,7 +1,7 @@
 #pragma once
 
 #include <dcc/dcc.hpp>
- 
+
 struct CommandStation : dcc::tx::CrtpBase<CommandStation> {
   friend dcc::tx::CrtpBase<CommandStation>;
 
