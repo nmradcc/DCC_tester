@@ -16,8 +16,8 @@ const osThreadAttr_t cmdStationTask_attributes = {
 
 void CommandStation::trackOutputs(bool N, bool P) 
 { 
-// TRACK_N_GPIO_Port->BSRR = (static_cast<uint32_t>(!N) << TRACK_N_BR_Pos) | (static_cast<uint32_t>(!P) << TRACK_P_BR_Pos) |
-//                           (static_cast<uint32_t>(N) << TRACK_N_BS_Pos) | (static_cast<uint32_t>(P) << TRACK_P_BS_Pos);
+ TR_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!N) << TR_N_BR_Pos) | (static_cast<uint32_t>(!P) << TR_P_BR_Pos) |
+                           (static_cast<uint32_t>(N) << TR_N_BS_Pos) | (static_cast<uint32_t>(P) << TR_P_BS_Pos);
 }
 
 void CommandStation::biDiStart() {}
@@ -34,9 +34,10 @@ CommandStation command_station;
 /* only use callback if NOT using custom interrupt handler! */
 extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_SET);   // Set DCC trigger high
   auto const arr{command_station.transmit()};
-  htim->Instance->ARR = arr * 2;
-  htim->Instance->CCR1 = arr;
+  htim->Instance->ARR = arr;
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
 
@@ -60,7 +61,7 @@ void CommandStationThread(void *argument) {
     .num_preamble = DCC_TX_MIN_PREAMBLE_BITS,
     .bit1_duration = 58u,
     .bit0_duration = 100u,
-    .flags = {.invert = false, .bidi = true},
+    .flags = {.invert = false, .bidi = false},
   });
 
   // Block until externally started

@@ -63,12 +63,23 @@ void MX_SDMMC1_SD_Init(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define TR_P_Pin GPIO_PIN_2
+#define TR_P_GPIO_Port GPIOE
+#define TR_N_Pin GPIO_PIN_3
+#define TR_N_GPIO_Port GPIOE
+#define DCC_TRG_Pin GPIO_PIN_5
+#define DCC_TRG_GPIO_Port GPIOE
 #define TRACK_Pin GPIO_PIN_0
 #define TRACK_GPIO_Port GPIOA
 #define SD_DETECT_Pin GPIO_PIN_2
 #define SD_DETECT_GPIO_Port GPIOG
 
 /* USER CODE BEGIN Private defines */
+/* set and reset TR bit positions */
+#define TR_P_BS_Pos GPIO_BSRR_BS2_Pos
+#define TR_P_BR_Pos GPIO_BSRR_BR2_Pos
+#define TR_N_BS_Pos GPIO_BSRR_BS3_Pos
+#define TR_N_BR_Pos GPIO_BSRR_BR3_Pos
 
 /* USER CODE END Private defines */
 
