@@ -283,9 +283,7 @@
    interface. 127.0.0.1 loopback interface is enabled by default.
    Uncomment out the follow code to disable the loopback interface. */
 
-/*
 #define NX_DISABLE_LOOPBACK_INTERFACE
-*/
 
 /* Defined, this option disables the addition size checking on received packets. */
 #define NX_DISABLE_RX_SIZE_CHECKING
@@ -302,7 +300,9 @@
 
 /* Defined, NX_ENABLE_IP_RAW_PACKET_FILTER allows an application to install a
    filter for incoming raw packets. This feature is disabled by default. */
+/*
 #define NX_ENABLE_IP_RAW_PACKET_FILTER
+*/
 
 /* This define specifies the maximum number of RAW packets can be queued for
    receive. The default value is 20.  */
