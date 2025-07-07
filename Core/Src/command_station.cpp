@@ -76,9 +76,9 @@ void CommandStationThread(void *argument) {
 
     // Set function F3
     BSP_LED_Toggle(LED_GREEN);
-    packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'1000u);
+    packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
     command_station.packet(packet);
-    printf("Command station: set function F3\n");
+    printf("Command station: set function F0\n");
     osDelay(2000u);
 
     // Decelerate
@@ -92,7 +92,7 @@ void CommandStationThread(void *argument) {
     BSP_LED_Toggle(LED_GREEN);
     packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
     command_station.packet(packet);
-    printf("Command station: clear function F3\n");
+    printf("Command station: clear function F0\n");
     osDelay(2000u);
   }
 }
