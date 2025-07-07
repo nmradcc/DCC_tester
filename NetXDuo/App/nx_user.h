@@ -288,9 +288,7 @@
 */
 
 /* Defined, this option disables the addition size checking on received packets. */
-/*
 #define NX_DISABLE_RX_SIZE_CHECKING
-*/
 
 /* This defines specifies the number of ThreadX timer ticks in one second.
    The default value is based on ThreadX timer interrupt. */

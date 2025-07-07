@@ -212,6 +212,12 @@ void USART3_IRQHandler(void)
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
+  // grab char from data register
+  rxChar = USART3->RDR & 0xFF;
+  //get ready to receive another char
+  HAL_UART_Receive_IT(&huart3, (uint8_t *)&huart3.Instance->RDR, 1);
+  //send the char to the command line task
+  uart_receive_callback(&rxChar);
 
   /* USER CODE END USART3_IRQn 1 */
 }
