@@ -71,8 +71,12 @@ void MX_SDMMC1_SD_Init(void);
 #define TRACK_P_GPIO_Port GPIOA
 #define TRACK_N_Pin GPIO_PIN_3
 #define TRACK_N_GPIO_Port GPIOA
+#define SCOPE_Pin GPIO_PIN_7
+#define SCOPE_GPIO_Port GPIOE
 #define SD_DETECT_Pin GPIO_PIN_2
 #define SD_DETECT_GPIO_Port GPIOG
+#define BR_ENABLE_Pin GPIO_PIN_6
+#define BR_ENABLE_GPIO_Port GPIOG
 
 /* USER CODE BEGIN Private defines */
 /* set and reset TR bit positions */

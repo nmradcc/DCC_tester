@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdbool.h>
+#include "stm32_lock.h"
 #include "version.h"
 #include "command_station.h"
 
@@ -60,6 +61,8 @@ UART_HandleTypeDef huart3;
 PCD_HandleTypeDef hpcd_USB_DRD_FS;
 
 /* USER CODE BEGIN PV */
+TX_MUTEX newlib_mutex;
+LockingData_t newlib_lock = LOCKING_DATA_INIT;
 
 /* USER CODE END PV */
 
@@ -86,6 +89,11 @@ int iar_fputc(int ch);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void init_thread_safe_system(void)
+{
+    stm32_lock_init(&newlib_lock);
+}
 
 /* USER CODE END 0 */
 
@@ -114,6 +122,9 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
 
+  // Initialize thread-safe lock
+  init_thread_safe_system();
+
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -125,6 +136,7 @@ int main(void)
   MX_SDMMC1_SD_Init();
   MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
+
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
   BSP_LED_Init(LED_YELLOW);
@@ -480,10 +492,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, TR_P_Pin|TR_N_Pin|DCC_TRG_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, TR_P_Pin|TR_N_Pin|DCC_TRG_Pin|SCOPE_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, TRACK_P_Pin|TRACK_N_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : TR_P_Pin TR_N_Pin */
   GPIO_InitStruct.Pin = TR_P_Pin|TR_N_Pin;
@@ -492,12 +507,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : DCC_TRG_Pin */
-  GPIO_InitStruct.Pin = DCC_TRG_Pin;
+  /*Configure GPIO pins : DCC_TRG_Pin SCOPE_Pin */
+  GPIO_InitStruct.Pin = DCC_TRG_Pin|SCOPE_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(DCC_TRG_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pins : TRACK_P_Pin TRACK_N_Pin */
   GPIO_InitStruct.Pin = TRACK_P_Pin|TRACK_N_Pin;
@@ -511,6 +526,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(SD_DETECT_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : BR_ENABLE_Pin */
+  GPIO_InitStruct.Pin = BR_ENABLE_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(BR_ENABLE_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
   /* USER CODE END MX_GPIO_Init_2 */
@@ -543,12 +565,19 @@ int _write(int file, char *data, int len)
 int _write(int file, char *ptr, int len) {
   (void)file;
   // Transmit data using UART
+#if 0
   for (int i = 0; i < len; i++)
   {
     HAL_UART_Transmit(&huart3, (const uint8_t *)ptr++, 1, 0xFFFF);
   }
 
   return len;
+#endif
+  // Use mutex to ensure thread safety
+    stm32_lock_acquire(&newlib_lock);
+    HAL_StatusTypeDef status = HAL_UART_Transmit(&huart3, (uint8_t*)ptr, (uint16_t)len, HAL_MAX_DELAY);
+    stm32_lock_release(&newlib_lock);
+    return (status == HAL_OK) ? len : 0;
 }
 
 
