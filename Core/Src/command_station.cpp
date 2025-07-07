@@ -18,6 +18,8 @@ void CommandStation::trackOutputs(bool N, bool P)
 { 
  TR_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!N) << TR_N_BR_Pos) | (static_cast<uint32_t>(!P) << TR_P_BR_Pos) |
                            (static_cast<uint32_t>(N) << TR_N_BS_Pos) | (static_cast<uint32_t>(P) << TR_P_BS_Pos);
+ TRACK_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!N) << TRACK_N_BR_Pos) | (static_cast<uint32_t>(!P) << TRACK_P_BR_Pos) |
+                           (static_cast<uint32_t>(N) << TRACK_N_BS_Pos) | (static_cast<uint32_t>(P) << TRACK_P_BS_Pos);
 }
 
 void CommandStation::biDiStart() {}
@@ -34,26 +36,11 @@ CommandStation command_station;
 /* only use callback if NOT using custom interrupt handler! */
 extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_SET);   // Set DCC trigger high
+  HAL_GPIO_WritePin(DCC_TRG_GPIO_Port, DCC_TRG_Pin, GPIO_PIN_SET);   // Set DCC trigger high
   auto const arr{command_station.transmit()};
   htim->Instance->ARR = arr;
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_RESET); // Set DCC trigger low
+  HAL_GPIO_WritePin(DCC_TRG_GPIO_Port, DCC_TRG_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
-
-
-#if 0
-extern "C" void TIM2_IRQHandler(void) 
-{
-//  if (TIM2->SR & TIM_SR_UIF)  // Check update interrupt flag
-//      TIM2->SR &= static_cast<uint32_t>(~TIM_SR_UIF);  // Clear the flag
-
-  auto const arr{command_station.transmit()};
-  TIM2->ARR = arr * 2;
-  TIM2->CCR1 = arr;
-  TIM2->SR &= static_cast<uint32_t>(~TIM_SR_UIF);  // Clear the flag
-  HAL_TIM_IRQHandler(&htim2);
-}
-#endif
 
 
 void CommandStationThread(void *argument) {
