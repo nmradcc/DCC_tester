@@ -26,6 +26,8 @@
 #include "cmsis_os2.h"
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
+#include "tx_api.h"
+#include "command_station.h"
 
 /* USER CODE END Includes */
 
@@ -61,13 +63,13 @@ const osThreadAttr_t cmdLineTask_attributes = {
 /* USER CODE BEGIN PV */
 osThreadId_t ledThreadHandle;
 osThreadId_t cmdLineTaskHandle;
-
+osThreadId_t cmdStationTaskHandle;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-void LedThread(void *argument);
+void LedThreadTask(void *argument);
 
 
 /* USER CODE END PFP */
@@ -80,15 +82,19 @@ void LedThread(void *argument);
 UINT App_ThreadX_Init(VOID *memory_ptr)
 {
   UINT ret = TX_SUCCESS;
+
   /* USER CODE BEGIN App_ThreadX_MEM_POOL */
   (void)memory_ptr;
   /* USER CODE END App_ThreadX_MEM_POOL */
+
   /* USER CODE BEGIN App_ThreadX_Init */
 
   /* Create the led line task */  
-  ledThreadHandle = osThreadNew(LedThread, NULL, &LED_thread_attr);  // Create thread with attributes
+  ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes
   /* Create the command line task */
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
+  /* Create the command station task ... but don't start it */
+  CommandStationThread_Init();
 
   /* USER CODE END App_ThreadX_Init */
 
@@ -105,6 +111,7 @@ void MX_ThreadX_Init(void)
   /* USER CODE BEGIN Before_Kernel_Start */
   /* needed for CMSIS-RTOS2 support */
   osKernelInitialize();  // Initialize the ThreadX kernel
+
   /* USER CODE END Before_Kernel_Start */
 
   tx_kernel_enter();
@@ -115,13 +122,14 @@ void MX_ThreadX_Init(void)
 }
 
 /* USER CODE BEGIN 1 */
-void LedThread(void *argument)
+void LedThreadTask(void *argument)
 {
     (void)argument;
     while (1)
     {
         BSP_LED_Toggle(LED_YELLOW);
-        osDelay(100);  // Delay for 1 second
+//        tx_thread_sleep(500);
+        osDelay(500);  // Delay for 500ms
     }
 }
 

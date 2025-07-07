@@ -13,6 +13,7 @@
 #include "stm32h5xx_hal.h"
 #include "cli_app.h"
 #include "version.h"
+#include "command_station.h"
 
 // Declare _write prototype to avoid implicit declaration error
 int _write(int file, char *ptr, int len);
@@ -53,6 +54,21 @@ void help_command(const char *arg1, const char *arg2) {
     print_help();
 }
 
+void command_station_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    if (stricmp(arg1,"start") == 0) {
+        printf("Starting Command Station ...\n");
+        CommandStationThread_Start();
+    }
+//    else if (stricmp(arg1,"stop") == 0) {
+//        printf("Stopping Command Station ...\n");
+//        CommandStationThread_Stop();
+//    }
+    else {
+        printf("Unknown command station command: %s\n", arg1);
+    }
+}
+
 void hello_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
     printf("Hello, %s!\n", arg1[0] ? arg1 : "ThreadX User");
@@ -73,11 +89,17 @@ Command cmd_help = {
     .help = NULL,
     .next = NULL
 };
+Command cmd_cms = {
+    .name = "cms", 
+    .execute = command_station_command,
+    .help = NULL,
+    .next = &cmd_help
+};
 Command cmd_hello = {
     .name ="hello", 
     .execute = hello_command,
     .help = NULL,
-    .next = &cmd_help
+    .next = &cmd_cms
 };
 Command cmd_status = {
     .name = "status",
@@ -107,8 +129,8 @@ static void print_help(void) {
     printf("Type 'help' for this message.\n");
 }
 
-static void parse_input(const char *input, ParsedInput *parsed) {
-    sscanf(input, "%s %31s %31s", parsed->command, parsed->arg1, parsed->arg2);
+static void parse_input(const char *input, ParsedInput *out_parsed) {
+    sscanf(input, "%s %31s %31s", out_parsed->command, out_parsed->arg1, out_parsed->arg2);
 }
 
 void vCommandConsoleTask(void *pvParameters)
@@ -130,12 +152,12 @@ void vCommandConsoleTask(void *pvParameters)
                 inputIndex--;
                 InputBuffer[inputIndex] = '\0'; // Null terminate the string
                 sprintf(OutputBuffer,"\b \b"); // Move cursor back, print space to overwrite, and move back again
-                _write(0, OutputBuffer, strlen(OutputBuffer)); // Echo backspace to console
+                _write(0, OutputBuffer, (int)strlen(OutputBuffer)); // Echo backspace to console
             }
         }
         else if (inputIndex < sizeof(InputBuffer) - 1) {
             // user pressed a character add it to the input string
-            InputBuffer[inputIndex++] = receivedChar;
+            InputBuffer[inputIndex++] = (char)receivedChar;
             InputBuffer[inputIndex] = '\0'; // Null terminate the string
             _write(0, (char *)&receivedChar, 1); // Echo the character to the console
             if (receivedChar == '\r' || receivedChar == '\n') {

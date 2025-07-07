@@ -23,7 +23,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdbool.h>
+#include "stm32_lock.h"
 #include "version.h"
+#include "command_station.h"
 
 /* USER CODE END Includes */
 
@@ -51,11 +54,15 @@ ETH_HandleTypeDef heth;
 
 SD_HandleTypeDef hsd1;
 
+TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart3;
 
 PCD_HandleTypeDef hpcd_USB_DRD_FS;
 
 /* USER CODE BEGIN PV */
+TX_MUTEX newlib_mutex;
+LockingData_t newlib_lock = LOCKING_DATA_INIT;
 
 /* USER CODE END PV */
 
@@ -65,6 +72,7 @@ static void MX_GPIO_Init(void);
 static void MX_ICACHE_Init(void);
 static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_TIM2_Init(void);
 static void MX_USB_PCD_Init(void);
 /* USER CODE BEGIN PFP */
 #if defined(__ICCARM__)
@@ -81,14 +89,10 @@ int iar_fputc(int ch);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void Success_Handler(void)
+
+void init_thread_safe_system(void)
 {
-  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_4, GPIO_PIN_RESET);
-  while(1)
-  {
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-    tx_thread_sleep(50);
-  }
+    stm32_lock_init(&newlib_lock);
 }
 
 /* USER CODE END 0 */
@@ -118,6 +122,9 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
 
+  // Initialize thread-safe lock
+  init_thread_safe_system();
+
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -125,9 +132,11 @@ int main(void)
   MX_ICACHE_Init();
   MX_ETH_Init();
   MX_USART3_UART_Init();
-  MX_USB_PCD_Init();
+  MX_TIM2_Init();
   MX_SDMMC1_SD_Init();
+  MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
+
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
   BSP_LED_Init(LED_YELLOW);
@@ -142,6 +151,7 @@ int main(void)
   printf("CPU ID: 0x%X\n", (unsigned int)HAL_GetDEVID());
   printf("Revision ID: 0x%X\n", (unsigned int)HAL_GetREVID());
   printf("Compiled at %s %s\n\n", __DATE__, __TIME__);
+
   /* USER CODE END 2 */
 
   MX_ThreadX_Init();
@@ -331,6 +341,51 @@ void MX_SDMMC1_SD_Init(void)
 }
 
 /**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 75;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 118;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
   * @brief USART3 Initialization Function
   * @param None
   * @retval None
@@ -373,8 +428,9 @@ static void MX_USART3_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART3_Init 2 */
-  // ---> enable reception interruptions
+  // ---> enable reception interrupts
   huart3.Instance->CR1 |= USART_CR1_RXNEIE;
+
   /* USER CODE END USART3_Init 2 */
 
 }
@@ -427,12 +483,43 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOE, TR_P_Pin|TR_N_Pin|DCC_TRG_Pin|SCOPE_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, TRACK_P_Pin|TRACK_N_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : TR_P_Pin TR_N_Pin */
+  GPIO_InitStruct.Pin = TR_P_Pin|TR_N_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : DCC_TRG_Pin SCOPE_Pin */
+  GPIO_InitStruct.Pin = DCC_TRG_Pin|SCOPE_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : TRACK_P_Pin TRACK_N_Pin */
+  GPIO_InitStruct.Pin = TRACK_P_Pin|TRACK_N_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : SD_DETECT_Pin */
   GPIO_InitStruct.Pin = SD_DETECT_Pin;
@@ -440,11 +527,20 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(SD_DETECT_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : BR_ENABLE_Pin */
+  GPIO_InitStruct.Pin = BR_ENABLE_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(BR_ENABLE_GPIO_Port, &GPIO_InitStruct);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
+
+#if 0
 /**
   * @brief  Retargets the C library __write function to the IAR function iar_fputc.
   * @param  file: file descriptor.
@@ -464,6 +560,24 @@ int _write(int file, char *data, int len)
         while (!(USART3->ISR & USART_ISR_TXE));
     }
     return len;
+}
+#endif
+int _write(int file, char *ptr, int len) {
+  (void)file;
+  // Transmit data using UART
+#if 0
+  for (int i = 0; i < len; i++)
+  {
+    HAL_UART_Transmit(&huart3, (const uint8_t *)ptr++, 1, 0xFFFF);
+  }
+
+  return len;
+#endif
+  // Use mutex to ensure thread safety
+    stm32_lock_acquire(&newlib_lock);
+    HAL_StatusTypeDef status = HAL_UART_Transmit(&huart3, (uint8_t*)ptr, (uint16_t)len, HAL_MAX_DELAY);
+    stm32_lock_release(&newlib_lock);
+    return (status == HAL_OK) ? len : 0;
 }
 
 
@@ -514,6 +628,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
+  if (htim->Instance == TIM2)
+  {
+    CS_HAL_TIM_PeriodElapsedCallback(htim);
+  }
 
   /* USER CODE END Callback 1 */
 }

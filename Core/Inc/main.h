@@ -38,6 +38,7 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+extern TIM_HandleTypeDef htim2;
 extern SD_HandleTypeDef hsd1;
 /* USER CODE END ET */
 
@@ -60,10 +61,34 @@ void MX_SDMMC1_SD_Init(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define TR_P_Pin GPIO_PIN_2
+#define TR_P_GPIO_Port GPIOE
+#define TR_N_Pin GPIO_PIN_3
+#define TR_N_GPIO_Port GPIOE
+#define DCC_TRG_Pin GPIO_PIN_5
+#define DCC_TRG_GPIO_Port GPIOE
+#define TRACK_P_Pin GPIO_PIN_0
+#define TRACK_P_GPIO_Port GPIOA
+#define TRACK_N_Pin GPIO_PIN_3
+#define TRACK_N_GPIO_Port GPIOA
+#define SCOPE_Pin GPIO_PIN_7
+#define SCOPE_GPIO_Port GPIOE
 #define SD_DETECT_Pin GPIO_PIN_2
 #define SD_DETECT_GPIO_Port GPIOG
+#define BR_ENABLE_Pin GPIO_PIN_6
+#define BR_ENABLE_GPIO_Port GPIOG
 
 /* USER CODE BEGIN Private defines */
+/* set and reset TR bit positions */
+#define TR_P_BS_Pos GPIO_BSRR_BS2_Pos
+#define TR_P_BR_Pos GPIO_BSRR_BR2_Pos
+#define TR_N_BS_Pos GPIO_BSRR_BS3_Pos
+#define TR_N_BR_Pos GPIO_BSRR_BR3_Pos
+/* set and reset TRACK bit positions */
+#define TRACK_P_BS_Pos GPIO_BSRR_BS0_Pos
+#define TRACK_P_BR_Pos GPIO_BSRR_BR0_Pos
+#define TRACK_N_BS_Pos GPIO_BSRR_BS3_Pos
+#define TRACK_N_BR_Pos GPIO_BSRR_BR3_Pos
 
 /* USER CODE END Private defines */
 

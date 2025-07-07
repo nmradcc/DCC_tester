@@ -51,6 +51,15 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+include(FetchContent)
+
+FetchContent_Declare(
+  DCC
+  GIT_REPOSITORY "https://github.com/ZIMO-Elektronik/DCC"
+  GIT_TAG v0.41.1)
+
+FetchContent_MakeAvailable(DCC)
+
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
@@ -59,13 +68,15 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/cmsis_os2.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/cli_app.c
+    Core/Src/cmsis_os2.c
+    Core/Src/cli_app.c
+    Core/Src/command_station.cpp
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
+    ${CMAKE_CURRENT_SOURCE_DIR}/
     ${CMAKE_CURRENT_BINARY_DIR}/generated
     ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/bsp/stm32hXX_Nucleo
 )
@@ -80,4 +91,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
+    DCC::DCC
 )

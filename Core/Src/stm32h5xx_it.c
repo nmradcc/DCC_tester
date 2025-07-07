@@ -22,7 +22,9 @@
 #include "stm32h5xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
 #include "cli_app.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +44,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-static char rxChar;
+static char rx_char;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,6 +60,7 @@ static char rxChar;
 /* External variables --------------------------------------------------------*/
 extern ETH_HandleTypeDef heth;
 extern SD_HandleTypeDef hsd1;
+extern TIM_HandleTypeDef htim2;
 extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim6;
 
@@ -164,6 +167,20 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles TIM2 global interrupt.
+  */
+void TIM2_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+
+  /* USER CODE END TIM2_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM6 global interrupt.
   */
 void TIM6_IRQHandler(void)
@@ -183,6 +200,14 @@ void TIM6_IRQHandler(void)
 void USART3_IRQHandler(void)
 {
   /* USER CODE BEGIN USART3_IRQn 0 */
+  // RXNE: Receive interrupt
+  if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_RXNE) &&
+      __HAL_UART_GET_IT_SOURCE(&huart3, UART_IT_RXNE)) 
+      {
+//    HAL_UART_Receive_IT(&huart3, (uint8_t *)&rx_char, 1);
+        rx_char = (char)(huart3.Instance->RDR);  // Read received byte
+        uart_receive_callback(&rx_char);
+      }
 
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);

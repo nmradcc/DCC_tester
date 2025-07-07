@@ -302,9 +302,7 @@
 
 /* Defined, NX_ENABLE_IP_RAW_PACKET_FILTER allows an application to install a
    filter for incoming raw packets. This feature is disabled by default. */
-/*
 #define NX_ENABLE_IP_RAW_PACKET_FILTER
-*/
 
 /* This define specifies the maximum number of RAW packets can be queued for
    receive. The default value is 20.  */
