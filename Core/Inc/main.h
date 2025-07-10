@@ -67,16 +67,28 @@ void MX_SDMMC1_SD_Init(void);
 #define TR_N_GPIO_Port GPIOE
 #define DCC_TRG_Pin GPIO_PIN_5
 #define DCC_TRG_GPIO_Port GPIOE
+#define IN2_Pin GPIO_PIN_6
+#define IN2_GPIO_Port GPIOE
 #define TRACK_P_Pin GPIO_PIN_0
 #define TRACK_P_GPIO_Port GPIOA
-#define TRACK_N_Pin GPIO_PIN_3
-#define TRACK_N_GPIO_Port GPIOA
+#define BIDIR_EN_Pin GPIO_PIN_3
+#define BIDIR_EN_GPIO_Port GPIOA
 #define SCOPE_Pin GPIO_PIN_7
 #define SCOPE_GPIO_Port GPIOE
+#define IN0_Pin GPIO_PIN_10
+#define IN0_GPIO_Port GPIOE
+#define IN1_Pin GPIO_PIN_12
+#define IN1_GPIO_Port GPIOE
+#define IN3_Pin GPIO_PIN_15
+#define IN3_GPIO_Port GPIOE
+#define REF_OSC_Pin GPIO_PIN_13
+#define REF_OSC_GPIO_Port GPIOD
 #define SD_DETECT_Pin GPIO_PIN_2
 #define SD_DETECT_GPIO_Port GPIOG
 #define BR_ENABLE_Pin GPIO_PIN_6
 #define BR_ENABLE_GPIO_Port GPIOG
+#define BIDIR_RX_Pin GPIO_PIN_7
+#define BIDIR_RX_GPIO_Port GPIOC
 
 /* USER CODE BEGIN Private defines */
 /* set and reset TR bit positions */
@@ -87,8 +99,6 @@ void MX_SDMMC1_SD_Init(void);
 /* set and reset TRACK bit positions */
 #define TRACK_P_BS_Pos GPIO_BSRR_BS0_Pos
 #define TRACK_P_BR_Pos GPIO_BSRR_BR0_Pos
-#define TRACK_N_BS_Pos GPIO_BSRR_BS3_Pos
-#define TRACK_N_BR_Pos GPIO_BSRR_BR3_Pos
 
 /* USER CODE END Private defines */
 
