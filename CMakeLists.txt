@@ -71,6 +71,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/cmsis_os2.c
     Core/Src/cli_app.c
     Core/Src/command_station.cpp
+    Core/Src/decoder.cpp
 )
 
 # Add include paths

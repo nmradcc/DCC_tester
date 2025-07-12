@@ -39,6 +39,7 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim15;
 extern SD_HandleTypeDef hsd1;
 extern RTC_HandleTypeDef hrtc;
 /* USER CODE END ET */
@@ -66,8 +67,8 @@ void MX_SDMMC1_SD_Init(void);
 #define TR_P_GPIO_Port GPIOE
 #define TR_N_Pin GPIO_PIN_3
 #define TR_N_GPIO_Port GPIOE
-#define DCC_TRG_Pin GPIO_PIN_5
-#define DCC_TRG_GPIO_Port GPIOE
+#define DEC_IN_Pin GPIO_PIN_5
+#define DEC_IN_GPIO_Port GPIOE
 #define IN2_Pin GPIO_PIN_6
 #define IN2_GPIO_Port GPIOE
 #define TRACK_P_Pin GPIO_PIN_0

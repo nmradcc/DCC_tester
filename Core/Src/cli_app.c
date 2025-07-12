@@ -16,6 +16,7 @@
 #include "version.h"
 #include "main.h"
 #include "command_station.h"
+#include "decoder.h"
 
 // Declare _write prototype to avoid implicit declaration error
 int _write(int file, char *ptr, int len);
@@ -71,6 +72,21 @@ void command_station_command(const char *arg1, const char *arg2) {
     }
 }
 
+void decoder_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    if (stricmp(arg1,"start") == 0) {
+        printf("Starting Decoder ...\n");
+        DecoderThread_Start();
+    }
+//    else if (stricmp(arg1,"stop") == 0) {
+//        printf("Stopping Decoder ...\n");
+//        DecoderThread_Stop();
+//    }
+    else {
+        printf("Unknown decoder command: %s\n", arg1);
+    }
+}
+
 void hello_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
     printf("Hello, %s!\n", arg1[0] ? arg1 : "ThreadX User");
@@ -111,11 +127,17 @@ Command cmd_cms = {
     .help = "Start Command Station",
     .next = &cmd_help
 };
+Command cmd_dec = {
+    .name = "dec", 
+    .execute = decoder_command,
+    .help = "Start Decoder",
+    .next = &cmd_cms
+};
 Command cmd_hello = {
     .name ="hello", 
     .execute = hello_command,
     .help = NULL,
-    .next = &cmd_cms
+    .next = &cmd_dec
 };
 Command cmd_status = {
     .name = "status",

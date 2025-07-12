@@ -36,10 +36,10 @@ CommandStation command_station;
 /* only use callback if NOT using custom interrupt handler! */
 extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  HAL_GPIO_WritePin(DCC_TRG_GPIO_Port, DCC_TRG_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
+  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
   auto const arr{command_station.transmit()};
   htim->Instance->ARR = arr;
-  HAL_GPIO_WritePin(DCC_TRG_GPIO_Port, DCC_TRG_Pin, GPIO_PIN_RESET); // Set DCC trigger low
+  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
 
@@ -109,6 +109,7 @@ extern "C" void CommandStationThread_Start(void)
 {
     osSemaphoreRelease(commandStationStart_sem);
     HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
-}
+    printf("Command station started\n");
+  }
 
 

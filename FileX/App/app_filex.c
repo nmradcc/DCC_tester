@@ -396,6 +396,7 @@ static uint8_t SD_IsDetected(uint32_t Instance)
   */
 static VOID media_close_callback(FX_MEDIA *media_ptr)
 {
+  (void)media_ptr; // Mark parameter as unused to avoid compiler warning
   media_status = MEDIA_CLOSED;
 }
 
