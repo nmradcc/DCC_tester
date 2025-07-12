@@ -40,6 +40,7 @@ extern "C" {
 /* USER CODE BEGIN ET */
 extern TIM_HandleTypeDef htim2;
 extern SD_HandleTypeDef hsd1;
+extern RTC_HandleTypeDef hrtc;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

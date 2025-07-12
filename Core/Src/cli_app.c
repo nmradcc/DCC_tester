@@ -8,11 +8,13 @@
 #include <assert.h>
 #include <string.h>
 
+#include "cmsis_os2.h"
 #include "tx_api.h"
 #include "stm32h5xx_nucleo.h"
 #include "stm32h5xx_hal.h"
 #include "cli_app.h"
 #include "version.h"
+#include "main.h"
 #include "command_station.h"
 
 // Declare _write prototype to avoid implicit declaration error
@@ -82,17 +84,31 @@ void set_command(const char *arg1, const char *arg2) {
     printf("Setting %s to %s\n", arg1[0] ? arg1 : "default", arg2[0] ? arg2 : "value");
 }
 
+void date_time_command(const char *arg1, const char *arg2) {
+    (void)arg1; // Unused
+    (void)arg2; // Unused
+    RTC_TimeTypeDef sTime;
+    RTC_DateTypeDef sDate;
+
+    HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+    HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+
+    printf("Current Date: 20%02d-%02d-%02d  Time: %02d:%02d:%02d\n",
+           sDate.Year, sDate.Month, sDate.Date,
+           sTime.Hours, sTime.Minutes, sTime.Seconds);
+}
+
 // Statically Register commands in a linked list!
 Command cmd_help = {
     .name = "help", 
     .execute = help_command,
-    .help = NULL,
+    .help = NULL, 
     .next = NULL
 };
 Command cmd_cms = {
     .name = "cms", 
     .execute = command_station_command,
-    .help = NULL,
+    .help = "Start Command Station",
     .next = &cmd_help
 };
 Command cmd_hello = {
@@ -107,11 +123,17 @@ Command cmd_status = {
     .help = NULL,
     .next = &cmd_hello
 };
+Command cmd_date_time = {
+    .name = "date_time",
+    .execute = date_time_command,
+    .help = "Get current date and time",
+    .next = &cmd_status
+};
 Command cmd_set = {
     .name = "set",
     .execute = set_command,
     .help = NULL,
-    .next = &cmd_status
+    .next = &cmd_date_time
 };
 
 Command *command_list = &cmd_set;
@@ -140,6 +162,8 @@ void vCommandConsoleTask(void *pvParameters)
     char N_char = '\n';
     tx_queue_create(&command_queue, "Queue", TX_1_ULONG, command_queue_storage, sizeof(command_queue_storage));
 
+    osDelay(3000); // Wait for system to initialize
+    
     print_help(); // Print help on startup
 
     for (;;)

@@ -112,9 +112,7 @@
 /* Defined, this option enables deferred driver packet handling. This allows
    the driver to place a raw packet on the IP instance and have the driver's
    real processing routine called from the NetX internal IP helper thread. */
-/*
 #define NX_DRIVER_DEFERRED_PROCESSING
-*/
 
 /* Defined, the source address of incoming packet is checked. The default is
    disabled. */
@@ -283,10 +281,14 @@
    interface. 127.0.0.1 loopback interface is enabled by default.
    Uncomment out the follow code to disable the loopback interface. */
 
+/*
 #define NX_DISABLE_LOOPBACK_INTERFACE
+*/
 
 /* Defined, this option disables the addition size checking on received packets. */
+/*
 #define NX_DISABLE_RX_SIZE_CHECKING
+*/
 
 /* This defines specifies the number of ThreadX timer ticks in one second.
    The default value is based on ThreadX timer interrupt. */
@@ -2097,9 +2099,7 @@
 
 /* The lowest level (highest numeric stratum level) SNTP Server stratum the
    Client will accept. The NetX Duo SNTP Client default is 2. */
-/*
-#define NX_SNTP_CLIENT_MIN_SERVER_STRATUM       2
-*/
+#define NX_SNTP_CLIENT_MIN_SERVER_STRATUM		5
 
 /* The minimum time adjustment in milliseconds the Client will make to its
    local clock time. Time adjustments below this will be ignored. The NetX
@@ -2176,17 +2176,13 @@
 /* This option if enabled requires that the SNTP Client calculate round trip
    time of SNTP messages when applying Server updates to the local clock.
    The default value is NX_FALSE (disabled). */
-/*
-#define NX_SNTP_CLIENT_RTT_REQUIRED             NX_FALSE
-*/
+#define NX_SNTP_CLIENT_RTT_REQUIRED				1  /* NX_TRUE */
 
 /* The maximum server clock dispersion (microseconds), which is a measure of
    server clock precision, the Client will accept. To disable this requirement,
    set the maximum root dispersion to 0x0. The NetX Duo SNTP Client default is
    set to 50000. */
-/*
-#define NX_SNTP_CLIENT_MAX_ROOT_DISPERSION      50000
-*/
+#define NX_SNTP_CLIENT_MAX_ROOT_DISPERSION		500000
 
 /* The limit on the number of consecutive invalid updates received from the
    Client server in either broadcast or unicast mode. When this limit is
@@ -2200,9 +2196,7 @@
 /* To display date in year/month/date format, set this value to equal or less
    than current year (need not be same year as in NTP time being evaluated).
    The default value is 2015. */
-/*
-#define NX_SNTP_CURRENT_YEAR                    2015
-*/
+#define NX_SNTP_CURRENT_YEAR					2025
 
 /* This is the number of seconds into the first NTP Epoch on the master NTP
    clock. It is defined as 0xBA368E80. To disable display of NTP seconds into
