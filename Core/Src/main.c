@@ -159,21 +159,6 @@ int main(void)
   printf("Welcome to DCC tester world !\n\r");
   printf("Firmware version: %s\n", FW_VERSION_STRING);
   printf("SystemCoreClock: %lu Hz\n", (unsigned long)SystemCoreClock);
-
-  RTC_TimeTypeDef sTime;
-  RTC_DateTypeDef sDate;
-
-  // Get time first
-  HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-
-  // Then get date to unlock shadow registers
-  HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-
-  // Print in YYYY-MM-DD HH:MM:SS format
-  printf("Date: 20%02d-%02d-%02d  Time: %02d:%02d:%02d\n",
-        sDate.Year, sDate.Month, sDate.Date,
-        sTime.Hours, sTime.Minutes, sTime.Seconds);
-
   printf("CPU ID: 0x%X\n", (unsigned int)HAL_GetDEVID());
   printf("Revision ID: 0x%X\n", (unsigned int)HAL_GetREVID());
   printf("Compiled at %s %s\n\n", __DATE__, __TIME__);
@@ -433,7 +418,8 @@ static void MX_RTC_Init(void)
   }
 
   /* USER CODE BEGIN Check_RTC_BKUP */
-
+  if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1) != 0xA5A5) {
+      // RTC not initialized — set time and date
   /* USER CODE END Check_RTC_BKUP */
 
   /** Initialize RTC and set the Time and Date
@@ -457,7 +443,8 @@ static void MX_RTC_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN RTC_Init 2 */
-
+    HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0xA5A5); // Mark RTC as initialized
+}
   /* USER CODE END RTC_Init 2 */
 
 }

@@ -100,7 +100,6 @@ UINT MX_NetXDuo_Init(VOID *memory_ptr)
    /* USER CODE BEGIN App_NetXDuo_MEM_POOL */
   /* USER CODE END App_NetXDuo_MEM_POOL */
   /* USER CODE BEGIN 0 */
-  printf("Nx_SNTP_Client application started..\n");
 
   /* USER CODE END 0 */
 
@@ -279,9 +278,9 @@ UINT MX_NetXDuo_Init(VOID *memory_ptr)
 */
 static VOID ip_address_change_notify_callback(NX_IP *ip_instance, VOID *ptr)
 {
+  /* USER CODE BEGIN ip_address_change_notify_callback */
   NX_PARAMETER_NOT_USED(ip_instance);
   NX_PARAMETER_NOT_USED(ptr);
-  /* USER CODE BEGIN ip_address_change_notify_callback */
   if (nx_ip_address_get(&NetXDuoEthIpInstance, &IpAddress, &NetMask) != NX_SUCCESS)
   {
     /* USER CODE BEGIN ip address change callback error */
@@ -480,7 +479,7 @@ static void App_SNTP_Thread_Entry(ULONG info)
     else
     {
       printf("\nSNTP update :\n");
-      printf("%s\n\n",buffer);
+      printf("%s\n",buffer);
     }
   }
   else
@@ -505,15 +504,13 @@ static void App_SNTP_Thread_Entry(ULONG info)
     Error_Handler();
   }
 
-  /* Toggling LED after a success Time update */
-  while(1)
-  {
-    /* Display RTC time each second  */
-    display_rtc_time();
-    BSP_LED_Toggle(LED1);
-    /* Delay for 1s */
-    tx_thread_sleep(1000);
-  }
+  display_rtc_time();
+
+  tx_thread_relinquish();
+
+  return;
+
+
 }
 
 

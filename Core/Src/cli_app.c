@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "cmsis_os2.h"
 #include "tx_api.h"
 #include "stm32h5xx_nucleo.h"
 #include "stm32h5xx_hal.h"
@@ -161,6 +162,8 @@ void vCommandConsoleTask(void *pvParameters)
     char N_char = '\n';
     tx_queue_create(&command_queue, "Queue", TX_1_ULONG, command_queue_storage, sizeof(command_queue_storage));
 
+    osDelay(3000); // Wait for system to initialize
+    
     print_help(); // Print help on startup
 
     for (;;)
