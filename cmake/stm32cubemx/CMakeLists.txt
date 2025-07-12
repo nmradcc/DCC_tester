@@ -34,6 +34,8 @@ set(MX_Include_Dirs
     C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/filex/ports/generic/inc
     C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/netxduo/common/inc
     C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/netxduo/ports/cortex_m33/gnu/inc
+    C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/netxduo/addons/dns
+    C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/netxduo/addons/sntp
     C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/threadx/ports/cortex_m33/gnu/inc
     C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Drivers/CMSIS/Include
 )
@@ -502,7 +504,9 @@ set(ThreadX_Src
     C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/threadx/common/src/txe_timer_info_get.c
 )
 set(NetXDuo_Src
+    C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/netxduo/addons/dns/nxd_dns.c
     C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/netxduo/common/drivers/ethernet/nx_stm32_eth_driver.c
+    C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/netxduo/addons/sntp/nxd_sntp_client.c
     C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/netxduo/common/src/nx_arp_announce_send.c
     C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/netxduo/common/src/nx_arp_dynamic_entries_invalidate.c
     C:/Users/dvesc/STM32Cube/Repository/STM32Cube_FW_H5_V1.5.0/Middlewares/ST/netxduo/common/src/nx_arp_dynamic_entry_delete.c

@@ -159,6 +159,21 @@ int main(void)
   printf("Welcome to DCC tester world !\n\r");
   printf("Firmware version: %s\n", FW_VERSION_STRING);
   printf("SystemCoreClock: %lu Hz\n", (unsigned long)SystemCoreClock);
+
+  RTC_TimeTypeDef sTime;
+  RTC_DateTypeDef sDate;
+
+  // Get time first
+  HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+
+  // Then get date to unlock shadow registers
+  HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+
+  // Print in YYYY-MM-DD HH:MM:SS format
+  printf("Date: 20%02d-%02d-%02d  Time: %02d:%02d:%02d\n",
+        sDate.Year, sDate.Month, sDate.Date,
+        sTime.Hours, sTime.Minutes, sTime.Seconds);
+
   printf("CPU ID: 0x%X\n", (unsigned int)HAL_GetDEVID());
   printf("Revision ID: 0x%X\n", (unsigned int)HAL_GetREVID());
   printf("Compiled at %s %s\n\n", __DATE__, __TIME__);
@@ -200,16 +215,22 @@ void SystemClock_Config(void)
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
+  /** Configure LSE Drive Capability
+  *  Warning : Only applied when the LSE is disabled.
+  */
+  HAL_PWR_EnableBkUpAccess();
+  __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_LOW);
+
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSI
-                              |RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+                              |RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS_DIGITAL;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSIDiv = RCC_HSI_DIV1;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;

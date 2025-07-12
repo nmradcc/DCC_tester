@@ -24,30 +24,28 @@
 /* Private includes ----------------------------------------------------------*/
 #include "nxd_dhcp_client.h"
 /* USER CODE BEGIN Includes */
+#include "nx_ip.h"
 #include "nx_stm32_eth_config.h"
 #include "stm32h5xx_nucleo.h"
+#include "stm32h5xx_hal_rtc.h"
+#include <time.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-/* Define Threadx global data structures. */
-TX_THREAD AppUDPThread;
-TX_THREAD AppLinkThread;
-/* Define NetX global data structures. */
-NX_UDP_SOCKET UDPSocket;
-ULONG IpAddress;
-ULONG NetMask;
 
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+static UINT kiss_of_death_handler(NX_SNTP_CLIENT *client_ptr, UINT KOD_code);
+static UINT dns_create(NX_DNS *dns_ptr);
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+static void display_rtc_time(RTC_HandleTypeDef *hrtc);
+static void rtc_time_update(NX_SNTP_CLIENT *client_ptr);
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -57,6 +55,25 @@ NX_IP          NetXDuoEthIpInstance;
 TX_SEMAPHORE   DHCPSemaphore;
 NX_DHCP        DHCPClient;
 /* USER CODE BEGIN PV */
+TX_THREAD AppSNTPThread;
+TX_THREAD AppLinkThread;
+NX_DNS                   DnsClient;
+NX_SNTP_CLIENT           SntpClient;
+
+TX_EVENT_FLAGS_GROUP     SntpFlags;
+
+ULONG                    IpAddress;
+ULONG                    NetMask;
+
+CHAR                     buffer[64];
+
+
+struct tm timeInfos;
+/* RTC handler declaration */
+RTC_HandleTypeDef RtcHandle;
+
+/* Set the SNTP network interface to the primary interface. */
+UINT  iface_index =0;
 
 /* USER CODE END PV */
 
@@ -64,11 +81,9 @@ NX_DHCP        DHCPClient;
 static VOID App_Main_Thread_Entry (ULONG thread_input);
 static VOID ip_address_change_notify_callback(NX_IP *ip_instance, VOID *ptr);
 /* USER CODE BEGIN PFP */
-/* UDP thread entry */
-static VOID App_UDP_Thread_Entry(ULONG thread_input);
-
-/* Link thread entry */
+static VOID App_SNTP_Thread_Entry(ULONG thread_input);
 static VOID App_Link_Thread_Entry(ULONG thread_input);
+static VOID time_update_callback(NX_SNTP_TIME_MESSAGE *time_update_ptr, NX_SNTP_TIME *local_time);
 
 /* USER CODE END PFP */
 
@@ -83,10 +98,9 @@ UINT MX_NetXDuo_Init(VOID *memory_ptr)
   TX_BYTE_POOL *byte_pool = (TX_BYTE_POOL*)memory_ptr;
 
    /* USER CODE BEGIN App_NetXDuo_MEM_POOL */
-
   /* USER CODE END App_NetXDuo_MEM_POOL */
   /* USER CODE BEGIN 0 */
-  printf("Nx_UDP_Echo_Server application started..\n");
+  printf("Nx_SNTP_Client application started..\n");
 
   /* USER CODE END 0 */
 
@@ -215,20 +229,19 @@ UINT MX_NetXDuo_Init(VOID *memory_ptr)
   tx_semaphore_create(&DHCPSemaphore, "DHCP Semaphore", 0);
 
   /* USER CODE BEGIN MX_NetXDuo_Init */
-  /* Allocate the app UDP thread entry pool. */
-  ret = tx_byte_allocate(byte_pool, (VOID **) &pointer, 2 * DEFAULT_MEMORY_SIZE, TX_NO_WAIT);
-
-  if (ret != TX_SUCCESS)
+  /* Allocate the memory for SNTP client thread   */
+  if (tx_byte_allocate(byte_pool, (VOID **) &pointer, SNTP_CLIENT_THREAD_MEMORY, TX_NO_WAIT) != TX_SUCCESS)
   {
     return TX_POOL_ERROR;
   }
-  /* create the UDP server thread */
-  ret = tx_thread_create(&AppUDPThread, "App UDP Thread", App_UDP_Thread_Entry, 0, pointer, 2 * DEFAULT_MEMORY_SIZE,
-                        DEFAULT_PRIORITY, DEFAULT_PRIORITY, TX_NO_TIME_SLICE, TX_DONT_START);
+
+  /* Create the SNTP client thread */
+  ret = tx_thread_create(&AppSNTPThread, "App SNTP Thread", App_SNTP_Thread_Entry, 0, pointer, SNTP_CLIENT_THREAD_MEMORY,
+                         DEFAULT_PRIORITY, DEFAULT_PRIORITY, TX_NO_TIME_SLICE, TX_DONT_START);
 
   if (ret != TX_SUCCESS)
   {
-    return TX_THREAD_ERROR;
+    return NX_NOT_ENABLED;
   }
 
   /* Allocate the memory for Link thread */
@@ -237,13 +250,21 @@ UINT MX_NetXDuo_Init(VOID *memory_ptr)
     return TX_POOL_ERROR;
   }
 
-  /* create the Link thread */
+  /* Create the Link thread */
   ret = tx_thread_create(&AppLinkThread, "App Link Thread", App_Link_Thread_Entry, 0, pointer, 2 * DEFAULT_MEMORY_SIZE,
                          LINK_PRIORITY, LINK_PRIORITY, TX_NO_TIME_SLICE, TX_AUTO_START);
 
   if (ret != TX_SUCCESS)
   {
-    return TX_THREAD_ERROR;
+    return NX_NOT_ENABLED;
+  }
+  /* Create the event flags. */
+  ret = tx_event_flags_create(&SntpFlags, "SNTP event flags");
+
+  /* Check for errors */
+  if (ret != NX_SUCCESS)
+  {
+    return NX_NOT_ENABLED;
   }
   /* USER CODE END MX_NetXDuo_Init */
 
@@ -294,6 +315,7 @@ static VOID App_Main_Thread_Entry (ULONG thread_input)
   if (ret != NX_SUCCESS)
   {
     /* USER CODE BEGIN IP address change callback error */
+
     Error_Handler();
 
     /* USER CODE END IP address change callback error */
@@ -304,6 +326,8 @@ static VOID App_Main_Thread_Entry (ULONG thread_input)
   if (ret != NX_SUCCESS)
   {
     /* USER CODE BEGIN DHCP client start error */
+
+    /* Error, call error handler. */
     Error_Handler();
 
     /* USER CODE END DHCP client start error */
@@ -313,85 +337,312 @@ static VOID App_Main_Thread_Entry (ULONG thread_input)
   if(tx_semaphore_get(&DHCPSemaphore, TX_WAIT_FOREVER) != TX_SUCCESS)
   {
     /* USER CODE BEGIN DHCPSemaphore get error */
+
+    /* Error, call error handler. */
     Error_Handler();
 
     /* USER CODE END DHCPSemaphore get error */
   }
 
   /* USER CODE BEGIN Nx_App_Thread_Entry 2 */
-
-  /* print the IP address */
   PRINT_IP_ADDRESS(IpAddress);
 
-  /* Now the network is correctly initialized, start the UDP server thread */
-  tx_thread_resume(&AppUDPThread);
+  /* Now the network is correctly initialized, start the SNTP client thread */
+  tx_thread_resume(&AppSNTPThread);
 
-  /* this thread is not needed any more, we relinquish it */
+  /* This thread is not needed any more, we relinquish it */
   tx_thread_relinquish();
+
+  return;
+
   /* USER CODE END Nx_App_Thread_Entry 2 */
 
 }
 /* USER CODE BEGIN 1 */
-static VOID App_UDP_Thread_Entry(ULONG thread_input)
+/**
+  * @brief  DNS Create Function.
+  * @param dns_ptr
+  * @retval ret
+  */
+UINT dns_create(NX_DNS *dns_ptr)
 {
-  UINT ret;
-  ULONG bytes_read;
-  UINT source_port;
+  UINT ret = NX_SUCCESS;
 
-  UCHAR data_buffer[512];
-  ULONG source_ip_address;
-  NX_PACKET *data_packet;
-
-  /* create the UDP socket */
-  ret = nx_udp_socket_create(&NetXDuoEthIpInstance, &UDPSocket, "UDP Server Socket", NX_IP_NORMAL, NX_FRAGMENT_OKAY, NX_IP_TIME_TO_LIVE, QUEUE_MAX_SIZE);
+  /* Create a DNS instance for the Client */
+  ret = nx_dns_create(dns_ptr, &NetXDuoEthIpInstance, (UCHAR *)"DNS Client");
 
   if (ret != NX_SUCCESS)
   {
-     Error_Handler();
+    Error_Handler();
   }
 
-  /* bind the socket indefinitely on the required port */
-  ret = nx_udp_socket_bind(&UDPSocket, DEFAULT_PORT, TX_WAIT_FOREVER);
+  /* Initialize DNS instance with the DNS server Address */
+  ret = nx_dns_server_add(dns_ptr, USER_DNS_ADDRESS);
+  if (ret != NX_SUCCESS)
+  {
+    Error_Handler();
+  }
+
+  return ret;
+}
+/**
+  * @brief  SNTP thread entry.
+  * @param thread_input: ULONG user argument used by the thread entry
+  * @retval none
+  */
+/* Define the client thread.  */
+static void App_SNTP_Thread_Entry(ULONG info)
+{
+  UINT ret;
+  ULONG  seconds, fraction;
+  ULONG  events = 0;
+  UINT   server_status;
+  NXD_ADDRESS sntp_server_ip;
+  NX_PARAMETER_NOT_USED(info);
+
+  sntp_server_ip.nxd_ip_version = 4;
+
+  /* Create a DNS client */
+  ret = dns_create(&DnsClient);
 
   if (ret != NX_SUCCESS)
   {
-     Error_Handler();
+    Error_Handler();
+  }
+
+  /* Look up SNTP Server address. */
+  ret = nx_dns_host_by_name_get(&DnsClient, (UCHAR *)SNTP_SERVER_NAME,
+                                &sntp_server_ip.nxd_ip_address.v4, NX_APP_DEFAULT_TIMEOUT);
+
+    /* Check for error. */
+  if (ret != NX_SUCCESS)
+  {
+    Error_Handler();
+  }
+
+   /* Create the SNTP Client */
+  ret =  nx_sntp_client_create(&SntpClient, &NetXDuoEthIpInstance, iface_index, &NxAppPool, NULL, kiss_of_death_handler, NULL);
+
+  /* Check for error. */
+  if (ret != NX_SUCCESS)
+  {
+    Error_Handler();
+  }
+
+  /* Setup time update callback function. */
+   nx_sntp_client_set_time_update_notify(&SntpClient, time_update_callback);
+
+  /* Use the IPv4 service to set up the Client and set the IPv4 SNTP server. */
+  ret = nx_sntp_client_initialize_unicast(&SntpClient, sntp_server_ip.nxd_ip_address.v4);
+
+  if (ret != NX_SUCCESS)
+  {
+    Error_Handler();
+  }
+
+  /* Run whichever service the client is configured for. */
+  ret = nx_sntp_client_run_unicast(&SntpClient);
+
+  if (ret != NX_SUCCESS)
+  {
+    Error_Handler();
   }
   else
   {
-    printf("UDP Server listening on PORT %d.. \n", DEFAULT_PORT);
+    PRINT_CNX_SUCC();
   }
 
-  while(1)
+  /* Wait for a server update event. */
+  tx_event_flags_get(&SntpFlags, SNTP_UPDATE_EVENT, TX_OR_CLEAR, &events, PERIODIC_CHECK_INTERVAL);
+
+  if (events == SNTP_UPDATE_EVENT)
   {
-    TX_MEMSET(data_buffer, '\0', sizeof(data_buffer));
+    /* Check for valid SNTP server status. */
+    ret = nx_sntp_client_receiving_updates(&SntpClient, &server_status);
 
-    /* wait for data for 1 sec */
-    ret = nx_udp_socket_receive(&UDPSocket, &data_packet, 100);
-
-    if (ret == NX_SUCCESS)
+    if ((ret != NX_SUCCESS) || (server_status == NX_FALSE))
     {
-      /* data is available, read it into the data buffer */
-      nx_packet_data_retrieve(data_packet, data_buffer, &bytes_read);
+      /* We do not have a valid update. */
+      Error_Handler();
+    }
+    /* We have a valid update.  Get the SNTP Client time.  */
+    ret = nx_sntp_client_get_local_time_extended(&SntpClient, &seconds, &fraction, NX_NULL, 0);
 
-      /* get info about the client address and port */
-      nx_udp_source_extract(data_packet, &source_ip_address, &source_port);
+    ret = nx_sntp_client_utility_display_date_time(&SntpClient,buffer,64);
 
-      /* print the client address, the remote port and the received data */
-      PRINT_DATA(source_ip_address, source_port, data_buffer);
-
-      /* resend the same packet to the client */
-      ret =  nx_udp_socket_send(&UDPSocket, data_packet, source_ip_address, source_port);
-
-      /* toggle the green led to monitor visually the traffic */
-//      BSP_LED_Toggle(LED_GREEN);    
+    if (ret != NX_SUCCESS)
+    {
+      printf("Internal error with getting local time 0x%x\n", ret);
+      Error_Handler();
     }
     else
     {
-        /* the server is in idle state, toggle the green led */
-//        BSP_LED_Toggle(LED_GREEN);
+      printf("\nSNTP update :\n");
+      printf("%s\n\n",buffer);
     }
   }
+  else
+  {
+    Error_Handler();
+  }
+
+  /* Set Current time from SNTP TO RTC */
+  rtc_time_update(&SntpClient);
+
+  /* We can stop the SNTP service if for example we think the SNTP server has stopped sending updates */
+  ret = nx_sntp_client_stop(&SntpClient);
+  if (ret != NX_SUCCESS)
+  {
+    Error_Handler();
+  }
+
+  /* When done with the SNTP Client, we delete it */
+  ret = nx_sntp_client_delete(&SntpClient);
+  if (ret != NX_SUCCESS)
+  {
+    Error_Handler();
+  }
+
+  /* Toggling LED after a success Time update */
+  while(1)
+  {
+    /* Display RTC time each second  */
+    display_rtc_time(&hrtc);
+    BSP_LED_Toggle(LED1);
+    /* Delay for 1s */
+    tx_thread_sleep(100);
+  }
+}
+
+
+/* This application defined handler for handling a Kiss of Death packet is not
+required by the SNTP Client. A KOD handler should determine
+if the Client task should continue vs. abort sending/receiving time data
+from its current time server, and if aborting if it should remove
+the server from its active server list.
+
+Note that the KOD list of codes is subject to change. The list
+below is current at the time of this software release. */
+
+static UINT kiss_of_death_handler(NX_SNTP_CLIENT *client_ptr, UINT KOD_code)
+{
+  UINT    remove_server_from_list = NX_FALSE;
+  UINT    status = NX_SUCCESS;
+
+  NX_PARAMETER_NOT_USED(client_ptr);
+
+  /* Handle kiss of death by code group. */
+  switch (KOD_code)
+  {
+
+  case NX_SNTP_KOD_RATE:
+  case NX_SNTP_KOD_NOT_INIT:
+  case NX_SNTP_KOD_STEP:
+
+    /* Find another server while this one is temporarily out of service.  */
+    status =  NX_SNTP_KOD_SERVER_NOT_AVAILABLE;
+
+    break;
+
+  case NX_SNTP_KOD_AUTH_FAIL:
+  case NX_SNTP_KOD_NO_KEY:
+  case NX_SNTP_KOD_CRYP_FAIL:
+
+    /* These indicate the server will not service client with time updates
+    without successful authentication. */
+
+    remove_server_from_list =  NX_TRUE;
+
+    break;
+
+
+  default:
+
+    /* All other codes. Remove server before resuming time updates. */
+
+    remove_server_from_list =  NX_TRUE;
+    break;
+  }
+
+  /* Removing the server from the active server list? */
+  if (remove_server_from_list)
+  {
+
+    /* Let the caller know it has to bail on this server before resuming service. */
+    status = NX_SNTP_KOD_REMOVE_SERVER;
+  }
+
+  return status;
+}
+
+/* This application defined handler for notifying SNTP time update event.  */
+static VOID time_update_callback(NX_SNTP_TIME_MESSAGE *time_update_ptr, NX_SNTP_TIME *local_time)
+{
+  NX_PARAMETER_NOT_USED(time_update_ptr);
+  NX_PARAMETER_NOT_USED(local_time);
+
+  tx_event_flags_set(&SntpFlags, SNTP_UPDATE_EVENT, TX_OR);
+}
+
+/* This application updates Time from SNTP to STM32 RTC */
+static void rtc_time_update(NX_SNTP_CLIENT *client_ptr)
+{
+  RTC_DateTypeDef sdatestructure ={0};
+  RTC_TimeTypeDef stimestructure ={0};
+  struct tm ts;
+  CHAR  temp[32] = {0};
+
+  /* Convert SNTP time (seconds since 01-01-1900 to 01-01-1970)
+
+  EPOCH_TIME_DIFF is equivalent to 70 years in sec
+  calculated with www.epochconverter.com/date-difference
+  This constant is used to delete difference between :
+  Epoch converter (referenced to 1970) and SNTP (referenced to 1900) */
+  time_t timestamp = client_ptr->nx_sntp_current_server_time_message.receive_time.seconds - EPOCH_TIME_DIFF;
+
+  /* Convert time in yy/mm/dd hh:mm:sec */
+  ts = *localtime(&timestamp);
+
+  /* Convert date composants to hex format */
+  sprintf(temp, "%d", (ts.tm_year - 100));
+  sdatestructure.Year = strtol(temp, NULL, 16);
+  sprintf(temp, "%d", ts.tm_mon + 1);
+  sdatestructure.Month = strtol(temp, NULL, 16);
+  sprintf(temp, "%d", ts.tm_mday);
+  sdatestructure.Date = strtol(temp, NULL, 16);
+  /* Dummy weekday */
+  sdatestructure.WeekDay =0x01;
+
+  if (HAL_RTC_SetDate(&hrtc, &sdatestructure, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* Convert time composants to hex format */
+  sprintf(temp,"%d", ts.tm_hour);
+  stimestructure.Hours = strtol(temp, NULL, 16);
+  sprintf(temp,"%d", ts.tm_min);
+  stimestructure.Minutes = strtol(temp, NULL, 16);
+  sprintf(temp, "%d", ts.tm_sec);
+  stimestructure.Seconds = strtol(temp, NULL, 16);
+
+  if (HAL_RTC_SetTime(&hrtc, &stimestructure, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+}
+
+/* This application displays time from RTC */
+static void display_rtc_time(RTC_HandleTypeDef *hrtc)
+{
+  RTC_TimeTypeDef RTC_Time = {0};
+  RTC_DateTypeDef RTC_Date = {0};
+
+  HAL_RTC_GetTime(&hrtc,&RTC_Time,RTC_FORMAT_BCD);
+  HAL_RTC_GetDate(&hrtc,&RTC_Date,RTC_FORMAT_BCD);
+
+  printf("%02x-%02x-20%02x / %02x:%02x:%02x\n",\
+        RTC_Date.Date, RTC_Date.Month, RTC_Date.Year,RTC_Time.Hours,RTC_Time.Minutes,RTC_Time.Seconds);
 }
 
 /**
@@ -415,7 +666,6 @@ static VOID App_Link_Thread_Entry(ULONG thread_input)
       if(linkdown == 1)
       {
         linkdown = 0;
-
         /* The network cable is connected. */
         printf("The network cable is connected.\n");
 
@@ -437,13 +687,14 @@ static VOID App_Link_Thread_Entry(ULONG thread_input)
           /* Start DHCP */
           nx_dhcp_start(&DHCPClient);
 
-          /* wait until an IP address is ready */
+          /* Wait until an IP address is ready */
           if(tx_semaphore_get(&DHCPSemaphore, TX_WAIT_FOREVER) != TX_SUCCESS)
           {
             /* USER CODE BEGIN DHCPSemaphore get error */
             Error_Handler();
             /* USER CODE END DHCPSemaphore get error */
           }
+
           PRINT_IP_ADDRESS(IpAddress);
         }
         else
@@ -465,7 +716,7 @@ static VOID App_Link_Thread_Entry(ULONG thread_input)
       }
     }
 
-    tx_thread_sleep(NX_APP_CABLE_CONNECTION_CHECK_PERIOD);
+    tx_thread_sleep(NX_ETH_CABLE_CONNECTION_CHECK_PERIOD);
   }
 }
 
