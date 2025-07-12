@@ -44,7 +44,7 @@ static UINT dns_create(NX_DNS *dns_ptr);
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-static void display_rtc_time(RTC_HandleTypeDef *hrtc);
+static void display_rtc_time(void);
 static void rtc_time_update(NX_SNTP_CLIENT *client_ptr);
 /* USER CODE END PM */
 
@@ -279,6 +279,8 @@ UINT MX_NetXDuo_Init(VOID *memory_ptr)
 */
 static VOID ip_address_change_notify_callback(NX_IP *ip_instance, VOID *ptr)
 {
+  NX_PARAMETER_NOT_USED(ip_instance);
+  NX_PARAMETER_NOT_USED(ptr);
   /* USER CODE BEGIN ip_address_change_notify_callback */
   if (nx_ip_address_get(&NetXDuoEthIpInstance, &IpAddress, &NetMask) != NX_SUCCESS)
   {
@@ -301,7 +303,7 @@ static VOID ip_address_change_notify_callback(NX_IP *ip_instance, VOID *ptr)
 static VOID App_Main_Thread_Entry (ULONG thread_input)
 {
   /* USER CODE BEGIN Nx_App_Thread_Entry 0 */
-
+  NX_PARAMETER_NOT_USED(thread_input);
   /* USER CODE END Nx_App_Thread_Entry 0 */
 
   UINT ret = NX_SUCCESS;
@@ -507,10 +509,10 @@ static void App_SNTP_Thread_Entry(ULONG info)
   while(1)
   {
     /* Display RTC time each second  */
-    display_rtc_time(&hrtc);
+    display_rtc_time();
     BSP_LED_Toggle(LED1);
     /* Delay for 1s */
-    tx_thread_sleep(100);
+    tx_thread_sleep(1000);
   }
 }
 
@@ -605,11 +607,15 @@ static void rtc_time_update(NX_SNTP_CLIENT *client_ptr)
 
   /* Convert date composants to hex format */
   sprintf(temp, "%d", (ts.tm_year - 100));
-  sdatestructure.Year = strtol(temp, NULL, 16);
+  sdatestructure.Year = (uint8_t)strtol(temp, NULL, 16);
   sprintf(temp, "%d", ts.tm_mon + 1);
-  sdatestructure.Month = strtol(temp, NULL, 16);
+  sdatestructure.Month = (uint8_t)strtol(temp, NULL, 16);
   sprintf(temp, "%d", ts.tm_mday);
-  sdatestructure.Date = strtol(temp, NULL, 16);
+  long date_val = strtol(temp, NULL, 16);
+  if (date_val < 0 || date_val > 0xFF) {
+    Error_Handler();
+  }
+  sdatestructure.Date = (uint8_t)date_val;
   /* Dummy weekday */
   sdatestructure.WeekDay =0x01;
 
@@ -619,11 +625,23 @@ static void rtc_time_update(NX_SNTP_CLIENT *client_ptr)
   }
   /* Convert time composants to hex format */
   sprintf(temp,"%d", ts.tm_hour);
-  stimestructure.Hours = strtol(temp, NULL, 16);
+  long hour_val = strtol(temp, NULL, 16);
+  if (hour_val < 0 || hour_val > 0xFF) {
+    Error_Handler();
+  }
+  stimestructure.Hours = (uint8_t)hour_val;
   sprintf(temp,"%d", ts.tm_min);
-  stimestructure.Minutes = strtol(temp, NULL, 16);
+  long min_val = strtol(temp, NULL, 16);
+  if (min_val < 0 || min_val > 0xFF) {
+    Error_Handler();
+  }
+  stimestructure.Minutes = (uint8_t)min_val;
   sprintf(temp, "%d", ts.tm_sec);
-  stimestructure.Seconds = strtol(temp, NULL, 16);
+  long sec_val = strtol(temp, NULL, 16);
+  if (sec_val < 0 || sec_val > 0xFF) {
+    Error_Handler();
+  }
+  stimestructure.Seconds = (uint8_t)sec_val;
 
   if (HAL_RTC_SetTime(&hrtc, &stimestructure, RTC_FORMAT_BCD) != HAL_OK)
   {
@@ -632,8 +650,8 @@ static void rtc_time_update(NX_SNTP_CLIENT *client_ptr)
 
 }
 
-/* This application displays time from RTC */
-static void display_rtc_time(RTC_HandleTypeDef *hrtc)
+/* Displays time from RTC */
+static void display_rtc_time()
 {
   RTC_TimeTypeDef RTC_Time = {0};
   RTC_DateTypeDef RTC_Date = {0};
@@ -652,6 +670,7 @@ static void display_rtc_time(RTC_HandleTypeDef *hrtc)
   */
 static VOID App_Link_Thread_Entry(ULONG thread_input)
 {
+  NX_PARAMETER_NOT_USED(thread_input);
   ULONG actual_status;
   UINT linkdown = 0, status;
 
