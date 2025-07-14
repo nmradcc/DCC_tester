@@ -58,9 +58,6 @@ void CommandStationThread(void *argument) {
   __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
   HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);
 
-#if defined(DEBUG)
-  SCB->CCR &= ~SCB_CCR_UNALIGN_TRP_Msk;
-#endif
   // Main loop
   // Send a few packets to test the command station
   // This is not part of the command station functionality, but rather a test
