@@ -28,6 +28,7 @@
 #include "stm32h5xx_nucleo.h"
 #include "tx_api.h"
 #include "command_station.h"
+#include "decoder.h"
 
 /* USER CODE END Includes */
 
@@ -95,6 +96,8 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
   /* Create the command station task ... but don't start it */
   CommandStationThread_Init();
+  /* Create the decoder task ... but don't start it */
+  DecoderThread_Init();
 
   /* USER CODE END App_ThreadX_Init */
 

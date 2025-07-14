@@ -36,7 +36,7 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-extern void cmdStationTask(void *argument);
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
