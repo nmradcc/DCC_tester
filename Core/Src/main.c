@@ -114,6 +114,9 @@ int main(void)
 
   /* USER CODE BEGIN 1 */
 
+  // Override alignment issue with DCC library on M33
+  SCB->CCR &= ~SCB_CCR_UNALIGN_TRP_Msk;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
