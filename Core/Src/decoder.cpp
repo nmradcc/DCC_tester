@@ -64,10 +64,6 @@ extern "C" void DC_HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
      // Get captured value (CH1)
     uint32_t ccr = HAL_TIM_ReadCapturedValue(&htim15, TIM_CHANNEL_1);
 
-    // Reset counter by subtracting capture value
-    __disable_irq();
-    __HAL_TIM_SET_COUNTER(&htim15, __HAL_TIM_GET_COUNTER(&htim15) - ccr);
-    __enable_irq();
     decoder.receive(ccr);
 }
 
@@ -99,6 +95,5 @@ extern "C" void DecoderThread_Init(void)
 extern "C" void DecoderThread_Start(void)
 {
     osSemaphoreRelease(decoderStart_sem);
-//TODO:    HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
     printf("Decoder started\n");
 }
