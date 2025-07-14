@@ -64,25 +64,25 @@ void CommandStationThread(void *argument) {
   // to see if the command station is working correctly.
   dcc::Packet packet{};
   for (;;) {
-    // Accelerate
-    BSP_LED_Toggle(LED_GREEN);
-    packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
-    command_station.packet(packet);
-    printf("\nCommand station: accelerate to speed step 42\n");
-    osDelay(2000u);
-
-    // Set function F3
+    // Set function F0
     BSP_LED_Toggle(LED_GREEN);
     packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
     command_station.packet(packet);
     printf("Command station: set function F0\n");
     osDelay(2000u);
 
+    // Accelerate
+    BSP_LED_Toggle(LED_GREEN);
+    packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
+    command_station.packet(packet);
+    printf("\nCommand station: accelerate to speed step 42 forward\n");
+    osDelay(2000u);
+
     // Decelerate
     BSP_LED_Toggle(LED_GREEN);
     packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 0u);
     command_station.packet(packet);
-    printf("Command station: stop\n");
+    printf("Command station: stop (forward)\n");
     osDelay(2000u);
 
     // Clear function
@@ -90,6 +90,20 @@ void CommandStationThread(void *argument) {
     packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
     command_station.packet(packet);
     printf("Command station: clear function F0\n");
+    osDelay(2000u);
+
+    // Accelerate
+    BSP_LED_Toggle(LED_GREEN);
+    packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
+    command_station.packet(packet);
+    printf("\nCommand station: accelerate to speed step 42 reverse\n");
+    osDelay(2000u);
+
+    // Decelerate
+    BSP_LED_Toggle(LED_GREEN);
+    packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
+    command_station.packet(packet);
+    printf("Command station: stop (reverse)\n");
     osDelay(2000u);
   }
 }

@@ -184,7 +184,7 @@ void vCommandConsoleTask(void *pvParameters)
     char N_char = '\n';
     tx_queue_create(&command_queue, "Queue", TX_1_ULONG, command_queue_storage, sizeof(command_queue_storage));
 
-    osDelay(3000); // Wait for system to initialize
+    osDelay(2000); // Wait for system to initialize
     
     print_help(); // Print help on startup
 
