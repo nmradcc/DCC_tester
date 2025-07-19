@@ -5,6 +5,7 @@
 
 static osThreadId_t commandStationThread_id;
 static osSemaphoreId_t commandStationStart_sem;
+static bool commandStationRunning = false;
 
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
@@ -44,83 +45,111 @@ extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 
 void CommandStationThread(void *argument) {
-  command_station.init({
-    .num_preamble = DCC_TX_MIN_PREAMBLE_BITS,
-    .bit1_duration = 58u,
-    .bit0_duration = 100u,
-    .flags = {.invert = false, .bidi = false},
-  });
+  (void)argument;  // Unused parameter
 
-  // Block until externally started
-  osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
-  
+  while (true) {
+    // Block until externally started
+    osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
+    
+    command_station.init({
+      .num_preamble = DCC_TX_MIN_PREAMBLE_BITS,
+      .bit1_duration = 58u,
+      .bit0_duration = 100u,
+      .flags = {.invert = false, .bidi = false},
+    });
+
   // Enable update interrupt
-  __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
-  HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);
+    __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
+    HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);
+    commandStationRunning = true;
 
-  // Main loop
-  // Send a few packets to test the command station
-  // This is not part of the command station functionality, but rather a test
-  // to see if the command station is working correctly.
-  dcc::Packet packet{};
-  for (;;) {
-    // Set function F0
-    BSP_LED_Toggle(LED_GREEN);
-    packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
-    command_station.packet(packet);
-    printf("Command station: set function F0\n");
-    osDelay(2000u);
+    // Main loop
+    // Send a few packets to test the command station
+    // This is not part of the command station functionality, but rather a test
+    // to see if the command station is working correctly.
+    dcc::Packet packet{};
+    while (commandStationRunning) {
+      // Set function F0
+      BSP_LED_Toggle(LED_GREEN);
+      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
+      command_station.packet(packet);
+      printf("Command station: set function F0\n");
+      osDelay(2000u);
 
-    // Accelerate
-    BSP_LED_Toggle(LED_GREEN);
-    packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
-    command_station.packet(packet);
-    printf("\nCommand station: accelerate to speed step 42 forward\n");
-    osDelay(2000u);
+      // Accelerate
+      BSP_LED_Toggle(LED_GREEN);
+      packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
+      command_station.packet(packet);
+      printf("\nCommand station: accelerate to speed step 42 forward\n");
+      osDelay(2000u);
 
-    // Decelerate
-    BSP_LED_Toggle(LED_GREEN);
-    packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 0u);
-    command_station.packet(packet);
-    printf("Command station: stop (forward)\n");
-    osDelay(2000u);
+      // Decelerate
+      BSP_LED_Toggle(LED_GREEN);
+      packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 0u);
+      command_station.packet(packet);
+      printf("Command station: stop (forward)\n");
+      osDelay(2000u);
 
-    // Clear function
-    BSP_LED_Toggle(LED_GREEN);
-    packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
-    command_station.packet(packet);
-    printf("Command station: clear function F0\n");
-    osDelay(2000u);
+      // Clear function
+      BSP_LED_Toggle(LED_GREEN);
+      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
+      command_station.packet(packet);
+      printf("Command station: clear function F0\n");
+      osDelay(2000u);
 
-    // Accelerate
-    BSP_LED_Toggle(LED_GREEN);
-    packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
-    command_station.packet(packet);
-    printf("\nCommand station: accelerate to speed step 42 reverse\n");
-    osDelay(2000u);
+      // Accelerate
+      BSP_LED_Toggle(LED_GREEN);
+      packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
+      command_station.packet(packet);
+      printf("\nCommand station: accelerate to speed step 42 reverse\n");
+      osDelay(2000u);
 
-    // Decelerate
-    BSP_LED_Toggle(LED_GREEN);
-    packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
-    command_station.packet(packet);
-    printf("Command station: stop (reverse)\n");
-    osDelay(2000u);
+      // Decelerate
+      BSP_LED_Toggle(LED_GREEN);
+      packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
+      command_station.packet(packet);
+      printf("Command station: stop (reverse)\n");
+      osDelay(2000u);
+    }
+    HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_1);
+    __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
+    osSemaphoreRelease(commandStationStart_sem);
+    osDelay(5u); // Give some time for the semaphore to be released
   }
+
 }
 
 // Called at system init
-extern "C" void CommandStationThread_Init(void)
+extern "C" void CommandStation_Init(void)
 {
     commandStationStart_sem = osSemaphoreNew(1, 0, NULL);  // Start locked
     commandStationThread_id = osThreadNew(CommandStationThread, NULL, &cmdStationTask_attributes);
 }
 
 // Can be called from anywhere
-extern "C" void CommandStationThread_Start(void)
+extern "C" void CommandStation_Start(void)
 {
-    osSemaphoreRelease(commandStationStart_sem);
+  if (!commandStationRunning) {
     HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
+    osSemaphoreRelease(commandStationStart_sem);
     printf("Command station started\n");
   }
+  else {
+    printf("Command station already running\n");
+  }
+}
 
-
+// Can be called from anywhere
+extern "C" void CommandStation_Stop(void)
+{
+  if (commandStationRunning) {
+    printf("Command station stopping\n");
+    commandStationRunning = false;
+    osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
+    HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
+    printf("Command station stopped\n");
+  }
+  else {
+    printf("Command station not running\n");
+  }
+}

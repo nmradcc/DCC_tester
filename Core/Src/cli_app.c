@@ -60,13 +60,13 @@ void help_command(const char *arg1, const char *arg2) {
 void command_station_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
     if (stricmp(arg1,"start") == 0) {
-        printf("Starting Command Station ...\n");
-        CommandStationThread_Start();
+        printf("Start Command Station ...\n");
+        CommandStation_Start();
     }
-//    else if (stricmp(arg1,"stop") == 0) {
-//        printf("Stopping Command Station ...\n");
-//        CommandStationThread_Stop();
-//    }
+    else if (stricmp(arg1,"stop") == 0) {
+        printf("Stop Command Station ...\n");
+        CommandStation_Stop();
+    }
     else {
         printf("Unknown command station command: %s\n", arg1);
     }
@@ -75,13 +75,13 @@ void command_station_command(const char *arg1, const char *arg2) {
 void decoder_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
     if (stricmp(arg1,"start") == 0) {
-        printf("Starting Decoder ...\n");
-        DecoderThread_Start();
+        printf("Start Decoder ...\n");
+        Decoder_Start();
     }
-//    else if (stricmp(arg1,"stop") == 0) {
-//        printf("Stopping Decoder ...\n");
-//        DecoderThread_Stop();
-//    }
+    else if (stricmp(arg1,"stop") == 0) {
+        printf("Stop Decoder ...\n");
+        Decoder_Stop();
+    }
     else {
         printf("Unknown decoder command: %s\n", arg1);
     }
@@ -124,13 +124,13 @@ Command cmd_help = {
 Command cmd_cms = {
     .name = "cms", 
     .execute = command_station_command,
-    .help = "Start Command Station",
+    .help = "Command Station start/stop",
     .next = &cmd_help
 };
 Command cmd_dec = {
     .name = "dec", 
     .execute = decoder_command,
-    .help = "Start Decoder",
+    .help = "Decoder start/stop",
     .next = &cmd_cms
 };
 Command cmd_hello = {

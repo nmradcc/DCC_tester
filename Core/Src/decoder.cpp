@@ -6,6 +6,7 @@
 
 static osThreadId_t decoderThread_id;
 static osSemaphoreId_t decoderStart_sem;
+static bool decoderRunning = false;
 
 /* Definitions for decoderTask */
 const osThreadAttr_t decoderTask_attributes = {
@@ -69,31 +70,58 @@ extern "C" void DC_HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 
 void DecoderThread(void *argument) {
   (void)argument;  // Unused parameter
-  decoder.init();
 
-  // Block until externally started
-  osSemaphoreAcquire(decoderStart_sem, osWaitForever);
+  while (true) {
+    // Block until externally started
+    osSemaphoreAcquire(decoderStart_sem, osWaitForever);
 
-  // Enable update interrupt
-  __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
-  HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1);
+    decoder.init();
 
-  for (;;) {
-    decoder.execute();
-    osDelay(5u);
+    // Enable update interrupt
+    __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
+    HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1);
+    decoderRunning = true;
+
+    while (decoderRunning) {
+      decoder.execute();
+      osDelay(5u);
+    }
+    HAL_TIM_IC_Stop_IT(&htim15, TIM_CHANNEL_1);
+    __HAL_TIM_DISABLE_IT(&htim15, TIM_IT_UPDATE);
+    osSemaphoreRelease(decoderStart_sem);
+    osDelay(5u); // Give some time for the semaphore to be released
   }
+
 }
 
 // Called at system init
-extern "C" void DecoderThread_Init(void)
+extern "C" void Decoder_Init(void)
 {
     decoderStart_sem = osSemaphoreNew(1, 0, NULL);  // Start locked
     decoderThread_id = osThreadNew(DecoderThread, NULL, &decoderTask_attributes);
 }
 
 // Can be called from anywhere
-extern "C" void DecoderThread_Start(void)
+extern "C" void Decoder_Start(void)
 {
+  if (!decoderRunning) {
     osSemaphoreRelease(decoderStart_sem);
     printf("Decoder started\n");
+  }
+  else {
+    printf("Decoder already running\n");
+  } 
 }
+
+extern "C" void Decoder_Stop(void)
+{
+  if (decoderRunning) {
+    printf("Decoder stopping\n");
+    decoderRunning = false;
+    osSemaphoreAcquire(decoderStart_sem, osWaitForever);
+    printf("Decoder stopped\n");
+  }
+  else {
+    printf("Decoder not running\n");
+  }
+} 

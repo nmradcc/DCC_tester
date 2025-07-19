@@ -5,8 +5,10 @@ extern "C" {
 
 void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 
-void CommandStationThread_Init(void);
-void CommandStationThread_Start(void);
+void CommandStation_Init(void);
+void CommandStation_Start(void);
+void CommandStation_Stop(void);
+
 
 #ifdef __cplusplus
 }
