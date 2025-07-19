@@ -5,8 +5,9 @@ extern "C" {
 
 void DC_HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim);
 
-void DecoderThread_Init(void);
-void DecoderThread_Start(void);
+void Decoder_Init(void);
+void Decoder_Start(void);
+void Decoder_Stop(void);
 
 #ifdef __cplusplus
 }

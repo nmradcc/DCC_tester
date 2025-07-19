@@ -95,9 +95,9 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   /* Create the command line task */
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
   /* Create the command station task ... but don't start it */
-  CommandStationThread_Init();
+  CommandStation_Init();
   /* Create the decoder task ... but don't start it */
-  DecoderThread_Init();
+  Decoder_Init();
 
   /* USER CODE END App_ThreadX_Init */
 
