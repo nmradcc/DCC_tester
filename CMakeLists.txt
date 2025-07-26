@@ -72,6 +72,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/cli_app.c
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
+    Core/Src/SUSI_Master.c
+    Core/Src/SUSI_Slave.c
 )
 
 # Add include paths

@@ -1,6 +1,3 @@
-#ifndef CLI_COMMANDS_H
-#define CLI_COMMANDS_H
-
 #include <sys/unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -238,6 +235,3 @@ void vCommandConsoleTask(void *pvParameters)
         }
     }
 }
-
-
-#endif /* CLI_COMMANDS_H */
