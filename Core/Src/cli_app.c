@@ -60,8 +60,12 @@ void help_command(const char *arg1, const char *arg2) {
 void command_station_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
     if (stricmp(arg1,"start") == 0) {
+        if (stricmp(arg2, "bidi") == 0) {
+            CommandStation_Start(true);
+        } else {
+            CommandStation_Start(false);
+        }
         printf("Start Command Station ...\n");
-        CommandStation_Start();
     }
     else if (stricmp(arg1,"stop") == 0) {
         printf("Stop Command Station ...\n");
@@ -86,6 +90,21 @@ void decoder_command(const char *arg1, const char *arg2) {
         printf("Unknown decoder command: %s\n", arg1);
     }
 }
+
+void bidi_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    if (arg1[0]) {
+//TODO: add range check
+        uint16_t threshold = (uint16_t)atoi(arg1);
+        printf("Setting BiDi threshold to %d ...\n", threshold);
+        CommandStation_bidi_Threshold(threshold);
+    } else {
+        printf("Setting BiDi threshold to default ...\n");
+        CommandStation_bidi_Threshold(DEFAULT_BIDIR_THRESHOLD);
+    }
+}
+
+
 
 void hello_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
@@ -121,16 +140,23 @@ Command cmd_help = {
     .help = NULL, 
     .next = NULL
 };
+Command cmd_bidi = {
+    .name = "bidi", 
+    .execute = bidi_command,
+    .help = "BiDi Threshold: bidi <value>",
+    .next = &cmd_help
+
+};
 Command cmd_cms = {
     .name = "cms", 
     .execute = command_station_command,
-    .help = "Command Station start/stop",
-    .next = &cmd_help
+    .help = "Command Station: cms <start|stop> [bidi]",
+    .next = &cmd_bidi
 };
 Command cmd_dec = {
     .name = "dec", 
     .execute = decoder_command,
-    .help = "Decoder start/stop",
+    .help = "Decoder: dec <start|stop>",
     .next = &cmd_cms
 };
 Command cmd_hello = {
@@ -164,9 +190,12 @@ static void print_help(void) {
     Command *current = command_list;
     printf("Available commands:\n");
     while (current != NULL) {
-        printf("  %s\n", current->name);
+        printf("  %s ", current->name);
         if (current->help) {
-            printf("    %s\n", current->help);
+            printf("\t%s\n", current->help);
+        }
+        else {
+            printf("\n");
         }
         current = current->next;
     }
