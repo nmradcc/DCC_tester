@@ -46,6 +46,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 
 void CommandStation::biDiStart() {
+    HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
     HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
 //    husart6.Instance->CR1 |= USART_CR1_RXNEIE;
   for (uint16_t i = 0; i < RX_BIDIR_MAX_SIZE; ++i) {
@@ -62,6 +63,7 @@ void CommandStation::biDiChannel2() {}
 void CommandStation::biDiEnd() {
     HAL_UART_AbortReceive_IT(&huart6); // Stop receiving BiDi data
     HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
+    HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
 }
 
 CommandStation command_station;
