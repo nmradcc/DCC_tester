@@ -1,6 +1,6 @@
 # DCC
 
-<img src="https://github.com/ZIMO-Elektronik/DCC/raw/master/data/images/logo.gif" align="right"/>
+<img src="https://github.com/nmradcc/DCC_tester/raw/main/data/images/logo.gif" align="right"/>
 
 DCC is an acronym for [Digital Command Control](https://en.wikipedia.org/wiki/Digital_Command_Control), a standardized protocol for controlling digital model railways. This library contains code to test DCC decoders for compliance to the NMRA standards. Test software runs on an STMicrosystems STM32H5xx Nucleo development board with an additional custom hardware daughterboard.
 
@@ -35,7 +35,8 @@ The DCC protocol is defined by various standards published by the [National Mode
 ### Prerequisites
 - [git](https://git-scm.com/downloads)
 - [Visual Studio Code](https://code.visualstudio.com/download)
-- [STM32Cube for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=stmicroelectronics.stm32-vscode-extension) Can be installed from the VS Code marketplace
+- [STM32Cube for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=stmicroelectronics.stm32-vscode-extension) Can be installed from the VS Code Marketplace
+- [Serial Monitor for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-serial-monitor) Can be installed from the VS Code Marketplace
 - [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html)
 
 ### Installation

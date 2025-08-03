@@ -7,6 +7,16 @@ cmake_minimum_required(VERSION 3.22)
 # User is free to modify the file as much as necessary
 #
 
+set(PROJECT_VERSION_MAJOR 1)
+set(PROJECT_VERSION_MINOR 0)
+set(PROJECT_VERSION_PATCH 0)
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Inc/version.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/version.h
+    @ONLY
+)
+
 # Setup compiler settings
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -23,14 +33,10 @@ set(CMAKE_PROJECT_NAME DCC_tester)
 
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")
-#??add_compile_definitions(STM32H563xx)
 
 # Enable compile command to ease indexing with e.g. clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
-#??# Include FetchContent module for dependency management
-#??include(FetchContent)
-#??
 # Core project settings
 project(${CMAKE_PROJECT_NAME})
 message("Build type: " ${CMAKE_BUILD_TYPE})
@@ -40,6 +46,7 @@ enable_language(C ASM)
 
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME})
+
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
