@@ -22,11 +22,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "cmsis_os2.h"
-#include "cli_app.h"
-#include "stm32h5xx_nucleo.h"
-#include "command_station.h"
-#include "decoder.h"
 
 /* USER CODE END Includes */
 
@@ -60,7 +55,7 @@ const osThreadAttr_t LedThreadTask_attributes = {
 osThreadId_t cmdLineThreadTaskHandle;
 const osThreadAttr_t cmdLineThreadTask_attributes = {
   .name = "cmdLineThreadTask",
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 512 * 4
 };
 
@@ -122,15 +117,15 @@ void LedTask(void *argument)
     (void)argument;
     while (1)
     {
-       BSP_LED_Toggle(LED_YELLOW);
-       osDelay(500);
+        BSP_LED_Toggle(LED_YELLOW);
+        osDelay(500);  // Delay for 500ms
     }
   /* USER CODE END LedThreadTask */
 }
 
 /* USER CODE BEGIN Header_cmdLineTask */
 /**
-* @brief Function implementing the cmdLineTask thread.
+* @brief Function implementing the cmdLineThreadTask thread.
 * @param argument: Not used
 * @retval None
 */
