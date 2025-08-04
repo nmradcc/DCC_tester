@@ -3,9 +3,6 @@
 
 #include "stdint.h"
 
-void processRxedChar(uint8_t rxChar);
-void handleNewline(const char *const pcInputString, char *cOutputBuffer, uint8_t *cInputIndex);
-void handleCharacterInput(uint8_t *cInputIndex, char *pcInputString);
-void vRegisterCLICommands(void);
+void uart_receive_callback(char *input);
 void vCommandConsoleTask(void *pvParameters);
 #endif // CLI_APP_H

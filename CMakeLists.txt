@@ -51,6 +51,16 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+include(FetchContent)
+
+FetchContent_Declare(
+  DCC
+  GIT_REPOSITORY "https://github.com/ZIMO-Elektronik/DCC"
+  GIT_TAG v0.41.1)
+
+FetchContent_MakeAvailable(DCC)
+
+
 set(MYTHIRD_PARTY_PATH "${CMAKE_SOURCE_DIR}/MyMiddleware/Third_Party")
 
 # Add FatFs port library
@@ -65,15 +75,18 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_SOURCE_DIR}/Core/Src/fatfs.c
-#    ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio.c
     ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio_dma_rtos.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/FreeRTOS_CLI.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/cli_app.c
+    Core/Src/cli_app.c
+    Core/Src/command_station.cpp
+    Core/Src/decoder.cpp
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
+    ${CMAKE_CURRENT_SOURCE_DIR}/
+    ${CMAKE_CURRENT_BINARY_DIR}/generated
     ${CMAKE_SOURCE_DIR}/Core/Inc
     ${MYTHIRD_PARTY_PATH}/FatFs/src
 )
@@ -88,5 +101,6 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
+    DCC::DCC
     fatfs
 )
