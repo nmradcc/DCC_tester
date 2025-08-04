@@ -74,13 +74,26 @@ UART_HandleTypeDef huart6;
 
 PCD_HandleTypeDef hpcd_USB_DRD_FS;
 
+/* Definitions for LedThreadTask */
+osThreadId_t LedThreadTaskHandle;
+const osThreadAttr_t LedThreadTask_attributes = {
+  .name = "LedThreadTask",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 256 * 4
+};
+/* Definitions for cmdLineThreadTask */
+osThreadId_t cmdLineThreadTaskHandle;
+const osThreadAttr_t cmdLineThreadTask_attributes = {
+  .name = "cmdLineThreadTask",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 512 * 4
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void MX_FREERTOS_Init(void);
 static void MX_GPIO_Init(void);
 static void MX_ICACHE_Init(void);
 static void MX_USART3_UART_Init(void);
@@ -93,6 +106,9 @@ static void MX_USART2_UART_Init(void);
 static void MX_USART6_UART_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_ETH_Init(void);
+void LedTask(void *argument);
+void cmdLineTask(void *argument);
+
 /* USER CODE BEGIN PFP */
 #if defined(__ICCARM__)
 /* New definition from EWARM V9, compatible with EWARM8 */
@@ -181,8 +197,34 @@ int main(void)
   /* Init scheduler */
   osKernelInitialize();
 
-  /* Call init function for freertos objects (in app_freertos.c) */
-  MX_FREERTOS_Init();
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+  /* creation of LedThreadTask */
+  LedThreadTaskHandle = osThreadNew(LedTask, NULL, &LedThreadTask_attributes);
+
+  /* creation of cmdLineThreadTask */
+  cmdLineThreadTaskHandle = osThreadNew(cmdLineTask, NULL, &cmdLineThreadTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
 
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
@@ -191,8 +233,6 @@ int main(void)
 
   /* Start scheduler */
   osKernelStart();
-
-  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -1052,6 +1092,42 @@ PUTCHAR_PROTOTYPE
 }
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_LedTask */
+/**
+* @brief Function implementing the LedThreadTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_LedTask */
+void LedTask(void *argument)
+{
+  /* USER CODE BEGIN LedThreadTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END LedThreadTask */
+}
+
+/* USER CODE BEGIN Header_cmdLineTask */
+/**
+* @brief Function implementing the cmdLineTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_cmdLineTask */
+void cmdLineTask(void *argument)
+{
+  /* USER CODE BEGIN cmdLineThreadTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END cmdLineThreadTask */
+}
 
 /**
   * @brief  Period elapsed callback in non blocking mode

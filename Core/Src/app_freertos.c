@@ -22,9 +22,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "cli_app.h"
 #include "cmsis_os2.h"
+#include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
+#include "command_station.h"
+#include "decoder.h"
 
 /* USER CODE END Includes */
 
@@ -45,21 +47,21 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-/* Definitions for cmdLineTask */
-osThreadId_t cmdLineTaskHandle;
-const osThreadAttr_t cmdLineTask_attributes = {
-  .name = "cmdLineTask",
-  .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
-};
 
 /* USER CODE END Variables */
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
+/* Definitions for LedThreadTask */
+osThreadId_t LedThreadTaskHandle;
+const osThreadAttr_t LedThreadTask_attributes = {
+  .name = "LedThreadTask",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
+  .stack_size = 256 * 4
+};
+/* Definitions for cmdLineThreadTask */
+osThreadId_t cmdLineThreadTaskHandle;
+const osThreadAttr_t cmdLineThreadTask_attributes = {
+  .name = "cmdLineThreadTask",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 512 * 4
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -92,13 +94,14 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  /* creation of LedThreadTask */
+  LedThreadTaskHandle = osThreadNew(LedTask, NULL, &LedThreadTask_attributes);
+
+  /* creation of cmdLineThreadTask */
+  cmdLineThreadTaskHandle = osThreadNew(cmdLineTask, NULL, &cmdLineThreadTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  /* Create the command line task */
-  cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -106,25 +109,41 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_EVENTS */
 
 }
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_LedTask */
 /**
-* @brief Function implementing the defaultTask thread.
+* @brief Function implementing the LedThreadTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_LedTask */
+void LedTask(void *argument)
 {
-  /* USER CODE BEGIN defaultTask */
-  (void) argument; /* Prevent unused argument(s) compilation warning */
+  /* USER CODE BEGIN LedThreadTask */
+    (void)argument;
+    while (1)
+    {
+       BSP_LED_Toggle(LED_YELLOW);
+       osDelay(500);
+    }
+  /* USER CODE END LedThreadTask */
+}
+
+/* USER CODE BEGIN Header_cmdLineTask */
+/**
+* @brief Function implementing the cmdLineTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_cmdLineTask */
+void cmdLineTask(void *argument)
+{
+  /* USER CODE BEGIN cmdLineThreadTask */
   /* Infinite loop */
   for(;;)
   {
-      /* Toggle the LED */
-      BSP_LED_Toggle(LED_YELLOW);
-      osDelay(500);
+    osDelay(1);
   }
-  /* USER CODE END defaultTask */
+  /* USER CODE END cmdLineThreadTask */
 }
 
 /* Private application code --------------------------------------------------*/

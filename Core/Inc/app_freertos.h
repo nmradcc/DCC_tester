@@ -55,14 +55,16 @@ extern osThreadId_t cmdLineTaskHandle;
 /* USER CODE BEGIN EM */
 
 /* USER CODE END EM */
-extern osThreadId_t defaultTaskHandle;
+extern osThreadId_t LedThreadTaskHandle;
+extern osThreadId_t cmdLineThreadTaskHandle;
 
 /* Exported function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void *argument);
+void LedTask(void *argument);
+void cmdLineTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
