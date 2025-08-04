@@ -75,24 +75,10 @@ void MX_SDMMC1_SD_Init(void);
 #define IN2_GPIO_Port GPIOE
 #define LD2_Pin GPIO_PIN_4
 #define LD2_GPIO_Port GPIOF
-#define RMII_MDC_Pin GPIO_PIN_1
-#define RMII_MDC_GPIO_Port GPIOC
 #define TRACK_P_Pin GPIO_PIN_0
 #define TRACK_P_GPIO_Port GPIOA
-#define RMII_REF_CLK_Pin GPIO_PIN_1
-#define RMII_REF_CLK_GPIO_Port GPIOA
-#define RMII_MDIO_Pin GPIO_PIN_2
-#define RMII_MDIO_GPIO_Port GPIOA
 #define BIDIR_EN_Pin GPIO_PIN_3
 #define BIDIR_EN_GPIO_Port GPIOA
-#define VBUS_SENSE_Pin GPIO_PIN_4
-#define VBUS_SENSE_GPIO_Port GPIOA
-#define RMII_CRS_DV_Pin GPIO_PIN_7
-#define RMII_CRS_DV_GPIO_Port GPIOA
-#define RMII_RXD0_Pin GPIO_PIN_4
-#define RMII_RXD0_GPIO_Port GPIOC
-#define RMII_RXD1_Pin GPIO_PIN_5
-#define RMII_RXD1_GPIO_Port GPIOC
 #define LD1_Pin GPIO_PIN_0
 #define LD1_GPIO_Port GPIOB
 #define SCOPE_Pin GPIO_PIN_7
@@ -103,12 +89,6 @@ void MX_SDMMC1_SD_Init(void);
 #define IN1_GPIO_Port GPIOE
 #define IN3_Pin GPIO_PIN_15
 #define IN3_GPIO_Port GPIOE
-#define UCPD_CC1_Pin GPIO_PIN_13
-#define UCPD_CC1_GPIO_Port GPIOB
-#define UCPD_CC2_Pin GPIO_PIN_14
-#define UCPD_CC2_GPIO_Port GPIOB
-#define RMII_TXD1_Pin GPIO_PIN_15
-#define RMII_TXD1_GPIO_Port GPIOB
 #define REF_OSC_Pin GPIO_PIN_13
 #define REF_OSC_GPIO_Port GPIOD
 #define SD_DETECT_Pin GPIO_PIN_2
@@ -117,18 +97,12 @@ void MX_SDMMC1_SD_Init(void);
 #define LD3_GPIO_Port GPIOG
 #define BR_ENABLE_Pin GPIO_PIN_6
 #define BR_ENABLE_GPIO_Port GPIOG
-#define UART6_RX_BIDIR_Pin GPIO_PIN_7
-#define UART6_RX_BIDIR_GPIO_Port GPIOC
-#define UCDP_DBn_Pin GPIO_PIN_9
-#define UCDP_DBn_GPIO_Port GPIOA
+#define USART6_RX_BIDIR_Pin GPIO_PIN_7
+#define USART6_RX_BIDIR_GPIO_Port GPIOC
 #define USB_FS_N_Pin GPIO_PIN_11
 #define USB_FS_N_GPIO_Port GPIOA
 #define USB_FS_P_Pin GPIO_PIN_12
 #define USB_FS_P_GPIO_Port GPIOA
-#define RMII_TXT_EN_Pin GPIO_PIN_11
-#define RMII_TXT_EN_GPIO_Port GPIOG
-#define RMI_TXD0_Pin GPIO_PIN_13
-#define RMI_TXD0_GPIO_Port GPIOG
 
 /* USER CODE BEGIN Private defines */
 /* set and reset TR bit positions */

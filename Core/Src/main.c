@@ -84,7 +84,6 @@ void MX_FREERTOS_Init(void);
 static void MX_GPIO_Init(void);
 static void MX_ICACHE_Init(void);
 static void MX_USART3_UART_Init(void);
-static void MX_ETH_Init(void);
 static void MX_RTC_Init(void);
 static void MX_USB_PCD_Init(void);
 static void MX_FDCAN1_Init(void);
@@ -93,6 +92,7 @@ static void MX_TIM15_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART6_UART_Init(void);
 static void MX_DAC1_Init(void);
+static void MX_ETH_Init(void);
 /* USER CODE BEGIN PFP */
 #if defined(__ICCARM__)
 /* New definition from EWARM V9, compatible with EWARM8 */
@@ -145,7 +145,6 @@ int main(void)
   MX_GPIO_Init();
   MX_ICACHE_Init();
   MX_USART3_UART_Init();
-  MX_ETH_Init();
   MX_RTC_Init();
   MX_USB_PCD_Init();
   MX_SDMMC1_SD_Init();
@@ -155,6 +154,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART6_UART_Init();
   MX_DAC1_Init();
+  MX_ETH_Init();
   /* USER CODE BEGIN 2 */
 //  FATFS_Init();
     /* Initialise the RTOS's TCP/IP stack.  The tasks that use the network
@@ -918,12 +918,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : VBUS_SENSE_Pin */
-  GPIO_InitStruct.Pin = VBUS_SENSE_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(VBUS_SENSE_GPIO_Port, &GPIO_InitStruct);
-
   /*Configure GPIO pin : LD1_Pin */
   GPIO_InitStruct.Pin = LD1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -935,14 +929,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = SCOPE_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(SCOPE_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : UCPD_CC1_Pin UCPD_CC2_Pin */
-  GPIO_InitStruct.Pin = UCPD_CC1_Pin|UCPD_CC2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : REF_OSC_Pin */
   GPIO_InitStruct.Pin = REF_OSC_Pin;
@@ -956,19 +944,112 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(SD_DETECT_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD3_Pin BR_ENABLE_Pin */
-  GPIO_InitStruct.Pin = LD3_Pin|BR_ENABLE_Pin;
+  /*Configure GPIO pin : LD3_Pin */
+  GPIO_InitStruct.Pin = LD3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+  HAL_GPIO_Init(LD3_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : BR_ENABLE_Pin */
+  GPIO_InitStruct.Pin = BR_ENABLE_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(BR_ENABLE_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
-
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
+
+// Mutex for printf thread safety
+static osMutexId_t printf_lock;
+
+// Implementation of lock acquire/release
+static void printf_lock_acquire(osMutexId_t *lock) {
+    if (*lock == NULL) {
+        osMutexAttr_t attr = { .name = "printf_lock" };
+        *lock = osMutexNew(&attr);
+    }
+    osMutexAcquire(*lock, osWaitForever);
+}
+
+static void printf_lock_release(osMutexId_t *lock) {
+    if (*lock != NULL) {
+        osMutexRelease(*lock);
+    }
+}
+
+#if 0
+/**
+  * @brief  Retargets the C library __write function to the IAR function iar_fputc.
+  * @param  file: file descriptor.
+  * @param  ptr: pointer to the buffer where the data is stored.
+  * @param  len: length of the data to write in bytes.
+  * @retval length of the written data in bytes.
+  */
+int _write(int file, char *data, int len)
+{
+    (void)(file);
+    // Transmit data using UART
+    for (int i = 0; i < len; i++)
+    {
+        // Send the character
+        USART3->TDR = (uint16_t)data[i];
+        // Wait for the transmit buffer to be empty
+        while (!(USART3->ISR & USART_ISR_TXE));
+    }
+    return len;
+}
+#endif
+int _write(int file, char *ptr, int len) {
+  (void)file;
+  // Transmit data using UART
+#if 0
+  for (int i = 0; i < len; i++)
+  {
+    HAL_UART_Transmit(&huart3, (const uint8_t *)ptr++, 1, 0xFFFF);
+  }
+
+  return len;
+#endif
+  // Use mutex to ensure printf thread safety
+    printf_lock_acquire(&printf_lock);
+    HAL_StatusTypeDef status = HAL_UART_Transmit(&huart3, (uint8_t*)ptr, (uint16_t)len, HAL_MAX_DELAY);
+    printf_lock_release(&printf_lock);
+    return (status == HAL_OK) ? len : 0;
+}
+
+
+  #if defined(__ICCARM__)
+size_t __write(int file, unsigned char const *ptr, size_t len)
+{
+  size_t idx;
+  unsigned char const *pdata = ptr;
+
+  for (idx = 0; idx < len; idx++)
+  {
+    iar_fputc((int)*pdata);
+    pdata++;
+  }
+  return len;
+}
+#endif /* __ICCARM__ */
+
+/**
+  * @brief  Retargets the C library printf function to the USART.
+  */
+PUTCHAR_PROTOTYPE
+{
+  /* Place your implementation of putchar here */
+  /* NOT THREAD SAFE! */
+  /* e.g. write a character to the USART3 and Loop until the end of transmission */
+  HAL_UART_Transmit(&huart3, (uint8_t *)&ch, 1, 0xFFFF);
+
+  return ch;
+}
 
 /* USER CODE END 4 */
 
@@ -1014,6 +1095,7 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+  BSP_LED_On(LED_RED);
   while (1)
   {
   }
@@ -1031,10 +1113,16 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  (void)file;
-  (void)line;
   /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  printf("Wrong parameters value: file %s on line %lu\r\n", file, line);
+  /* Infinite loop */
+  while (1)
+  {
+    BSP_LED_Toggle(LED_RED);
+    HAL_Delay(100);
+  }
+
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
