@@ -22,6 +22,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "cli_app.h"
+#include "command_station.h"
+#include "decoder.h"
 
 /* USER CODE END Includes */
 
@@ -97,6 +100,11 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  /* Create the command station task ... but don't start it */
+  CommandStation_Init();
+  /* Create the decoder task ... but don't start it */
+  Decoder_Init();
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -133,11 +141,7 @@ void LedTask(void *argument)
 void cmdLineTask(void *argument)
 {
   /* USER CODE BEGIN cmdLineThreadTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+  vCommandConsoleTask(argument);
   /* USER CODE END cmdLineThreadTask */
 }
 

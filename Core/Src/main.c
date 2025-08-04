@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdbool.h>
+#include <sys/time.h>
 #include "fatfs.h"
 #include "FreeRTOS.h"
 //#include "FreeRTOS_IP.h"
@@ -108,6 +109,14 @@ int iar_fputc(int ch);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+int _gettimeofday(struct timeval* ptimeval,
+                  void* ptimezone __attribute__((unused))) {
+  uint32_t const tick_ms = HAL_GetTick();
+  ptimeval->tv_sec = tick_ms / 1000;
+  ptimeval->tv_usec = (suseconds_t)tick_ms % 1000;
+  return 0;
+}
 
 /* USER CODE END 0 */
 
