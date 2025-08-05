@@ -74,13 +74,13 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    ${CMAKE_SOURCE_DIR}/newlib_lock_glue.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/fatfs.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/sd_diskio_dma_rtos.c
+    newlib_lock_glue.c
     Core/Src/cli_app.c
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
+    FATFS/App/fatfs.c
+#    FATFS/Target/sd_diskio.c
+    FATFS/Target/sd_diskio_dma_rtos.c
 )
 
 # Add include paths
@@ -89,6 +89,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/
     ${CMAKE_CURRENT_BINARY_DIR}/generated
     ${CMAKE_SOURCE_DIR}/Core/Inc
+    ${CMAKE_SOURCE_DIR}/FATFS/App
+    ${CMAKE_SOURCE_DIR}/FATFS/Target
     ${MYTHIRD_PARTY_PATH}/FatFs/src
 )
 

@@ -165,11 +165,7 @@ int main(void)
   MX_DAC1_Init();
   MX_ETH_Init();
   /* USER CODE BEGIN 2 */
-//  FATFS_Init();
-    /* Initialise the RTOS's TCP/IP stack.  The tasks that use the network
-    are created in the vApplicationIPNetworkEventHook() hook function
-    below.  The hook function is called when the network connects. */
-
+  
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
   BSP_LED_Init(LED_YELLOW);

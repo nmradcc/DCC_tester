@@ -25,7 +25,7 @@
 #include "ff_gen_drv.h"
 #include "sd_diskio_dma_rtos.h" /* defines SD_Driver as external */
 
-void FATFS_Init(void);
+void MX_FATFS_Init(void);
 
 extern FATFS SDFatFS;   /* File system object for SD logical drive */
 extern FIL SDFile;      /* File object for SD */

@@ -22,6 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "fatfs.h"
 #include "cli_app.h"
 #include "command_station.h"
 #include "decoder.h"
@@ -74,6 +75,11 @@ const osThreadAttr_t cmdLineThreadTask_attributes = {
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
+  /* Initialize the FatFs module */
+  MX_FATFS_Init();
+    /* Initialise the RTOS's TCP/IP stack.  The tasks that use the network
+    are created in the vApplicationIPNetworkEventHook() hook function
+    below.  The hook function is called when the network connects. */
 
   /* USER CODE END Init */
 

@@ -1,6 +1,6 @@
 
 set(FatFs_Include_Dirs
-    ${CMAKE_SOURCE_DIR}/Core/Inc
+    ${CMAKE_SOURCE_DIR}/FATFS/Target
     ${CMAKE_SOURCE_DIR}/MyMiddleware/Third_Party/FatFs/src
 )
 
