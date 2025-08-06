@@ -17,6 +17,7 @@
   */
 /* Includes ------------------------------------------------------------------*/
 #include <stdbool.h>
+#include <stdio.h>
 #include "fatfs.h"
 #include "main.h"
 #include "stm32h5xx_nucleo.h"
@@ -57,7 +58,6 @@ static uint32_t CARD_DISCONNECTED= 1;
 static uint32_t CARD_STATUS_CHANGED= 2;
 
 static uint8_t isFsCreated = 0;
-static __IO uint8_t statusChanged = 0;
 static uint8_t workBuffer[2 * FF_MAX_SS];
 static  uint8_t rtext[100]; /* File read buffer */
 
@@ -91,42 +91,54 @@ static void uSDThread_Entry(void *argument)
 {
   (void)argument;
   osStatus_t status;
+  uint32_t last_status = CARD_DISCONNECTED;
 
-    if (SD_IsDetected())
+  while (1)
+  {
+    if (last_status == CARD_CONNECTED && SD_IsDetected() == false)
     {
-      osMessageQueuePut (QueueHandle, &CARD_CONNECTED, 100, 0U);
+      /* SD card was connected but now it is not detected, send a message */
+      osMessageQueuePut (QueueHandle, &CARD_STATUS_CHANGED, 100, 0U);
+    }
+    else if (last_status == CARD_DISCONNECTED && SD_IsDetected() == true)
+    {
+      /* SD card was disconnected but now it is detected, send a message */
+      osMessageQueuePut (QueueHandle, &CARD_STATUS_CHANGED, 100, 0U);
     }
 
-  /* Infinite Loop */
-  for ( ;; )
-  {
     status = osMessageQueueGet(QueueHandle, &osQueueMsg, NULL, 100);
 
     if ((status == osOK) && (osQueueMsg== CARD_STATUS_CHANGED))
     {
-        if (SD_IsDetected())
-        {
-          osMessageQueuePut (QueueHandle, &CARD_CONNECTED, 100, 0U);
-        }
-        else
-        {
-          osMessageQueuePut (QueueHandle, &CARD_DISCONNECTED, 100, 0U);
-        }
-     }
+      osDelay(500);
+      if (SD_IsDetected())
+      {
+        /* Open the SD disk driver */
+        MX_SDMMC1_SD_Init();
+        osMessageQueuePut (QueueHandle, &CARD_CONNECTED, 100, 0U);
+        last_status = CARD_CONNECTED;
+        printf("SD CARD inserted!!\r\n");
+      }
+      else
+      {
+        HAL_SD_DeInit(&hsd1);
+        osMessageQueuePut (QueueHandle, &CARD_DISCONNECTED, 100, 0U);
+        last_status = CARD_DISCONNECTED;
+        printf("SD CARD ejected!!\r\n");
+      }
+    }
 
-     if ((status == osOK) && (osQueueMsg== CARD_CONNECTED))
-     {
-        FS_FileOperations();
-        statusChanged = 0;
-     }
+    if ((status == osOK) && (osQueueMsg== CARD_CONNECTED))
+    {
+      FS_FileOperations();
+    }
 
-     if ((status == osOK) && (osQueueMsg== CARD_DISCONNECTED))
-     {
-        osDelay(200);
+    if ((status == osOK) && (osQueueMsg== CARD_DISCONNECTED))
+    {
+      osDelay(200);
 
-        f_mount(NULL, (TCHAR const*)"", 0);
-        statusChanged = 0;
-     }
+      f_mount(NULL, (TCHAR const*)"", 0);
+    }
   }
 }
 
@@ -164,22 +176,22 @@ static void FS_FileOperations(void)
         f_close(&SDFile);
 
         /* Open the text file object with read access */
-        if(f_open(&SDFile, "STM32.TXT", FA_READ) == FR_OK)
+        if (f_open(&SDFile, "STM32.TXT", FA_READ) == FR_OK)
         {
           /* Read data from the text file */
           res = f_read(&SDFile, ( void *)rtext, sizeof(rtext), (void *)&bytesread);
 
-          if((bytesread > 0) && (res == FR_OK))
+          if ((bytesread > 0) && (res == FR_OK))
           {
             /* Close the open text file */
             f_close(&SDFile);
 
             /* Compare read data with the expected data */
-            if(bytesread == byteswritten)
+            if (bytesread == byteswritten)
             {
+              printf("FileFs SD card example completed successfully!\r\n");
+//              printf("Read data: %s\r\n", read_buffer);
               /* Success of the demo: no error occurrence */
-              BSP_LED_Off(LED_GREEN);
-              //HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
               return;
             }
           }
@@ -206,24 +218,3 @@ static bool SD_IsDetected(void)
     return status;
 }
 
-/**
-  * @brief  EXTI line detection callback.
-  * @param  GPIO_Pin: Specifies the port pin connected to corresponding EXTI line.
-  * @retval None.
-  */
-
-  //TODO: not used at present, but can be used to detect SD card insertion/removal
-#if 0
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-  if(GPIO_Pin == SD_DETECT_Pin)
-  {
-     if (statusChanged == 0)
-     {
-       statusChanged = 1;
-       osMessageQueuePut ( QueueHandle, &CARD_STATUS_CHANGED, 100, 0U);
-     }
-  }
-
-}
-#endif
