@@ -47,6 +47,7 @@ enable_language(C ASM)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME})
 
+add_compile_definitions(STM32H563xx)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
@@ -78,22 +79,35 @@ file(GLOB RTOS2_SOURCES
 
 add_library(RTOS2 OBJECT)
 target_sources(RTOS2 PRIVATE ${RTOS2_SOURCES})
-target_compile_definitions(RTOS2 PRIVATE
-    STM32H563xx
-)
 target_include_directories(RTOS2 PRIVATE
     Core/Inc
     Third_Party/FreeRTOS/Source/include
     Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM33_NTZ/non_secure
     Third_Party/CMSIS/RTOS2/include
     Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2
-    Drivers/CMSIS/Device/ST/STM32H5xx/Include
     Drivers/CMSIS/Include
+    Drivers/CMSIS/Device/ST/STM32H5xx/Include
 )
 
-
 # Add FatFs library
-add_subdirectory(MyMiddlewares/Third_Party/FatFs)
+file(GLOB FATFS_SOURCES
+    Third_Party/FatFs/source/*.c
+    Third_Party/FatFs/source/drivers/sd/sd_diskio_dma_rtos.c
+)
+
+add_library(fatfs STATIC ${FATFS_SOURCES})
+target_include_directories(fatfs PUBLIC
+    Core/Inc
+    Third_Party/FatFs/source
+    Third_Party/FatFs/source/drivers/sd
+    Third_Party/CMSIS/RTOS2/include
+    Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2
+    Drivers/STM32H5xx_HAL_Driver/Inc
+    Drivers/CMSIS/Include
+    Drivers/CMSIS/Device/ST/STM32H5xx/Include
+    FATFS/Target
+)
+#add_subdirectory(MyMiddlewares/Third_Party/FatFs)
 
 
 include(FetchContent)
@@ -118,7 +132,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
     FATFS/App/fatfs.c
-    FATFS/Target/sd_diskio_dma_rtos.c
 )
 
 # Add include paths
