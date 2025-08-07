@@ -128,6 +128,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     newlib_lock_glue.c
+    Core/Src/app_freertos.c
     Core/Src/cli_app.c
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp

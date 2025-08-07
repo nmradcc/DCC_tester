@@ -28,6 +28,7 @@
 #include "cmsis_os2.h"
 #include "fatfs.h"
 #include "FreeRTOS.h"
+#include "app_freertos.h"
 //#include "FreeRTOS_IP.h"
 #include "version.h"
 #include "command_station.h"
@@ -94,7 +95,7 @@ static void MX_USART6_UART_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_ETH_Init(void);
 /* USER CODE BEGIN PFP */
-void MX_FREERTOS_Init(void);
+
 #if defined(__ICCARM__)
 /* New definition from EWARM V9, compatible with EWARM8 */
 int iar_fputc(int ch);
@@ -165,7 +166,8 @@ int main(void)
   MX_DAC1_Init();
   MX_ETH_Init();
   /* USER CODE BEGIN 2 */
-  
+  MX_FREERTOS_Init();
+
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
   BSP_LED_Init(LED_YELLOW);
