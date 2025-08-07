@@ -51,6 +51,28 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+set(RTOS2_Src
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/croutine.c
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/event_groups.c
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/list.c
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/queue.c
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/stream_buffer.c
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/tasks.c
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/timers.c
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM33_NTZ/non_secure/port.c
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM33_NTZ/non_secure/portasm.c
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
+)
+
+# Create RTOS2 static library
+add_library(RTOS2 OBJECT)
+target_sources(RTOS2 PRIVATE ${RTOS2_Src})
+target_include_directories(RTOS2 PRIVATE
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/include
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM33_NTZ
+    ${CMAKE_SOURCE_DIR}/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2
+)
 
 # Add FatFs library
 add_subdirectory(MyMiddlewares/Third_Party/FatFs)
@@ -89,7 +111,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Inc
     FATFS/App
     FATFS/Target
-    MyMiddlewares/Third_Party/FatFs/src
+    Third_Party/CMSIS/RTOS2/include
+    Third_Party/FatFs/src
 )
 
 
@@ -101,7 +124,7 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
-
+    RTOS2
     # Add user defined libraries
     DCC::DCC
     fatfs

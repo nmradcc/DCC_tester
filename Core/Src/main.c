@@ -19,13 +19,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "string.h"
-#include "cmsis_os2.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdbool.h>
 #include <sys/time.h>
+#include "cmsis_os2.h"
 #include "fatfs.h"
 #include "FreeRTOS.h"
 //#include "FreeRTOS_IP.h"
@@ -81,7 +81,6 @@ PCD_HandleTypeDef hpcd_USB_DRD_FS;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void MX_FREERTOS_Init(void);
 static void MX_GPIO_Init(void);
 static void MX_ICACHE_Init(void);
 static void MX_USART3_UART_Init(void);
@@ -95,6 +94,7 @@ static void MX_USART6_UART_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_ETH_Init(void);
 /* USER CODE BEGIN PFP */
+void MX_FREERTOS_Init(void);
 #if defined(__ICCARM__)
 /* New definition from EWARM V9, compatible with EWARM8 */
 int iar_fputc(int ch);
@@ -181,23 +181,18 @@ int main(void)
   printf("Revision ID: 0x%X\n", (unsigned int)HAL_GetREVID());
   printf("Compiled at %s %s\n\n", __DATE__, __TIME__);
 
-  /* USER CODE END 2 */
-
   /* Init scheduler */
   osKernelInitialize();
 
-  /* Call init function for freertos objects (in app_freertos.c) */
-  MX_FREERTOS_Init();
+  /* Start scheduler */
+  osKernelStart();
+
+  /* USER CODE END 2 */
 
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
   BSP_LED_Init(LED_YELLOW);
   BSP_LED_Init(LED_RED);
-
-  /* Start scheduler */
-  osKernelStart();
-
-  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
