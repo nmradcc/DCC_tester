@@ -68,26 +68,16 @@ target_include_directories(freertos_kernel PUBLIC
 add_library(freertos_config INTERFACE)
 target_include_directories(freertos_config INTERFACE Core/Inc)
 
-
-
-set(RTOS2_Src
+# Add RTOS2 library
+file(GLOB RTOS2_SOURCES
     Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
-    Third_Party/FreeRTOS/Source/croutine.c
-    Third_Party/FreeRTOS/Source/event_groups.c
-    Third_Party/FreeRTOS/Source/list.c
-    Third_Party/FreeRTOS/Source/queue.c
-    Third_Party/FreeRTOS/Source/stream_buffer.c
-    Third_Party/FreeRTOS/Source/tasks.c
-    Third_Party/FreeRTOS/Source/timers.c
-    Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM33_NTZ/non_secure/port.c
-    Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM33_NTZ/non_secure/portasm.c
+    Third_Party/FreeRTOS/Source/*.c
+    Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM33_NTZ/non_secure/*.c
     Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
 )
 
-# Create RTOS2 static library
-
 add_library(RTOS2 OBJECT)
-target_sources(RTOS2 PRIVATE ${RTOS2_Src})
+target_sources(RTOS2 PRIVATE ${RTOS2_SOURCES})
 target_compile_definitions(RTOS2 PRIVATE
     STM32H563xx
 )
