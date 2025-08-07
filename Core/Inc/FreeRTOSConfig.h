@@ -44,6 +44,9 @@
  *----------------------------------------------------------*/
 
 /* USER CODE BEGIN Includes */
+#ifndef FREERTOS_CONFIG_H
+#define FREERTOS_CONFIG_H
+#endif /* FREERTOS_CONFIG_H */
 /* Section where include file can be added */
 /* USER CODE END Includes */
 
