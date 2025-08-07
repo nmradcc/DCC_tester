@@ -51,6 +51,11 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+
+# Add FatFs library
+add_subdirectory(MyMiddlewares/Third_Party/FatFs)
+
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -59,12 +64,6 @@ FetchContent_Declare(
   GIT_TAG v0.41.1)
 
 FetchContent_MakeAvailable(DCC)
-
-
-set(MYTHIRD_PARTY_PATH "${CMAKE_SOURCE_DIR}/MyMiddleware/Third_Party")
-
-# Add FatFs port library
-add_subdirectory(MyMiddleware/Third_Party/FatFs)
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
@@ -79,7 +78,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
     FATFS/App/fatfs.c
-#    FATFS/Target/sd_diskio.c
     FATFS/Target/sd_diskio_dma_rtos.c
 )
 
@@ -88,11 +86,12 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_CURRENT_SOURCE_DIR}/
     ${CMAKE_CURRENT_BINARY_DIR}/generated
-    ${CMAKE_SOURCE_DIR}/Core/Inc
-    ${CMAKE_SOURCE_DIR}/FATFS/App
-    ${CMAKE_SOURCE_DIR}/FATFS/Target
-    ${MYTHIRD_PARTY_PATH}/FatFs/src
+    Core/Inc
+    FATFS/App
+    FATFS/Target
+    MyMiddlewares/Third_Party/FatFs/src
 )
+
 
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
