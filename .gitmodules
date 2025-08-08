@@ -1,0 +1,15 @@
+[submodule "Third_Party/FreeRTOS"]
+	path = Third_Party/FreeRTOS
+	url = https://github.com/STMicroelectronics/stm32-mw-freertos.git
+[submodule "Third_Party/FatFs"]
+	path = Third_Party/FatFs
+	url = https://github.com/STMicroelectronics/stm32_mw_fatfs.git
+[submodule "Third_Party/LwIP"]
+	path = Third_Party/LwIP
+	url = https://github.com/STMicroelectronics/stm32_mw_lwip.git
+[submodule "Third_Party/ST/STM32_USB_Device_Library"]
+	path = Third_Party/ST/STM32_USB_Device_Library
+	url = https://github.com/STMicroelectronics/stm32_mw_usb_device.git
+[submodule "Third_Party/ST/STM32_USB_Host_Library"]
+	path = Third_Party/ST/STM32_USB_Host_Library
+	url = https://github.com/STMicroelectronics/stm32_mw_usb_host.git
