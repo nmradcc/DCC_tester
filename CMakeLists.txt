@@ -107,7 +107,6 @@ target_include_directories(fatfs PUBLIC
     Drivers/CMSIS/Device/ST/STM32H5xx/Include
     FATFS/Target
 )
-#add_subdirectory(MyMiddlewares/Third_Party/FatFs)
 
 
 include(FetchContent)
@@ -157,10 +156,10 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
+    # Add user defined libraries
     freertos_kernel
     freertos_config
     RTOS2
-    # Add user defined libraries
     DCC::DCC
     fatfs
 )

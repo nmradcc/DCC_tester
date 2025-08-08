@@ -207,9 +207,10 @@ static void parse_input(const char *input, ParsedInput *out_parsed) {
 void vCommandConsoleTask(void *pvParameters)
 {
     (void)(pvParameters);
-    uint32_t receivedChar;  // used to store the received value from the notification
+    char receivedChar;  // used to store the received value from the notification
     char N_char = '\n';
-    commandQueue = osMessageQueueNew(5, sizeof(uint32_t), NULL);
+
+    commandQueue = osMessageQueueNew(6, sizeof(char), NULL);
 
     osDelay(2000); // Wait for system to initialize
     
@@ -230,9 +231,9 @@ void vCommandConsoleTask(void *pvParameters)
         }
         else if (inputIndex < sizeof(InputBuffer) - 1) {
             // user pressed a character add it to the input string
-            InputBuffer[inputIndex++] = (char)receivedChar;
+            InputBuffer[inputIndex++] = receivedChar;
             InputBuffer[inputIndex] = '\0'; // Null terminate the string
-            _write(0, (char *)&receivedChar, 1); // Echo the character to the console
+            _write(0, &receivedChar, 1); // Echo the character to the console
             if (receivedChar == '\r' || receivedChar == '\n') {
                 // Process the command when Enter is pressed
                 InputBuffer[inputIndex - 1] = '\0'; // Null terminate the string

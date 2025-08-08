@@ -166,8 +166,7 @@ int main(void)
   MX_DAC1_Init();
   MX_ETH_Init();
   /* USER CODE BEGIN 2 */
-  MX_FREERTOS_Init();
-
+  
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
   BSP_LED_Init(LED_YELLOW);
@@ -186,8 +185,13 @@ int main(void)
   /* Init scheduler */
   osKernelInitialize();
 
+  /* Call init function for freertos objects (in app_freertos.c) */
+  MX_FREERTOS_Init();
+
   /* Start scheduler */
   osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
 
   /* USER CODE END 2 */
 
