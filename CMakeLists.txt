@@ -56,6 +56,7 @@ add_subdirectory(cmake/stm32cubemx)
 file(GLOB FREERTOS_KERNEL_SOURCES
     Third_Party/FreeRTOS/Source/*.c
     Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM33_NTZ/non_secure/*.c
+    Core/Src/freertos_hooks.c
 )
 
 add_library(freertos_kernel STATIC ${FREERTOS_KERNEL_SOURCES})
