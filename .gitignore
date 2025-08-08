@@ -1,9 +1,13 @@
 build
-Drivers
-cmake
 mx.scratch
 !.settings
 **/Backup/
 .clangd
+
+# CubeMX generated files and folders
+Drivers
+cmake
 stm32_lock.h
 newlib_lock_glue.c
+startup_stm32h563xx.s
+
