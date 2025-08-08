@@ -109,6 +109,8 @@ target_include_directories(fatfs PUBLIC
     FATFS/Target
 )
 
+# Add LwIP library
+add_subdirectory(Third_Party/LwIP)
 
 include(FetchContent)
 
@@ -163,4 +165,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     RTOS2
     DCC::DCC
     fatfs
+#    lwip
 )
