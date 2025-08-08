@@ -5,3 +5,5 @@ mx.scratch
 !.settings
 **/Backup/
 .clangd
+stm32_lock.h
+newlib_lock_glue.c
