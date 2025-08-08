@@ -110,6 +110,7 @@ target_include_directories(fatfs PUBLIC
 )
 
 # Add LwIP library
+set(LWIP_BUILD_DOC OFF CACHE BOOL "Disable lwIP documentation build")
 add_subdirectory(Third_Party/LwIP)
 
 include(FetchContent)
