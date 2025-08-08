@@ -1,4 +1,6 @@
 build
+Drivers
+cmake
 mx.scratch
 !.settings
 **/Backup/
