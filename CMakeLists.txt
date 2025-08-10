@@ -110,8 +110,7 @@ target_include_directories(fatfs PUBLIC
 )
 
 # Add LwIP library
-set(LWIP_BUILD_DOC OFF CACHE BOOL "Disable lwIP documentation build")
-add_subdirectory(Third_Party/LwIP)
+add_subdirectory(Third_Party)
 
 include(FetchContent)
 
@@ -166,5 +165,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     RTOS2
     DCC::DCC
     fatfs
-#    lwip
+    lwip
 )
