@@ -21,6 +21,10 @@ target_include_directories(lwip PUBLIC
     ${LWIP_DIR}/src/include/ipv4
     ${LWIP_DIR}/src/include/ipv6
     ${LWIP_DIR}/port
+    ${LWIP_DIR}/system
+    ${CMAKE_CURRENT_SOURCE_DIR}/CMSIS/RTOS2/Include
+    ../LWIP/Target
+
 )
 
 target_compile_definitions(lwip PUBLIC

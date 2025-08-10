@@ -135,7 +135,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
     FATFS/App/fatfs.c
-    LWIP/App/lwip.c
+#    LWIP/App/lwip.c
+    LWIP/App/app_ethernet.c
+    LWIP/App/tcp_echoclient.c
     LWIP/Target/ethernetif.c
     LWIP/Target/lan8742.c
 )
