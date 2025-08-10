@@ -81,7 +81,7 @@ void MX_FREERTOS_Init(void) {
     /* Initialise the RTOS's TCP/IP stack.  The tasks that use the network
     are created in the vApplicationIPNetworkEventHook() hook function
     below.  The hook function is called when the network connects. */
-    MX_LWIP_Init();
+  MX_LWIP_Init();
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
