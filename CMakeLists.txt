@@ -148,9 +148,13 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Inc
     FATFS/App
     FATFS/Target
+    LWIP/App
+    LWIP/Target
     Third_Party/FreeRTOS/Source/include
     Third_Party/CMSIS/RTOS2/include
     Third_Party/FatFs/src
+    Third_Party/LwIP/src/include
+    Third_Party/LwIP/system
 )
 
 
