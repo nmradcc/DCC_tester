@@ -45,6 +45,7 @@ extern RTC_HandleTypeDef hrtc;
 extern DAC_HandleTypeDef hdac1;
 extern UART_HandleTypeDef huart6;
 extern ETH_HandleTypeDef heth;
+extern ETH_TxPacketConfigTypeDef TxConfig;
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
