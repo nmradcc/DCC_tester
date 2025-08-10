@@ -44,11 +44,7 @@ extern SD_HandleTypeDef hsd1;
 extern RTC_HandleTypeDef hrtc;
 extern DAC_HandleTypeDef hdac1;
 extern UART_HandleTypeDef huart6;
-/* USER CODE END ET */
-
-/* Exported constants --------------------------------------------------------*/
-/* USER CODE BEGIN EC */
-
+extern ETH_HandleTypeDef heth;
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/

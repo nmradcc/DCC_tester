@@ -24,6 +24,7 @@ target_include_directories(lwip PUBLIC
     ${LWIP_DIR}/system
     ${CMAKE_CURRENT_SOURCE_DIR}/CMSIS/RTOS2/Include
     ../LWIP/Target
+    ../Core/Inc
 
 )
 
