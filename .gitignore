@@ -3,6 +3,10 @@ mx.scratch
 !.settings
 **/Backup/
 .clangd
+**/Doxyfile*
+**/*.tag
+**/html/
+**/latex/
 
 # CubeMX generated files and folders
 Drivers
