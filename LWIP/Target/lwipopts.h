@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2023 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -41,21 +41,24 @@
 /* Parameters set in STM32CubeMX LwIP Configuration GUI -*/
 /*----- WITH_RTOS enabled (Since FREERTOS is set) -----*/
 #define WITH_RTOS 1
-/* Temporary workaround to avoid conflict on errno defined in STM32CubeIDE and lwip sys_arch.c errno */
-#undef LWIP_PROVIDE_ERRNO
 /*----- CHECKSUM_BY_HARDWARE enabled -----*/
 #define CHECKSUM_BY_HARDWARE 1
 /*-----------------------------------------------------------------------------*/
 
 /* LwIP Stack Parameters (modified compared to initialization value in opt.h) -*/
 /* Parameters set in STM32CubeMX LwIP Configuration GUI -*/
+#define LWIP_IPV4                  1
+
+
+/*----- Value in opt.h for LWIP_DHCP: 0 -----*/
+#define LWIP_DHCP 1
 /*----- Default value in ETH configuration GUI in CubeMx: 1524 -----*/
 #define ETH_RX_BUFFER_SIZE 1536
 /*----- Value in opt.h for MEM_ALIGNMENT: 1 -----*/
 #define MEM_ALIGNMENT 4
 /*----- Default Value */
 #define LWIP_RAM_HEAP_POINTER (0x20084000)
-/*----- Value supported for H7 devices: 1 -----*/
+/*----- Value supported for Hxx devices: 1 -----*/
 #define LWIP_SUPPORT_CUSTOM_PBUF 1
 /*----- Value in opt.h for LWIP_ETHERNET: LWIP_ARP || PPPOE_SUPPORT -*/
 #define LWIP_ETHERNET 1
@@ -93,6 +96,10 @@
 #define DEFAULT_ACCEPTMBOX_SIZE 6
 /*----- Value in opt.h for RECV_BUFSIZE_DEFAULT: INT_MAX -----*/
 #define RECV_BUFSIZE_DEFAULT 2000000000
+/*----- Default Value for LWIP_SNTP: 0 ---*/
+#define LWIP_SNTP 1
+/*----- Default Value for LWIP_SMTP: 0 ---*/
+#define LWIP_SMTP 1
 /*----- Value in opt.h for LWIP_STATS: 1 -----*/
 #define LWIP_STATS 0
 /*----- Value in opt.h for CHECKSUM_GEN_IP: 1 -----*/
@@ -113,7 +120,8 @@
 #define CHECKSUM_CHECK_ICMP6 0
 /*-----------------------------------------------------------------------------*/
 /* USER CODE BEGIN 1 */
-
+#define LWIP_DEBUG 1
+#define DHCP_DEBUG LWIP_DBG_ON
 /* USER CODE END 1 */
 
 #ifdef __cplusplus

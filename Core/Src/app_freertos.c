@@ -81,7 +81,7 @@ void MX_FREERTOS_Init(void) {
     /* Initialise the RTOS's TCP/IP stack.  The tasks that use the network
     are created in the vApplicationIPNetworkEventHook() hook function
     below.  The hook function is called when the network connects. */
-  MX_LWIP_Init();
+//  MX_LWIP_Init();
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -130,7 +130,8 @@ void LedTask(void *argument)
 {
   /* USER CODE BEGIN LedThreadTask */
     (void)argument;
-    while (1)
+  MX_LWIP_Init();
+  while (1)
     {
         BSP_LED_Toggle(LED_YELLOW);
         osDelay(500);  // Delay for 500ms

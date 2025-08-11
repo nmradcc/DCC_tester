@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2023 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -221,7 +221,6 @@ static void low_level_init(struct netif *netif)
   LWIP_MEMPOOL_INIT(RX_POOL);
 
 #if LWIP_ARP || LWIP_ETHERNET
-
   /* set MAC hardware address length */
   netif->hwaddr_len = ETH_HWADDR_LEN;
 
@@ -313,7 +312,6 @@ static void low_level_init(struct netif *netif)
     HAL_ETH_Start_IT(&heth);
     netif_set_up(netif);
     netif_set_link_up(netif);
-
 /* USER CODE BEGIN PHY_POST_CONFIG */
 
 /* USER CODE END PHY_POST_CONFIG */
@@ -673,6 +671,7 @@ void ethernet_link_thread(void* argument)
   }
   else if(!netif_is_link_up(netif) && (PHYLinkState > LAN8742_STATUS_LINK_DOWN))
   {
+
     switch (PHYLinkState)
     {
     case LAN8742_STATUS_100MBITS_FULLDUPLEX:

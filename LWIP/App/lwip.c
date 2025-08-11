@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2023 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -26,6 +26,7 @@
 #include "lwip/sio.h"
 #endif /* MDK ARM Compiler */
 #include "ethernetif.h"
+#include <string.h>
 
 /* USER CODE BEGIN 0 */
 
@@ -77,7 +78,7 @@ void MX_LWIP_Init(void)
 /* USER CODE BEGIN IP_ADDRESSES */
 /* USER CODE END IP_ADDRESSES */
 
-  /* Initilialize the LwIP stack with RTOS */
+  /* Initialize the LwIP stack with RTOS */
   tcpip_init( NULL, NULL );
 
   /* IP addresses initialization without DHCP (IPv4) */
@@ -106,13 +107,13 @@ void MX_LWIP_Init(void)
   netif_set_link_callback(&gnetif, ethernet_link_status_updated);
 
   /* Create the Ethernet link handler thread */
-  /* USER CODE BEGIN H7_OS_THREAD_NEW_CMSIS_RTOS_V2 */
+  /* USER CODE BEGIN_OS_THREAD_NEW_CMSIS_RTOS_V2 */
     memset(&attributes, 0x0, sizeof(osThreadAttr_t));
     attributes.name = "EthLink";
     attributes.stack_size = INTERFACE_THREAD_STACK_SIZE;
     attributes.priority = osPriorityBelowNormal;
     osThreadNew(ethernet_link_thread, &gnetif, &attributes);
-  /* USER CODE END H7_OS_THREAD_NEW_CMSIS_RTOS_V2 */
+  /* USER CODE END_OS_THREAD_NEW_CMSIS_RTOS_V2 */
 
 /* USER CODE BEGIN 3 */
 
@@ -136,11 +137,13 @@ static void ethernet_link_status_updated(struct netif *netif)
   if (netif_is_up(netif))
   {
 /* USER CODE BEGIN 5 */
+printf("The network is up and running\r\n");
 /* USER CODE END 5 */
   }
   else /* netif is down */
   {
 /* USER CODE BEGIN 6 */
+printf("The network is down\r\n");
 /* USER CODE END 6 */
   }
 }
