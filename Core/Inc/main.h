@@ -46,6 +46,46 @@ extern DAC_HandleTypeDef hdac1;
 extern UART_HandleTypeDef huart6;
 extern ETH_HandleTypeDef heth;
 extern ETH_TxPacketConfigTypeDef TxConfig;
+extern ETH_DMADescTypeDef  DMARxDscrTab[ETH_RX_DESC_CNT]; /* Ethernet Rx DMA Descriptors */
+extern ETH_DMADescTypeDef  DMATxDscrTab[ETH_TX_DESC_CNT]; /* Ethernet Tx DMA Descriptors */
+
+/* USER CODE END ET */
+
+/* Exported constants --------------------------------------------------------*/
+/* USER CODE BEGIN EC */
+
+#define DEST_IP_ADDR0   ((uint8_t)192U)
+#define DEST_IP_ADDR1   ((uint8_t)168U)
+#define DEST_IP_ADDR2   ((uint8_t)0U)
+#define DEST_IP_ADDR3   ((uint8_t)2U)
+
+#define DEST_PORT       ((uint16_t)7U)
+
+/*Static IP ADDRESS: IP_ADDR0.IP_ADDR1.IP_ADDR2.IP_ADDR3 */
+#define IP_ADDR0   ((uint8_t) 192U)
+#define IP_ADDR1   ((uint8_t) 168U)
+#define IP_ADDR2   ((uint8_t) 0U)
+#define IP_ADDR3   ((uint8_t) 10U)
+
+/*NETMASK*/
+#define NETMASK_ADDR0   ((uint8_t) 255U)
+#define NETMASK_ADDR1   ((uint8_t) 255U)
+#define NETMASK_ADDR2   ((uint8_t) 255U)
+#define NETMASK_ADDR3   ((uint8_t) 0U)
+
+/*Gateway Address*/
+#define GW_ADDR0   ((uint8_t) 192U)
+#define GW_ADDR1   ((uint8_t) 168U)
+#define GW_ADDR2   ((uint8_t) 0U)
+#define GW_ADDR3   ((uint8_t) 1U)
+
+#define ETH_MAC_ADDR0    ((uint8_t)0x02)
+#define ETH_MAC_ADDR1    ((uint8_t)0x00)
+#define ETH_MAC_ADDR2    ((uint8_t)0x00)
+#define ETH_MAC_ADDR3    ((uint8_t)0x00)
+#define ETH_MAC_ADDR4    ((uint8_t)0x00)
+#define ETH_MAC_ADDR5    ((uint8_t)0x00)
+
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/

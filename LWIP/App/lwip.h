@@ -41,6 +41,7 @@
 #endif /* WITH_RTOS */
 
 /* USER CODE BEGIN 0 */
+#include "main.h"
 #include "string.h"
 /* USER CODE END 0 */
 

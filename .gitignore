@@ -3,7 +3,7 @@ mx.scratch
 !.settings
 **/Backup/
 .clangd
-**/Doxyfile*
+Doxyfile
 **/*.tag
 **/html/
 **/latex/
