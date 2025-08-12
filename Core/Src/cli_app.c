@@ -17,6 +17,13 @@
 #include "command_station.h"
 #include "decoder.h"
 
+#include "lwip/netif.h"
+#include "lwip/dhcp.h"
+#include "lwip/ip_addr.h"
+#include "lwip/inet.h"
+
+extern struct netif gnetif; // Your network interface
+
 // Declare _write prototype to avoid implicit declaration error
 int _write(int file, char *ptr, int len);
 
@@ -111,6 +118,11 @@ void hello_command(const char *arg1, const char *arg2) {
 
 void status_command(const char *arg1, const char *arg2) {
     printf("System Status: %s %s\n", arg1[0] ? arg1 : "OK", arg2[0] ? arg2 : "");
+    if (dhcp_supplied_address(&gnetif)) {
+        printf("DHCP assigned IP: %s\n", ipaddr_ntoa(&gnetif.ip_addr));
+    } else {
+        printf("DHCP has not assigned an IP yet.\n");
+    }
 }
 
 void set_command(const char *arg1, const char *arg2) {
