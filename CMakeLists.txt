@@ -110,8 +110,50 @@ target_include_directories(fatfs PUBLIC
 )
 
 # Add LwIP library
+#add_subdirectory(Third_Party)
+# Path to LwIP source
+set(LWIP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Third_Party/LwIP)
+
+# Include source file lists
+include(${LWIP_DIR}/src/Filelists.cmake)
+
+# Create static library
 set(LWIP_BUILD_DOC OFF CACHE BOOL "Disable lwIP documentation build")
-add_subdirectory(Third_Party/LwIP)
+add_library(lwip STATIC
+    ${lwipnoapps_SRCS}
+    ${lwipallapps_SRCS}
+#    ${LWIP_DIR}/contrib/ports/freertos/sys_arch.c
+    ${LWIP_DIR}/system/OS/sys_arch.c
+)
+
+target_include_directories(lwip PUBLIC
+    ${LWIP_DIR}/src/include
+    ${LWIP_DIR}/src/include/ipv4
+    ${LWIP_DIR}/src/include/ipv6
+    ${LWIP_DIR}/port
+    ${LWIP_DIR}/system
+    Third_Party/CMSIS/RTOS2/include
+    Drivers/BSP/STM32H5xx_Nucleo
+    Drivers/STM32H5xx_HAL_Driver/Inc
+    Drivers/CMSIS/Include
+    Drivers/CMSIS/Device/ST/STM32H5xx/Include
+    LWIP/Target
+    Core/Inc
+)
+
+target_compile_definitions(lwip PUBLIC
+    LWIP_TCP=1
+    LWIP_UDP=1
+    LWIP_DNS=1
+    NO_SYS=0  # Using FreeRTOS
+)
+
+target_compile_options(lwip PRIVATE -Wall -Wextra)
+
+
+
+
+
 
 include(FetchContent)
 
@@ -136,6 +178,11 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
     FATFS/App/fatfs.c
+    LWIP/App/lwip.c
+#    LWIP/App/app_ethernet.c
+#    LWIP/App/tcp_echoclient.c
+    LWIP/Target/ethernetif.c
+    LWIP/Target/lan8742.c
 )
 
 # Add include paths
@@ -146,9 +193,13 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Inc
     FATFS/App
     FATFS/Target
+    LWIP/App
+    LWIP/Target
     Third_Party/FreeRTOS/Source/include
     Third_Party/CMSIS/RTOS2/include
     Third_Party/FatFs/src
+    Third_Party/LwIP/src/include
+    Third_Party/LwIP/system
 )
 
 
@@ -166,5 +217,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     RTOS2
     DCC::DCC
     fatfs
-#    lwip
+    lwip
 )
