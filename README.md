@@ -64,4 +64,11 @@ If the VSC STM32Cube extension is installed correctly it should pickup the top l
 Its worth maintaining compatability going forward.  
 **DO NOT MODIFY** generated files unless you add code only in the "USER" specified code blocks. If you do not adhear to this rule, the next time you regenerate the code your changes will be lost!
 
+### Run
+
+The debug USB interface creates a virtual serial serial uart.
+You can connect to the UART using the Visual Studio Code serial monitor or you can use an external program like Putty or Termite.
+The Command Line Interface (CLI) is available via the virtual com port.
+Through the CLI you can start/stop modules like the command station, set variables/parameters, launch scripts etc.
+See the CLI help menu for available commands.
 

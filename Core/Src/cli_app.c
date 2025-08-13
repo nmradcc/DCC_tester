@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "cmsis_os2.h"
-#include "tx_api.h"
 #include "stm32h5xx_nucleo.h"
 #include "stm32h5xx_hal.h"
 #include "cli_app.h"
@@ -31,8 +30,7 @@ typedef struct {
     char arg2[32];
 } ParsedInput;
 
-ULONG command_queue_storage[5];
-TX_QUEUE command_queue;
+osMessageQueueId_t commandQueue;
 
 static char InputBuffer[64];
 static char OutputBuffer[32];
@@ -42,7 +40,7 @@ static ParsedInput parsed = {0};
 static void print_help(void);
 
 void uart_receive_callback(char *input) {
-    tx_queue_send(&command_queue, input, TX_NO_WAIT);
+    osMessageQueuePut(commandQueue, input, 0, 0);
 }
 
 
@@ -179,7 +177,7 @@ void vCommandConsoleTask(void *pvParameters)
     (void)(pvParameters);
     uint32_t receivedChar;  // used to store the received value from the notification
     char N_char = '\n';
-    tx_queue_create(&command_queue, "Queue", TX_1_ULONG, command_queue_storage, sizeof(command_queue_storage));
+    commandQueue = osMessageQueueNew(5, sizeof(uint32_t), NULL);
 
     osDelay(2000); // Wait for system to initialize
     
@@ -188,7 +186,7 @@ void vCommandConsoleTask(void *pvParameters)
     for (;;)
     {
         // Wait for data from ISR
-        tx_queue_receive(&command_queue, &receivedChar, TX_WAIT_FOREVER);
+        osMessageQueueGet(commandQueue, &receivedChar, NULL, osWaitForever);
         if (receivedChar == '\b' || receivedChar == 0x7F) {
             // user pressed backspace, remove last character from input string
             if (inputIndex > 0) {
