@@ -42,6 +42,11 @@ extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim15;
 extern SD_HandleTypeDef hsd1;
 extern RTC_HandleTypeDef hrtc;
+extern SPI_HandleTypeDef hspi1;
+extern SPI_HandleTypeDef hspi2;
+extern SPI_HandleTypeDef hspi5;
+extern SPI_HandleTypeDef hspi6;
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -71,6 +76,10 @@ void MX_SDMMC1_SD_Init(void);
 #define DEC_IN_GPIO_Port GPIOE
 #define IN2_Pin GPIO_PIN_6
 #define IN2_GPIO_Port GPIOE
+#define SUSI_M_CLK_Pin GPIO_PIN_7
+#define SUSI_M_CLK_GPIO_Port GPIOF
+#define SUSI_M_DAT_Pin GPIO_PIN_9
+#define SUSI_M_DAT_GPIO_Port GPIOF
 #define TRACK_P_Pin GPIO_PIN_0
 #define TRACK_P_GPIO_Port GPIOA
 #define BIDIR_EN_Pin GPIO_PIN_3
@@ -91,6 +100,10 @@ void MX_SDMMC1_SD_Init(void);
 #define BR_ENABLE_GPIO_Port GPIOG
 #define BIDIR_RX_Pin GPIO_PIN_7
 #define BIDIR_RX_GPIO_Port GPIOC
+#define SUSI_S_CLK_Pin GPIO_PIN_3
+#define SUSI_S_CLK_GPIO_Port GPIOB
+#define SUSU_S_DAT_Pin GPIO_PIN_4
+#define SUSU_S_DAT_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 /* set and reset TR bit positions */

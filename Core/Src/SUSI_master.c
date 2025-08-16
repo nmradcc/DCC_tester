@@ -3,6 +3,7 @@
 #include "main.h"
 
 #include "SUSI.h"
+#include "stm32h5xx_hal_spi.h"
 
 static osThreadId_t susiThread_id;
 static osSemaphoreId_t susiStart_sem;
@@ -19,18 +20,20 @@ static const osThreadAttr_t susiTask_attributes = {
 void SUSI_MasterThread(void *argument) {
   (void)argument;  // Unused parameter
 
+  static uint8_t pData[3] = {0x60,0x10,0xAA};  // Example function packet data
+  static uint8_t pExData[3] = {0x71,0xA5,0x5A};  // Example extended packet data
+
   while (true) {
     // Block until externally started
     osSemaphoreAcquire(susiStart_sem, osWaitForever);
     
-    // Initialize SPI SUSI Master
-//    susi.init();
-
     susiRunning = true;
 
     while (susiRunning) {
-//      susi.execute();
-      osDelay(100u);
+      HAL_SPI_Transmit(&hspi1, (const uint8_t *)&pData[0], 2, HAL_MAX_DELAY);
+      osDelay(500u);
+//      HAL_SPI_Transmit(&hspi1, (const uint8_t *)&pExData[0], 3, HAL_MAX_DELAY);
+//      osDelay(500u);
     }
     
     osSemaphoreRelease(susiStart_sem);

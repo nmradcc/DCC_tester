@@ -101,9 +101,10 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   Decoder_Init();
   /* Create the SUSI Master task ... but don't start it */
   SUSI_Master_Init();
+SUSI_Master_Start();
   /* Create the SUSI Slave task ... but don't start it */
   SUSI_Slave_Init();
-
+SUSI_Slave_Start();
   /* USER CODE END App_ThreadX_Init */
 
   return ret;

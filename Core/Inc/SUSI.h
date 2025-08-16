@@ -10,6 +10,9 @@ void SUSI_Slave_Init(void);
 void SUSI_Slave_Start(void);
 void SUSI_Slave_Stop(void);
 
+void SUSI_S_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi);
+
+
 /* SUSI commands */
 //TODO: not complete
 #define SUSI_NOOP     (0x00)
