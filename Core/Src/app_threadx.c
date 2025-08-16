@@ -27,6 +27,7 @@
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
 #include "tx_api.h"
+#include "main.h"
 #include "command_station.h"
 #include "decoder.h"
 #include "SUSI.h"
@@ -100,7 +101,7 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   /* Create the decoder task ... but don't start it */
   Decoder_Init();
   /* Create the SUSI Master task ... but don't start it */
-  SUSI_Master_Init();
+  SUSI_Master_Init(&hspi5);
 SUSI_Master_Start();
   /* Create the SUSI Slave task ... but don't start it */
   SUSI_Slave_Init();

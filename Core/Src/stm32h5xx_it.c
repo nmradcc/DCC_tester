@@ -67,7 +67,6 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 /* External variables --------------------------------------------------------*/
 extern ETH_HandleTypeDef heth;
 extern SD_HandleTypeDef hsd1;
-extern SPI_HandleTypeDef hspi1;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi5;
 extern SPI_HandleTypeDef hspi6;
@@ -204,20 +203,6 @@ void TIM6_IRQHandler(void)
   /* USER CODE BEGIN TIM6_IRQn 1 */
 
   /* USER CODE END TIM6_IRQn 1 */
-}
-
-/**
-  * @brief This function handles SPI1 global interrupt.
-  */
-void SPI1_IRQHandler(void)
-{
-  /* USER CODE BEGIN SPI1_IRQn 0 */
-
-  /* USER CODE END SPI1_IRQn 0 */
-  HAL_SPI_IRQHandler(&hspi1);
-  /* USER CODE BEGIN SPI1_IRQn 1 */
-
-  /* USER CODE END SPI1_IRQn 1 */
 }
 
 /**

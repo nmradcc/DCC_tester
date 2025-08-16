@@ -42,7 +42,6 @@ extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim15;
 extern SD_HandleTypeDef hsd1;
 extern RTC_HandleTypeDef hrtc;
-extern SPI_HandleTypeDef hspi1;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi5;
 extern SPI_HandleTypeDef hspi6;

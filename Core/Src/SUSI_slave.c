@@ -35,13 +35,16 @@ static osEventFlagsId_t spiRxEvent;
 
 HAL_StatusTypeDef spi_conditional_rx(SPI_HandleTypeDef *hspi, uint8_t *rxBuf, uint32_t timeout) {
     osEventFlagsClear(spiRxEvent, SPI_RX_STAGE1_FLAG | SPI_RX_STAGE2_FLAG);
+    HAL_SPI_DeInit(hspi);
+    HAL_SPI_Init(hspi);
 
     // Stage 1: Receive first byte
     HAL_StatusTypeDef status = HAL_SPI_Receive_IT(hspi, rxBuf, 2);
-    if (status != HAL_OK) return status;
+    if (status != HAL_OK)
+      return status;
 
     // Wait for stage 1 completion
-    uint32_t flags = osEventFlagsWait(spiRxEvent, SPI_RX_STAGE1_FLAG, osFlagsWaitAny, timeout);
+    uint32_t flags = osEventFlagsWait(spiRxEvent, SPI_RX_STAGE1_FLAG, osFlagsWaitAny, 10000);
     if (!(flags & SPI_RX_STAGE1_FLAG)) 
       return HAL_TIMEOUT;
 
@@ -50,10 +53,12 @@ HAL_StatusTypeDef spi_conditional_rx(SPI_HandleTypeDef *hspi, uint8_t *rxBuf, ui
     {
         // Stage 2: Receive third byte
         status = HAL_SPI_Receive_IT(hspi, &rxBuf[2], 1);
-        if (status != HAL_OK) return status;
+        if (status != HAL_OK)
+          return status;
 
         flags = osEventFlagsWait(spiRxEvent, SPI_RX_STAGE2_FLAG, osFlagsWaitAny, timeout);
-        if (!(flags & SPI_RX_STAGE2_FLAG)) return HAL_TIMEOUT;
+        if (!(flags & SPI_RX_STAGE2_FLAG))
+          return HAL_TIMEOUT;
     }
 
     return HAL_OK;
