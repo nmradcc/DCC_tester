@@ -6,7 +6,7 @@ void SUSI_Master_Init(SPI_HandleTypeDef *hspi);
 void SUSI_Master_Start(void);
 void SUSI_Master_Stop(void);
 
-void SUSI_Slave_Init(void);
+void SUSI_Slave_Init(SPI_HandleTypeDef *hspi);
 void SUSI_Slave_Start(void);
 void SUSI_Slave_Stop(void);
 

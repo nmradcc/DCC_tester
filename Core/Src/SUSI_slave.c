@@ -8,6 +8,7 @@
 #include "stm32h5xx_hal_def.h"
 #include "stm32h5xx_hal_spi.h"
 
+static SPI_HandleTypeDef *hSlaveSPI;
 static osThreadId_t susiThread_id;
 static osSemaphoreId_t susiStart_sem;
 static bool susiRunning = false;
@@ -20,7 +21,6 @@ static const osThreadAttr_t susiTask_attributes = {
 };
 
 typedef struct {
-    SPI_HandleTypeDef *hspi;
     uint8_t rxBuffer[64];
     uint8_t txBuffer[64];
 } SUSI_Slave;
@@ -33,13 +33,13 @@ static osEventFlagsId_t spiRxEvent;
 #define EXTENDED_PACKET_MASK      0xF0
 
 
-HAL_StatusTypeDef spi_conditional_rx(SPI_HandleTypeDef *hspi, uint8_t *rxBuf, uint32_t timeout) {
+HAL_StatusTypeDef spi_conditional_rx(uint8_t *rxBuf, uint32_t timeout) {
     osEventFlagsClear(spiRxEvent, SPI_RX_STAGE1_FLAG | SPI_RX_STAGE2_FLAG);
-    HAL_SPI_DeInit(hspi);
-    HAL_SPI_Init(hspi);
+    HAL_SPI_DeInit(hSlaveSPI);
+    HAL_SPI_Init(hSlaveSPI);
 
     // Stage 1: Receive first byte
-    HAL_StatusTypeDef status = HAL_SPI_Receive_IT(hspi, rxBuf, 2);
+    HAL_StatusTypeDef status = HAL_SPI_Receive_IT(hSlaveSPI, rxBuf, 2);
     if (status != HAL_OK)
       return status;
 
@@ -52,7 +52,7 @@ HAL_StatusTypeDef spi_conditional_rx(SPI_HandleTypeDef *hspi, uint8_t *rxBuf, ui
     if ((rxBuf[0] & EXTENDED_PACKET_MASK) == EXTENDED_PACKET_PATTERN)
     {
         // Stage 2: Receive third byte
-        status = HAL_SPI_Receive_IT(hspi, &rxBuf[2], 1);
+        status = HAL_SPI_Receive_IT(hSlaveSPI, &rxBuf[2], 1);
         if (status != HAL_OK)
           return status;
 
@@ -94,13 +94,12 @@ void SUSI_SlaveThread(void *argument) {
     
     // Initialize SPI SUSI Slave
     SUSI_Slave susi;
-    susi.hspi = &hspi2;  // Assign the SPI handle
 
     susiRunning = true;
 
     spiRxEvent = osEventFlagsNew(NULL);
     while (susiRunning) {
-      if (spi_conditional_rx(susi.hspi, susi.rxBuffer, PACKET_TIMEOUT_MS) == HAL_OK) {
+      if (spi_conditional_rx(susi.rxBuffer, PACKET_TIMEOUT_MS) == HAL_OK) {
         // Process received data
         switch (susi.rxBuffer[0]) {
           case SUSI_FG1:
@@ -131,7 +130,8 @@ void SUSI_SlaveThread(void *argument) {
 
 
 
-void SUSI_Slave_Init(void) {
+void SUSI_Slave_Init(SPI_HandleTypeDef *hspi) {
+  hSlaveSPI = hspi;
   susiStart_sem = osSemaphoreNew(1, 0, NULL);  // Start locked
   susiThread_id = osThreadNew(SUSI_SlaveThread, NULL, &susiTask_attributes);
 }

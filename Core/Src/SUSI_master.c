@@ -6,7 +6,7 @@
 #include "SUSI.h"
 #include "stm32h5xx_hal_spi.h"
 
-static SPI_HandleTypeDef *hSlaveSPI;
+static SPI_HandleTypeDef *hMasterSPI;
 static osThreadId_t susiThread_id;
 static osSemaphoreId_t susiStart_sem;
 static bool susiRunning = false;
@@ -32,10 +32,10 @@ void SUSI_MasterThread(void *argument) {
     susiRunning = true;
 
     while (susiRunning) {
-      HAL_SPI_Transmit(hSlaveSPI, (const uint8_t *)&pData[0], 2, HAL_MAX_DELAY);
+      HAL_SPI_Transmit(hMasterSPI, (const uint8_t *)&pData[0], 2, HAL_MAX_DELAY);
 //      osDelay(500u);
 HAL_Delay(100);
-//      HAL_SPI_Transmit(hSlaveSPI, (const uint8_t *)&pExData[0], 3, HAL_MAX_DELAY);
+//      HAL_SPI_Transmit(hMasterSPI, (const uint8_t *)&pExData[0], 3, HAL_MAX_DELAY);
 //      osDelay(500u);
     }
     
@@ -48,7 +48,7 @@ HAL_Delay(100);
 
 
 void SUSI_Master_Init(SPI_HandleTypeDef *hspi) {
-  hSlaveSPI = hspi;
+  hMasterSPI = hspi;
   susiStart_sem = osSemaphoreNew(1, 0, NULL);  // Start locked
   susiThread_id = osThreadNew(SUSI_MasterThread, NULL, &susiTask_attributes);
 }
