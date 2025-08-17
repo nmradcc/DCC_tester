@@ -22,10 +22,7 @@ uint8_t rxBuffer[3];
 uint8_t txBuffer[5];
 
 static osEventFlagsId_t spiRxEvent;
-
 #define SPI_RX_3BYTES_FLAG  (1 << 0)
-#define EXTENDED_PACKET_PATTERN   0x70
-#define EXTENDED_PACKET_MASK      0xF0
 
 void SUSI_S_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
   (void)hspi;  // Unused parameter
