@@ -1,12 +1,9 @@
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <sys/types.h>
 #include "cmsis_os2.h"
 #include "main.h"
 
 #include "SUSI.h"
-#include "stm32h5xx_hal_def.h"
 #include "stm32h5xx_hal_spi.h"
 
 static SPI_HandleTypeDef *hSlaveSPI;
@@ -45,11 +42,12 @@ HAL_StatusTypeDef spi_conditional_rx(void) {
     rxBuffer[1] = 0;  // Clear the second byte
     rxBuffer[2] = 0;  // Clear the third byte 
 
-    SUSI_Master_Start();
     HAL_StatusTypeDef status = HAL_SPI_Receive_IT(hSlaveSPI, rxBuffer, 3);
     if (status != HAL_OK)
       return status;
     osEventFlagsWait(spiRxEvent, SPI_RX_3BYTES_FLAG, osFlagsWaitAny, PACKET_TIMEOUT_MS);
+    if ((rxBuffer[0] == 0) && (rxBuffer[1] == 0) && (rxBuffer[2] == 0))
+      return HAL_TIMEOUT;  // No data received within timeout
     return HAL_OK;
 }
 
@@ -74,15 +72,32 @@ void SUSI_SlaveThread(void *argument) {
       if (spi_conditional_rx() == HAL_OK) {
         // Process received data
         switch (rxBuffer[0]) {
-          case SUSI_NOOP:
-            
-            break;
           case SUSI_FG1:
             printf("SUSI_FG1 received: 0x%02X\r\n", rxBuffer[1]);
-
             break;
           case SUSI_FG2:
- 
+            printf("SUSI_FG2 received: 0x%02X\r\n", rxBuffer[1]);
+            break;
+          case SUSI_FG3:
+            printf("SUSI_FG3 received: 0x%02X\r\n", rxBuffer[1]);
+            break;
+          case SUSI_FG4:
+            printf("SUSI_FG4 received: 0x%02X\r\n", rxBuffer[1]);
+            break;
+          case SUSI_FG5:
+            printf("SUSI_FG5 received: 0x%02X\r\n", rxBuffer[1]);
+            break; 
+          case SUSI_FG6: 
+            printf("SUSI_FG6 received: 0x%02X\r\n", rxBuffer[1]);
+            break;  
+          case SUSI_FG7:
+            printf("SUSI_FG7 received: 0x%02X\r\n", rxBuffer[1]);
+            break;
+          case SUSI_FG8:
+            printf("SUSI_FG8 received: 0x%02X\r\n", rxBuffer[1]);
+            break;
+          case SUSI_FG9:
+            printf("SUSI_FG9 received: 0x%02X\r\n", rxBuffer[1]);
             break;
           default:
             // Handle unexpected or extended packet type
@@ -94,9 +109,6 @@ void SUSI_SlaveThread(void *argument) {
             }
             break;
         }
-      }
-      else {
-        printf("SPI receive error or timeout\r\n");
       }
 //      osDelay(100u);
     }

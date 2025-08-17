@@ -1,6 +1,5 @@
 #include <stdbool.h>
 #include "cmsis_os2.h"
-#include "fx_stm32_sd_driver.h"
 #include "main.h"
 
 #include "SUSI.h"
@@ -22,8 +21,8 @@ static const osThreadAttr_t susiTask_attributes = {
 void SUSI_MasterThread(void *argument) {
   (void)argument;
 
-  static uint8_t pData[3] = {0x60,0x10,0xAA};  // Example function packet data
-  static uint8_t pExData[3] = {0x71,0xA5,0x5A};  // Example extended packet data
+  static uint8_t pData[2] =   {0x60,0x10};            // Example function packet data
+  static uint8_t pExData[3] = {0x71,0xA5,0x5A};   // Example extended packet data
 
   while (true) {
     // Block until externally started
@@ -31,14 +30,12 @@ void SUSI_MasterThread(void *argument) {
     
     susiRunning = true;
 
-//    while (susiRunning) {
+    while (susiRunning) {
       HAL_SPI_Transmit(hMasterSPI, (const uint8_t *)&pData[0], 2, HAL_MAX_DELAY);
-//      osDelay(500u);
-HAL_Delay(100);
+      osDelay(100u);
       HAL_SPI_Transmit(hMasterSPI, (const uint8_t *)&pExData[0], 3, HAL_MAX_DELAY);
-//      osDelay(500u);
-HAL_Delay(100);
-//    }
+      osDelay(100u);
+    }
     
     osSemaphoreRelease(susiStart_sem);
     osDelay(5u); // Give some time for the semaphore to be released
