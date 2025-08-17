@@ -26,19 +26,19 @@ uint8_t txBuffer[5];
 
 static osEventFlagsId_t spiRxEvent;
 
-#define SPI_RX_STAGE3_FLAG  (1 << 0)
+#define SPI_RX_3BYTES_FLAG  (1 << 0)
 #define EXTENDED_PACKET_PATTERN   0x70
 #define EXTENDED_PACKET_MASK      0xF0
 
 void SUSI_S_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
   (void)hspi;  // Unused parameter
 
-  osEventFlagsSet(spiRxEvent, SPI_RX_STAGE3_FLAG);
+  osEventFlagsSet(spiRxEvent, SPI_RX_3BYTES_FLAG);
 }
 
 
 HAL_StatusTypeDef spi_conditional_rx(void) {
-    osEventFlagsClear(spiRxEvent, SPI_RX_STAGE3_FLAG);
+    osEventFlagsClear(spiRxEvent, SPI_RX_3BYTES_FLAG);
     HAL_SPI_DeInit(hSlaveSPI);
     HAL_SPI_Init(hSlaveSPI);
     rxBuffer[0] = 0;  // Clear the first byte
@@ -46,16 +46,10 @@ HAL_StatusTypeDef spi_conditional_rx(void) {
     rxBuffer[2] = 0;  // Clear the third byte 
 
     SUSI_Master_Start();
-    uint32_t flags;
-    while (true) {
-      HAL_StatusTypeDef status = HAL_SPI_Receive_IT(hSlaveSPI, rxBuffer, 3);
-      if (status != HAL_OK)
-        return status;
-      flags = osEventFlagsWait(spiRxEvent, SPI_RX_STAGE3_FLAG, osFlagsWaitAny, PACKET_TIMEOUT_MS);
-      if (flags == osErrorTimeout)
-        break;
-    }
-
+    HAL_StatusTypeDef status = HAL_SPI_Receive_IT(hSlaveSPI, rxBuffer, 3);
+    if (status != HAL_OK)
+      return status;
+    osEventFlagsWait(spiRxEvent, SPI_RX_3BYTES_FLAG, osFlagsWaitAny, PACKET_TIMEOUT_MS);
     return HAL_OK;
 }
 
