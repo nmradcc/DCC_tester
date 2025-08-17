@@ -58,6 +58,8 @@ void SUSI_S_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi);
 /* SUSI packet timeout */
 #define PACKET_TIMEOUT_MS  8
 
+#define EXTENDED_PACKET_PATTERN   0x70
+#define EXTENDED_PACKET_MASK      0xF0
 
 
 

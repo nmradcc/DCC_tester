@@ -31,13 +31,14 @@ void SUSI_MasterThread(void *argument) {
     
     susiRunning = true;
 
-    while (susiRunning) {
+//    while (susiRunning) {
       HAL_SPI_Transmit(hMasterSPI, (const uint8_t *)&pData[0], 2, HAL_MAX_DELAY);
 //      osDelay(500u);
 HAL_Delay(100);
-//      HAL_SPI_Transmit(hMasterSPI, (const uint8_t *)&pExData[0], 3, HAL_MAX_DELAY);
+      HAL_SPI_Transmit(hMasterSPI, (const uint8_t *)&pExData[0], 3, HAL_MAX_DELAY);
 //      osDelay(500u);
-    }
+HAL_Delay(100);
+//    }
     
     osSemaphoreRelease(susiStart_sem);
     osDelay(5u); // Give some time for the semaphore to be released
