@@ -69,7 +69,6 @@ extern ETH_HandleTypeDef heth;
 extern SD_HandleTypeDef hsd1;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi5;
-extern SPI_HandleTypeDef hspi6;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim15;
 extern UART_HandleTypeDef huart3;
@@ -281,20 +280,6 @@ void SPI5_IRQHandler(void)
   /* USER CODE BEGIN SPI5_IRQn 1 */
 
   /* USER CODE END SPI5_IRQn 1 */
-}
-
-/**
-  * @brief This function handles SPI6 global interrupt.
-  */
-void SPI6_IRQHandler(void)
-{
-  /* USER CODE BEGIN SPI6_IRQn 0 */
-
-  /* USER CODE END SPI6_IRQn 0 */
-  HAL_SPI_IRQHandler(&hspi6);
-  /* USER CODE BEGIN SPI6_IRQn 1 */
-
-  /* USER CODE END SPI6_IRQn 1 */
 }
 
 /**

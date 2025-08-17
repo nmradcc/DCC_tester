@@ -44,7 +44,6 @@ extern SD_HandleTypeDef hsd1;
 extern RTC_HandleTypeDef hrtc;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi5;
-extern SPI_HandleTypeDef hspi6;
 
 /* USER CODE END ET */
 
@@ -99,10 +98,6 @@ void MX_SDMMC1_SD_Init(void);
 #define BR_ENABLE_GPIO_Port GPIOG
 #define BIDIR_RX_Pin GPIO_PIN_7
 #define BIDIR_RX_GPIO_Port GPIOC
-#define SUSI_S_CLK_Pin GPIO_PIN_3
-#define SUSI_S_CLK_GPIO_Port GPIOB
-#define SUSU_S_DAT_Pin GPIO_PIN_4
-#define SUSU_S_DAT_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 /* set and reset TR bit positions */

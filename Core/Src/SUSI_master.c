@@ -1,10 +1,12 @@
 #include <stdbool.h>
 #include "cmsis_os2.h"
+#include "fx_stm32_sd_driver.h"
 #include "main.h"
 
 #include "SUSI.h"
 #include "stm32h5xx_hal_spi.h"
 
+static SPI_HandleTypeDef *hSlaveSPI;
 static osThreadId_t susiThread_id;
 static osSemaphoreId_t susiStart_sem;
 static bool susiRunning = false;
@@ -18,7 +20,7 @@ static const osThreadAttr_t susiTask_attributes = {
 
 
 void SUSI_MasterThread(void *argument) {
-  SPI_HandleTypeDef *hspi = (SPI_HandleTypeDef *)argument;
+  (void)argument;
 
   static uint8_t pData[3] = {0x60,0x10,0xAA};  // Example function packet data
   static uint8_t pExData[3] = {0x71,0xA5,0x5A};  // Example extended packet data
@@ -30,9 +32,10 @@ void SUSI_MasterThread(void *argument) {
     susiRunning = true;
 
     while (susiRunning) {
-      HAL_SPI_Transmit(&hspi5, (const uint8_t *)&pData[0], 2, HAL_MAX_DELAY);
-      osDelay(500u);
-//      HAL_SPI_Transmit(&hspi5, (const uint8_t *)&pExData[0], 3, HAL_MAX_DELAY);
+      HAL_SPI_Transmit(hSlaveSPI, (const uint8_t *)&pData[0], 2, HAL_MAX_DELAY);
+//      osDelay(500u);
+HAL_Delay(100);
+//      HAL_SPI_Transmit(hSlaveSPI, (const uint8_t *)&pExData[0], 3, HAL_MAX_DELAY);
 //      osDelay(500u);
     }
     
@@ -45,8 +48,9 @@ void SUSI_MasterThread(void *argument) {
 
 
 void SUSI_Master_Init(SPI_HandleTypeDef *hspi) {
+  hSlaveSPI = hspi;
   susiStart_sem = osSemaphoreNew(1, 0, NULL);  // Start locked
-  susiThread_id = osThreadNew(SUSI_MasterThread, &hspi, &susiTask_attributes);
+  susiThread_id = osThreadNew(SUSI_MasterThread, NULL, &susiTask_attributes);
 }
 
 void SUSI_Master_Start(void) {

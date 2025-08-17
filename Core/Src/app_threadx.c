@@ -26,7 +26,6 @@
 #include "cmsis_os2.h"
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
-#include "tx_api.h"
 #include "main.h"
 #include "command_station.h"
 #include "decoder.h"
