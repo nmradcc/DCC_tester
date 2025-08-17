@@ -1,6 +1,3 @@
-#ifndef CLI_COMMANDS_H
-#define CLI_COMMANDS_H
-
 #include <sys/unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +13,7 @@
 #include "main.h"
 #include "command_station.h"
 #include "decoder.h"
+#include "susi.h"
 
 // Declare _write prototype to avoid implicit declaration error
 int _write(int file, char *ptr, int len);
@@ -53,6 +51,36 @@ void help_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
     printf("Firmware version: %s\n", FW_VERSION_STRING);
     print_help();
+}
+
+void susi_slave_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    if (stricmp(arg1,"start") == 0) {
+        printf("Start SUSI Slave ...\n");
+        SUSI_Slave_Start();
+    }
+    else if (stricmp(arg1,"stop") == 0) {
+        printf("Stop SUSI Slave ...\n");
+        SUSI_Slave_Stop();
+    }
+    else {
+        printf("Unknown SUSI command: %s\n", arg1);
+    }
+}
+
+void susi_master_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    if (stricmp(arg1,"start") == 0) {
+        printf("Start SUSI Master ...\n");
+        SUSI_Master_Start();
+    }
+    else if (stricmp(arg1,"stop") == 0) {
+        printf("Stop SUSI Master ...\n");
+        SUSI_Master_Stop();
+    }
+    else {
+        printf("Unknown SUSI command: %s\n", arg1);
+    }
 }
 
 void command_station_command(const char *arg1, const char *arg2) {
@@ -131,11 +159,23 @@ Command cmd_dec = {
     .help = "Decoder start/stop",
     .next = &cmd_cms
 };
+Command cmd_susi_slave = {
+    .name = "susi_slave", 
+    .execute = susi_slave_command,
+    .help = "SUSI Slave start/stop",
+    .next = &cmd_dec
+};
+Command cmd_susi_master = {
+    .name = "susi_master", 
+    .execute = susi_master_command,
+    .help = "SUSI Master start/stop",
+    .next = &cmd_susi_slave
+};
 Command cmd_hello = {
     .name ="hello", 
     .execute = hello_command,
     .help = NULL,
-    .next = &cmd_dec
+    .next = &cmd_susi_master
 };
 Command cmd_status = {
     .name = "status",
@@ -236,6 +276,3 @@ void vCommandConsoleTask(void *pvParameters)
         }
     }
 }
-
-
-#endif /* CLI_COMMANDS_H */
