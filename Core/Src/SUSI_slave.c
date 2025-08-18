@@ -9,7 +9,7 @@
 static SPI_HandleTypeDef *hSlaveSPI;
 static osThreadId_t susiThread_id;
 static osSemaphoreId_t susiStart_sem;
-static bool susiRunning = false;
+static volatile bool susiRunning = false;
 
 /* Definitions for susiTask */
 static const osThreadAttr_t susiTask_attributes = {
@@ -107,7 +107,6 @@ void SUSI_SlaveThread(void *argument) {
             break;
         }
       }
-//      osDelay(100u);
     }
     
     osSemaphoreRelease(susiStart_sem);
@@ -133,6 +132,6 @@ void SUSI_Slave_Start(void) {
 void SUSI_Slave_Stop(void) {
   if (susiRunning) {
     susiRunning = false;
-    osSemaphoreRelease(susiStart_sem);
+    osSemaphoreAcquire(susiStart_sem, osWaitForever);
   }
 }
