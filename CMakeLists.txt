@@ -56,7 +56,7 @@ include(FetchContent)
 FetchContent_Declare(
   DCC
   GIT_REPOSITORY "https://github.com/ZIMO-Elektronik/DCC"
-  GIT_TAG v0.41.1)
+  GIT_TAG v0.44.4)
 
 FetchContent_MakeAvailable(DCC)
 

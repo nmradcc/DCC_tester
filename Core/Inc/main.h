@@ -42,6 +42,8 @@ extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim15;
 extern SD_HandleTypeDef hsd1;
 extern RTC_HandleTypeDef hrtc;
+extern DAC_HandleTypeDef hdac1;
+extern UART_HandleTypeDef huart6;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi5;
 
@@ -96,8 +98,8 @@ void MX_SDMMC1_SD_Init(void);
 #define SD_DETECT_GPIO_Port GPIOG
 #define BR_ENABLE_Pin GPIO_PIN_6
 #define BR_ENABLE_GPIO_Port GPIOG
-#define BIDIR_RX_Pin GPIO_PIN_7
-#define BIDIR_RX_GPIO_Port GPIOC
+#define USART6_RX_BIDIR_Pin GPIO_PIN_7
+#define USART6_RX_BIDIR_GPIO_Port GPIOC
 
 /* USER CODE BEGIN Private defines */
 /* set and reset TR bit positions */
@@ -108,6 +110,9 @@ void MX_SDMMC1_SD_Init(void);
 /* set and reset TRACK bit positions */
 #define TRACK_P_BS_Pos GPIO_BSRR_BS0_Pos
 #define TRACK_P_BR_Pos GPIO_BSRR_BR0_Pos
+
+/* Default BiDi threshold */
+#define DEFAULT_BIDIR_THRESHOLD 466
 
 /* USER CODE END Private defines */
 
