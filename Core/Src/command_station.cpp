@@ -75,7 +75,7 @@ void CommandStationThread(void *argument) {
       command_station.packet(packet);
       printf("Command station: set function F0\n");
       osDelay(2000u);
-#if 0
+
       // Accelerate
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
@@ -89,14 +89,14 @@ void CommandStationThread(void *argument) {
       command_station.packet(packet);
       printf("Command station: stop (forward)\n");
       osDelay(2000u);
-#endif
+
       // Clear function
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
       command_station.packet(packet);
       printf("Command station: clear function F0\n");
       osDelay(2000u);
-#if 0
+
       // Accelerate
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
@@ -110,7 +110,7 @@ void CommandStationThread(void *argument) {
       command_station.packet(packet);
       printf("Command station: stop (reverse)\n");
       osDelay(2000u);
-#endif
+
     }
     HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_1);
     __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
