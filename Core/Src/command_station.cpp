@@ -123,21 +123,30 @@ void CommandStationThread(void *argument) {
     // Send a few packets to test the command station
     // This is not part of the command station functionality, but rather a test
     // to see if the command station is working correctly.
+
     dcc::Packet packet{};
-    while (commandStationRunning) {
+//    dcc::tx::Timings timings{};
+
+while (commandStationRunning) {
 
       // Set function F0
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
+//      timings = dcc::tx::bytes2timings(packet);
+//    for (auto i{0uz}; i < timings.size(); ++i)
+//        command_station.transmit();
+//      command_station.transmit();
       command_station.packet(packet);
       printf("Command station: set function F0\n");
-      osDelay(25u);
+      osDelay(250u);
       // Clear function
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
+//      timings = dcc::tx::bytes2timings(packet);
+//      command_station.transmit();
       command_station.packet(packet);
       printf("Command station: clear function F0\n");
-      osDelay(25u);
+      osDelay(250);
 #if 0
       // Accelerate
       BSP_LED_Toggle(LED_GREEN);
