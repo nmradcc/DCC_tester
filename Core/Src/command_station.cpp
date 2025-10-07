@@ -55,7 +55,7 @@ void CommandStationThread(void *argument) {
       .num_preamble = DCC_TX_MIN_PREAMBLE_BITS,
       .bit1_duration = 58u,
       .bit0_duration = 100u,
-      .flags = {.invert = false, .bidi = false},
+      .flags = {.bidi = false},
     });
 
   // Enable update interrupt
