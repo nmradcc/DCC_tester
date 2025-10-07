@@ -138,7 +138,7 @@ while (commandStationRunning) {
 //      command_station.transmit();
       command_station.packet(packet);
       printf("Command station: set function F0\n");
-      osDelay(250u);
+      osDelay(300u);
       // Clear function
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
@@ -146,7 +146,7 @@ while (commandStationRunning) {
 //      command_station.transmit();
       command_station.packet(packet);
       printf("Command station: clear function F0\n");
-      osDelay(250);
+      osDelay(300);
 #if 0
       // Accelerate
       BSP_LED_Toggle(LED_GREEN);
