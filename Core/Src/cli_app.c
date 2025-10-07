@@ -252,6 +252,12 @@ void vCommandConsoleTask(void *pvParameters)
     
     print_help(); // Print help on startup
 
+    //test..
+    CommandStation_Start(true);
+    printf("Start Command Station ...\n");
+    Decoder_Start();
+    printf("Start Decoder ...\n");
+
     for (;;)
     {
         // Wait for data from ISR

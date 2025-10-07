@@ -16,6 +16,7 @@ const osThreadAttr_t decoderTask_attributes = {
 };
 
 
+
 void Decoder::direction(uint16_t addr, bool dir) {}
 
 void Decoder::speed(uint16_t addr, int32_t speed) {
@@ -39,7 +40,13 @@ void Decoder::serviceModeHook(bool service_mode) {}
 
 void Decoder::serviceAck() {}
 
-void Decoder::transmitBiDi(std::span<uint8_t const> bytes) {}
+void Decoder::transmitBiDi(std::span<uint8_t const> bytes) {
+  printf("Decoder: BiDi transmit %u bytes:", (unsigned)bytes.size());
+  for (auto b : bytes) {
+    printf(" %02X", b);
+  }
+  printf("\n");
+}
 
 uint8_t Decoder::readCv(uint32_t cv_addr, uint8_t) {
   if (cv_addr >= size(_cvs)) return 0u;
@@ -59,6 +66,7 @@ bool Decoder::writeCv(uint32_t cv_addr, bool bit, uint32_t pos) {
 
 Decoder decoder;
 
+
 /* only use callback if NOT using custom interrupt handler! */
 extern "C" void DC_HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
@@ -76,6 +84,7 @@ void DecoderThread(void *argument) {
     osSemaphoreAcquire(decoderStart_sem, osWaitForever);
 
     decoder.init();
+
 
     // Enable update interrupt
     __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);

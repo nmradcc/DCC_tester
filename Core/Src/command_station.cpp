@@ -12,7 +12,8 @@ static osSemaphoreId_t commandStationStart_sem;
 static bool commandStationRunning = false;
 static bool commandStationBidi = false;
 
-static uint16_t dac_value =  DEFAULT_BIDIR_THRESHOLD; // DEFAULT BIDIR threshold value for 12-bit DAC
+//static uint16_t dac_value =  DEFAULT_BIDIR_THRESHOLD; // DEFAULT BIDIR threshold value for 12-bit DAC
+static uint16_t dac_value =  100; // DEFAULT BIDIR threshold value for 12-bit DAC
 
 static uint8_t rx_byte;
 static uint8_t bidirBuffer[RX_BIDIR_MAX_SIZE] = {0}; // Buffer for BiDi data
@@ -28,9 +29,9 @@ const osThreadAttr_t cmdStationTask_attributes = {
 
 void CommandStation::trackOutputs(bool N, bool P) 
 { 
- TR_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!N) << TR_N_BR_Pos) | (static_cast<uint32_t>(!P) << TR_P_BR_Pos) |
+  TR_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!N) << TR_N_BR_Pos) | (static_cast<uint32_t>(!P) << TR_P_BR_Pos) |
                            (static_cast<uint32_t>(N) << TR_N_BS_Pos) | (static_cast<uint32_t>(P) << TR_P_BS_Pos);
- TRACK_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!P) << TRACK_P_BR_Pos) |
+  TRACK_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!P) << TRACK_P_BR_Pos) |
                            (static_cast<uint32_t>(P) << TRACK_P_BS_Pos);
 }
 
@@ -46,15 +47,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 
 void CommandStation::biDiStart() {
-    HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
-    HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
+  HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
+  HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
 #if 0
-    //    husart6.Instance->CR1 |= USART_CR1_RXNEIE;
+  huart6.Instance->CR1 |= USART_CR1_RXNEIE;
   for (uint16_t i = 0; i < RX_BIDIR_MAX_SIZE; ++i) {
     bidirBuffer[i] = 0; // Clear the buffer
   }
   write_index = 0; // Reset write index
-  HAL_UART_Receive_IT(&huart6, &rx_byte, 1);
+//  HAL_UART_Receive_IT(&huart6, &rx_byte, 1);
 #endif
 }
 
@@ -63,9 +64,10 @@ void CommandStation::biDiChannel1() {}
 void CommandStation::biDiChannel2() {}
 
 void CommandStation::biDiEnd() {
-//    HAL_UART_AbortReceive_IT(&huart6); // Stop receiving BiDi data
-    HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
-    HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
+//  HAL_UART_AbortReceive_IT(&huart6); // Stop receiving BiDi data
+//  huart6.Instance->CR1 &= ~USART_CR1_RXNEIE;
+  HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
+  HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
 }
 
 CommandStation command_station;
@@ -96,7 +98,7 @@ void CommandStationThread(void *argument) {
 
       // Write value to DAC OUT2
       HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_value);
-
+      printf("DAC value: %d\n", dac_value);
     command_station.init({
       .num_preamble = DCC_TX_MIN_PREAMBLE_BITS,
       .bit1_duration = 58u,
@@ -129,7 +131,13 @@ void CommandStationThread(void *argument) {
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
       command_station.packet(packet);
       printf("Command station: set function F0\n");
-      osDelay(2000u);
+      osDelay(25u);
+      // Clear function
+      BSP_LED_Toggle(LED_GREEN);
+      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
+      command_station.packet(packet);
+      printf("Command station: clear function F0\n");
+      osDelay(25u);
 #if 0
       // Accelerate
       BSP_LED_Toggle(LED_GREEN);
@@ -144,7 +152,7 @@ void CommandStationThread(void *argument) {
       command_station.packet(packet);
       printf("Command station: stop (forward)\n");
       osDelay(2000u);
-#endif
+//#endif
       // Clear function
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
@@ -163,7 +171,7 @@ void CommandStationThread(void *argument) {
 
 
 
-      #if 0
+    //  #if 0
       // Accelerate
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
@@ -232,6 +240,7 @@ extern "C" bool CommandStation_bidi_Threshold(uint16_t threshold)
     // Write value to DAC OUT2
     // update threshold
     HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_value);
+    printf("DAC value: %d\n", dac_value);
     return true;
   }
   return false;

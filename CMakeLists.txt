@@ -53,12 +53,20 @@ add_subdirectory(cmake/stm32cubemx)
 
 include(FetchContent)
 
+#set(DCC_RX_DEQUE_SIZE
+#    8u
+#    CACHE STRING "" FORCE)
+#option(DCC_STANDARD_COMPLIANCE "Standard compliance" OFF)
+#option(DCC_ENABLE_BIDIRECTIONAL "Enable BiDi" ON)
+#option(DCC_ENABLE_RAILCOM "Enable RailCom" ON)
+
 FetchContent_Declare(
   DCC
   GIT_REPOSITORY "https://github.com/ZIMO-Elektronik/DCC"
   GIT_TAG v0.44.4)
 
 FetchContent_MakeAvailable(DCC)
+#target_compile_features(DCC INTERFACE cxx_std_23)
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
