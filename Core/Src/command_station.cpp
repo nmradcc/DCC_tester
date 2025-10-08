@@ -1,11 +1,18 @@
 #include "command_station.hpp"
+#include <cstdint>
 #include <cstdio>
 #include "cmsis_os2.h"
 #include "main.h"
+#include "stm32h5xx_hal_uart.h"
+
+#define RX_BIDIR_MAX_SIZE 16 // Maximum size of the BiDi receive buffer
 
 static osThreadId_t commandStationThread_id;
 static osSemaphoreId_t commandStationStart_sem;
 static bool commandStationRunning = false;
+static bool commandStationBidi = false;
+
+static uint16_t dac_value =  DEFAULT_BIDIR_THRESHOLD; // DEFAULT BIDIR threshold value for 12-bit DAC
 
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
@@ -23,13 +30,19 @@ void CommandStation::trackOutputs(bool N, bool P)
                            (static_cast<uint32_t>(P) << TRACK_P_BS_Pos);
 }
 
-void CommandStation::biDiStart() {}
+void CommandStation::biDiStart() {
+  HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
+  HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
+}
 
 void CommandStation::biDiChannel1() {}
 
 void CommandStation::biDiChannel2() {}
 
-void CommandStation::biDiEnd() {}
+void CommandStation::biDiEnd() {
+  HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
+  HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
+}
 
 CommandStation command_station;
 
@@ -50,13 +63,30 @@ void CommandStationThread(void *argument) {
   while (true) {
     // Block until externally started
     osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
-    
+
+    // Initialize DCC Command Station
+    if (commandStationBidi) {
+
+      // Start DAC channel 2
+      HAL_DAC_Start(&hdac1, DAC_CHANNEL_2);
+
+      // Write value to DAC OUT2
+      HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_value);
+      printf("DAC value: %d\n", dac_value);
+    command_station.init({
+      .num_preamble = DCC_TX_MIN_PREAMBLE_BITS,
+      .bit1_duration = 58u,
+      .bit0_duration = 100u,
+        .flags = {.bidi = true},
+    });
+    } else {
     command_station.init({
       .num_preamble = DCC_TX_MIN_PREAMBLE_BITS,
       .bit1_duration = 58u,
       .bit0_duration = 100u,
       .flags = {.bidi = false},
     });
+    }
 
   // Enable update interrupt
     __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
@@ -67,6 +97,7 @@ void CommandStationThread(void *argument) {
     // Send a few packets to test the command station
     // This is not part of the command station functionality, but rather a test
     // to see if the command station is working correctly.
+
     dcc::Packet packet{};
     while (commandStationRunning) {
       // Set function F0
@@ -128,9 +159,10 @@ extern "C" void CommandStation_Init(void)
 }
 
 // Can be called from anywhere
-extern "C" void CommandStation_Start(void)
+extern "C" void CommandStation_Start(bool bidi)
 {
   if (!commandStationRunning) {
+    commandStationBidi = bidi;
     HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
     osSemaphoreRelease(commandStationStart_sem);
     printf("Command station started\n");
@@ -154,3 +186,19 @@ extern "C" void CommandStation_Stop(void)
     printf("Command station not running\n");
   }
 }
+
+// Can be called from anywhere
+extern "C" bool CommandStation_bidi_Threshold(uint16_t threshold)
+{
+  dac_value = threshold;
+  printf("Command station bidi threshold %d\n", threshold);
+  if (commandStationRunning) {
+    // Write value to DAC OUT2
+    // update threshold
+    HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_value);
+    printf("DAC value: %d\n", dac_value);
+    return true;
+  }
+  return false;
+}
+
