@@ -53,12 +53,25 @@ add_subdirectory(cmake/stm32cubemx)
 
 include(FetchContent)
 
+set(DCC_MANUFACTURER_ID
+    145u
+    CACHE STRING "Manufacturer ID")
+set(DCC_RX_DEQUE_SIZE
+    31u
+    CACHE STRING "Size of the receiver deque of decoder")
+set(DCC_TX_DEQUE_SIZE
+    10u
+    CACHE STRING "Size of the transmitter deque of command station")
+
+option(DCC_STANDARD_COMPLIANCE "Standard compliance" ON)
+
 FetchContent_Declare(
   DCC
   GIT_REPOSITORY "https://github.com/ZIMO-Elektronik/DCC"
   GIT_TAG v0.44.4)
 
 FetchContent_MakeAvailable(DCC)
+target_compile_features(DCC INTERFACE cxx_std_23)
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
