@@ -53,12 +53,17 @@ add_subdirectory(cmake/stm32cubemx)
 
 include(FetchContent)
 
+set(DCC_MANUFACTURER_ID
+    145u
+    CACHE STRING "Manufacturer ID")
 set(DCC_RX_DEQUE_SIZE
-    8u
-    CACHE STRING "" FORCE)
-option(DCC_STANDARD_COMPLIANCE "Standard compliance" OFF)
-option(DCC_ENABLE_BIDIRECTIONAL "Enable BiDi" ON)
-option(DCC_ENABLE_RAILCOM "Enable RailCom" ON)
+    31u
+    CACHE STRING "Size of the receiver deque of decoder")
+set(DCC_TX_DEQUE_SIZE
+    10u
+    CACHE STRING "Size of the transmitter deque of command station")
+
+option(DCC_STANDARD_COMPLIANCE "Standard compliance" ON)
 
 FetchContent_Declare(
   DCC
