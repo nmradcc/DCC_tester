@@ -16,7 +16,6 @@ const osThreadAttr_t decoderTask_attributes = {
 };
 
 
-
 void Decoder::direction(uint16_t addr, bool dir) {}
 
 void Decoder::speed(uint16_t addr, int32_t speed) {
@@ -67,12 +66,20 @@ bool Decoder::writeCv(uint32_t cv_addr, bool bit, uint32_t pos) {
 Decoder decoder;
 
 
+//uint32_t captured_value[200];
+//uint32_t capture_index = 0;
+//TODO: optimize isr handler
 /* only use callback if NOT using custom interrupt handler! */
 extern "C" void DC_HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
      // Get captured value (CH1)
     uint32_t ccr = HAL_TIM_ReadCapturedValue(&htim15, TIM_CHANNEL_1);
-
+//    if (capture_index < sizeof(captured_value)/sizeof(captured_value[0])) {
+//      captured_value[capture_index++] = ccr;
+//    }
+//    else {
+//      capture_index = 0;
+//    }
     decoder.receive(ccr);
 }
 
@@ -84,7 +91,6 @@ void DecoderThread(void *argument) {
     osSemaphoreAcquire(decoderStart_sem, osWaitForever);
 
     decoder.init();
-
 
     // Enable update interrupt
     __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);

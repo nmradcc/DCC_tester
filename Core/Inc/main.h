@@ -100,6 +100,8 @@ void MX_SDMMC1_SD_Init(void);
 #define BR_ENABLE_GPIO_Port GPIOG
 #define USART6_RX_BIDIR_Pin GPIO_PIN_7
 #define USART6_RX_BIDIR_GPIO_Port GPIOC
+#define MC_OUT_Pin GPIO_PIN_8
+#define MC_OUT_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 /* set and reset TR bit positions */

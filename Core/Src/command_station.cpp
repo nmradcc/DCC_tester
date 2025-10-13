@@ -76,10 +76,10 @@ CommandStation command_station;
 /* only use callback if NOT using custom interrupt handler! */
 extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
   auto const arr{command_station.transmit()};
   htim->Instance->ARR = arr;
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
 
@@ -125,20 +125,28 @@ void CommandStationThread(void *argument) {
     // to see if the command station is working correctly.
 
     dcc::Packet packet{};
+    dcc::tx::Timings timings{};
 
 while (commandStationRunning) {
 
       // Set function F0
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
+  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
       command_station.packet(packet);
+//      timings = dcc::tx::packet2timings(dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u));
+//      command_station.transmit();
+  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
       printf("Command station: set function F0\n");
       osDelay(300u);
-      // Clear function
-      BSP_LED_Toggle(LED_GREEN);
-      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
-      command_station.packet(packet);
-      printf("Command station: clear function F0\n");
+//      // Clear function
+//      BSP_LED_Toggle(LED_GREEN);
+//      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
+//      command_station.packet(packet);
+//      timings = dcc::tx::packet2timings(dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u));
+//      timings = dcc::tx::packet2timings(dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u));
+//      command_station.transmit();
+//      printf("Command station: clear function F0\n");
       osDelay(300);
 #if 0
       // Accelerate
