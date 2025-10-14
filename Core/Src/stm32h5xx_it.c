@@ -25,7 +25,6 @@
 #include <stdbool.h>
 #include "cli_app.h"
 #include "SUSI.h"
-#include "command_station.h"
 
 /* USER CODE END Includes */
 
@@ -70,7 +69,6 @@ extern ETH_HandleTypeDef heth;
 extern SD_HandleTypeDef hsd1;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi5;
-extern TIM_HandleTypeDef htim15;
 extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart6;
 extern TIM_HandleTypeDef htim6;
@@ -225,20 +223,6 @@ void USART3_IRQHandler(void)
   /* USER CODE BEGIN USART3_IRQn 1 */
 
   /* USER CODE END USART3_IRQn 1 */
-}
-
-/**
-  * @brief This function handles TIM15 global interrupt.
-  */
-void TIM15_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM15_IRQn 0 */
-
-  /* USER CODE END TIM15_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim15);
-  /* USER CODE BEGIN TIM15_IRQn 1 */
-
-  /* USER CODE END TIM15_IRQn 1 */
 }
 
 /**
