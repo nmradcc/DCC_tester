@@ -78,7 +78,7 @@ extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 //  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
   auto const arr{command_station.transmit()};
-  htim->Instance->ARR = arr;
+  htim->Instance->ARR = arr - 1; // Set auto-reload register for next interrupt
 //  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
