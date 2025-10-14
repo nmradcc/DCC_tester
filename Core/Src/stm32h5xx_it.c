@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include "cli_app.h"
 #include "SUSI.h"
+#include "command_station.h"
 
 /* USER CODE END Includes */
 
@@ -184,8 +185,32 @@ void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
 
+  uint32_t itsource = htim2.Instance->DIER;
+  uint32_t itflag   = htim2.Instance->SR;
+
+  /* Capture compare 1 event */
+  if ((itflag & (TIM_FLAG_CC1)) == (TIM_FLAG_CC1))
+  {
+    if ((itsource & (TIM_IT_CC1)) == (TIM_IT_CC1))
+    {
+      {
+        __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_CC1);
+        htim2.Channel = HAL_TIM_ACTIVE_CHANNEL_1;
+        htim2.Channel = HAL_TIM_ACTIVE_CHANNEL_CLEARED;
+      }
+    }
+  }
+  /* TIM Update event */
+  if ((itflag & (TIM_FLAG_UPDATE)) == (TIM_FLAG_UPDATE))
+  {
+    if ((itsource & (TIM_IT_UPDATE)) == (TIM_IT_UPDATE))
+    {
+      __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
+      CS_HAL_TIM_PeriodElapsedCallback(&htim2);
+    }
+  }
+
   /* USER CODE END TIM2_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
 
   /* USER CODE END TIM2_IRQn 1 */
