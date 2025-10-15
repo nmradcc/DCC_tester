@@ -4,8 +4,6 @@
 extern "C" {
 #endif
 
-void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
-
 void CommandStation_Init(void);
 void CommandStation_Start(bool bidi);
 void CommandStation_Stop(void);

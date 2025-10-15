@@ -59,14 +59,41 @@ bool Decoder::writeCv(uint32_t cv_addr, bool bit, uint32_t pos) {
 
 Decoder decoder;
 
-/* only use callback if NOT using custom interrupt handler! */
-extern "C" void DC_HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+extern "C" void TIM15_IRQHandler(void)
 {
-     // Get captured value (CH1)
-    uint32_t ccr = HAL_TIM_ReadCapturedValue(&htim15, TIM_CHANNEL_1);
+  uint32_t itsource = htim15.Instance->DIER;
+  uint32_t itflag   = htim15.Instance->SR;
 
-    decoder.receive(ccr);
+  /* Capture compare 1 event */
+  if ((itflag & (TIM_FLAG_CC1)) == (TIM_FLAG_CC1))
+  {
+    if ((itsource & (TIM_IT_CC1)) == (TIM_IT_CC1))
+    {
+      {
+        __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_CC1);
+        htim15.Channel = HAL_TIM_ACTIVE_CHANNEL_1;
+
+        /* Input capture event */
+        if ((htim15.Instance->CCMR1 & TIM_CCMR1_CC1S) != 0x00U)
+        {
+          // Get captured value (CH1)
+          uint32_t ccr = HAL_TIM_ReadCapturedValue(&htim15, TIM_CHANNEL_1);
+          decoder.receive(ccr);
+        }
+        htim15.Channel = HAL_TIM_ACTIVE_CHANNEL_CLEARED;
+      }
+    }
+  }
+  /* TIM Update event */
+  if ((itflag & (TIM_FLAG_UPDATE)) == (TIM_FLAG_UPDATE))
+  {
+    if ((itsource & (TIM_IT_UPDATE)) == (TIM_IT_UPDATE))
+    {
+      __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+    }
+  }
 }
+
 
 void DecoderThread(void *argument) {
   (void)argument;  // Unused parameter
@@ -84,7 +111,7 @@ void DecoderThread(void *argument) {
 
     while (decoderRunning) {
       decoder.execute();
-      osDelay(5u);
+      osDelay(3u);
     }
     HAL_TIM_IC_Stop_IT(&htim15, TIM_CHANNEL_1);
     __HAL_TIM_DISABLE_IT(&htim15, TIM_IT_UPDATE);
