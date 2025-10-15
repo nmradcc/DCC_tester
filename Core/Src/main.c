@@ -1154,18 +1154,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-  if (htim->Instance == TIM2)
-  {
-    CS_HAL_TIM_PeriodElapsedCallback(htim);
-  }
-}
 
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
-{
-  if (htim->Instance == TIM15)
-  {
-    DC_HAL_TIM_IC_CaptureCallback(htim);
-  }
   /* USER CODE END Callback 1 */
 }
 
