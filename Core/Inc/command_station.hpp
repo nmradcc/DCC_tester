@@ -10,6 +10,7 @@ struct CommandStation : dcc::tx::CrtpBase<CommandStation, dcc::Packet> {
 struct CommandStation : dcc::tx::CrtpBase<CommandStation, dcc::tx::Timings> {
 #endif
   friend dcc::tx::CrtpBase<CommandStation>;
+
 public:
   // Write track outputs
   void trackOutputs(bool N, bool P);

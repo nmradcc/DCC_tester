@@ -67,7 +67,6 @@ set(DCC_TX_DEQUE_SIZE
 option(DCC_STANDARD_COMPLIANCE "Standard compliance" ON)
 
 
-
 # Decoder timing settings
 set(DCC_RX_MIN_PREAMBLE_BITS
     10u

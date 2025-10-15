@@ -70,8 +70,6 @@ void CommandStation::biDiEnd() {
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
 }
 
-
-dcc::Packet packet{};
 CommandStation command_station;
 
 
@@ -138,7 +136,7 @@ void CommandStationThread(void *argument) {
         .flags = {.bidi = false},
       });
     }
-    
+
   // Enable update interrupt
     __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
     HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);
@@ -149,9 +147,8 @@ void CommandStationThread(void *argument) {
     // This is not part of the command station functionality, but rather a test
     // to see if the command station is working correctly.
 
-
-while (commandStationRunning) {
-
+    dcc::Packet packet{};
+    while (commandStationRunning) {
       // Set function F0
       BSP_LED_Toggle(LED_GREEN);
   HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
