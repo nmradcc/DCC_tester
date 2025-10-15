@@ -47,15 +47,38 @@ void CommandStation::biDiEnd() {
 CommandStation command_station;
 
 
-/* only use callback if NOT using custom interrupt handler! */
-extern "C" void CS_HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+/**
+  * @brief This function handles TIM2 global interrupt.
+  */
+extern "C" void TIM2_IRQHandler(void)
 {
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
-  auto const arr{command_station.transmit()};
-  htim->Instance->ARR = arr;
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
-}
 
+  uint32_t itsource = htim2.Instance->DIER;
+  uint32_t itflag   = htim2.Instance->SR;
+
+  /* Capture compare 1 event */
+  if ((itflag & (TIM_FLAG_CC1)) == (TIM_FLAG_CC1))
+  {
+    if ((itsource & (TIM_IT_CC1)) == (TIM_IT_CC1))
+    {
+      {
+        __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_CC1);
+        htim2.Channel = HAL_TIM_ACTIVE_CHANNEL_1;
+        htim2.Channel = HAL_TIM_ACTIVE_CHANNEL_CLEARED;
+      }
+    }
+  }
+  /* TIM Update event */
+  if ((itflag & (TIM_FLAG_UPDATE)) == (TIM_FLAG_UPDATE))
+  {
+    if ((itsource & (TIM_IT_UPDATE)) == (TIM_IT_UPDATE))
+    {
+      __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
+  auto const arr{command_station.transmit()};
+      htim2.Instance->ARR = arr - 1; // Set auto-reload register for next interrupt
+    }
+  }
+}
 
 void CommandStationThread(void *argument) {
   (void)argument;  // Unused parameter

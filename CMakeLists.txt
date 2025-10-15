@@ -56,6 +56,7 @@ include(FetchContent)
 set(DCC_MANUFACTURER_ID
     145u
     CACHE STRING "Manufacturer ID")
+
 set(DCC_RX_DEQUE_SIZE
     31u
     CACHE STRING "Size of the receiver deque of decoder")
@@ -64,6 +65,55 @@ set(DCC_TX_DEQUE_SIZE
     CACHE STRING "Size of the transmitter deque of command station")
 
 option(DCC_STANDARD_COMPLIANCE "Standard compliance" ON)
+
+
+# Decoder timing settings
+set(DCC_RX_MIN_PREAMBLE_BITS
+    10u
+    CACHE STRING "Minimum number of preambel bits of decoder")
+set(DCC_RX_MIN_BIT_1_TIMING
+    52u
+    CACHE STRING "Minimum duration of a 1 bit of decoder")
+set(DCC_RX_MAX_BIT_1_TIMING
+    64u
+    CACHE STRING "Maximum duration of a 1 bit of decoder")
+set(DCC_RX_MIN_BIT_0_TIMING
+    90u
+    CACHE STRING "Minimum duration of a 0 bit of decoder")
+set(DCC_RX_MAX_BIT_0_TIMING
+    119u
+    CACHE STRING "Maximum duration of a 0 bit of decoder")
+
+
+# Command station timing settings
+set(DCC_TX_MIN_PREAMBLE_BITS
+    17u
+    CACHE STRING "Minimum number of preambel bits of command station")
+set(DCC_TX_MAX_PREAMBLE_BITS
+    30u
+    CACHE STRING "Maximum number of preambel bits of command station")
+
+set(DCC_TX_MIN_BIT_1_TIMING
+    56u
+    CACHE STRING "Minimum duration of a 1 bit of command station")
+set(DCC_TX_MAX_BIT_1_TIMING
+    60u
+    CACHE STRING "Maximum duration of a 1 bit of command station")
+set(DCC_TX_MIN_BIT_0_TIMING
+    97u
+    CACHE STRING "Minimum duration of a 0 bit of command station")
+set(DCC_TX_MAX_BIT_0_TIMING
+    114u
+    CACHE STRING "Maximum duration of a 0 bit of command station")
+
+set(DCC_TX_MIN_BIDI_BIT_TIMING
+    57u
+    CACHE STRING "Minimum duration of a BiDi bit of command station")
+set(DCC_TX_MAX_BIDI_BIT_TIMING
+    61u
+    CACHE STRING "Maximum duration of a BiDi bit of command station")
+
+
 
 FetchContent_Declare(
   DCC
