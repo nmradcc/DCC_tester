@@ -2,10 +2,15 @@
 
 #include <dcc/dcc.hpp>
 
-struct CommandStation : dcc::tx::CrtpBase<CommandStation> {
-  friend dcc::tx::CrtpBase<CommandStation>;
+#define USE_TIMINGS
 
-private:
+#ifndef USE_TIMINGS
+struct CommandStation : dcc::tx::CrtpBase<CommandStation, dcc::Packet> {
+#else
+struct CommandStation : dcc::tx::CrtpBase<CommandStation, dcc::tx::Timings> {
+#endif
+  friend dcc::tx::CrtpBase<CommandStation>;
+public:
   // Write track outputs
   void trackOutputs(bool N, bool P);
 
