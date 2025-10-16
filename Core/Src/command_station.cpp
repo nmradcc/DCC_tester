@@ -75,7 +75,7 @@ extern "C" void TIM2_IRQHandler(void)
     {
       __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
   auto const arr{command_station.transmit()};
-      htim2.Instance->ARR = arr - 1; // Set auto-reload register for next interrupt
+      htim2.Instance->ARR = arr; // Set auto-reload register for next interrupt
     }
   }
 }
