@@ -92,16 +92,16 @@ void MX_SDMMC1_SD_Init(void);
 #define IN1_GPIO_Port GPIOE
 #define IN3_Pin GPIO_PIN_15
 #define IN3_GPIO_Port GPIOE
+#define UART4_TX_BIDI_Pin GPIO_PIN_12
+#define UART4_TX_BIDI_GPIO_Port GPIOD
 #define REF_OSC_Pin GPIO_PIN_13
 #define REF_OSC_GPIO_Port GPIOD
 #define SD_DETECT_Pin GPIO_PIN_2
 #define SD_DETECT_GPIO_Port GPIOG
 #define BR_ENABLE_Pin GPIO_PIN_6
 #define BR_ENABLE_GPIO_Port GPIOG
-#define USART6_RX_BIDIR_Pin GPIO_PIN_7
-#define USART6_RX_BIDIR_GPIO_Port GPIOC
-#define MC_OUT_Pin GPIO_PIN_8
-#define MC_OUT_GPIO_Port GPIOA
+#define USART6_RX_BIDI_Pin GPIO_PIN_6
+#define USART6_RX_BIDI_GPIO_Port GPIOC
 
 /* USER CODE BEGIN Private defines */
 /* set and reset TR bit positions */

@@ -22,7 +22,7 @@ private:
   void serviceAck();
 
   // Transmit BiDi
-  void transmitBiDi(std::span<uint8_t const> bytes);
+//  void transmitBiDi(std::span<uint8_t const> bytes);
 
   // Read CV
   uint8_t readCv(uint32_t cv_addr, uint8_t byte = 0u);
@@ -42,4 +42,9 @@ private:
     55u,  0u,   0u, 117u, 128u, 195u, 0u, 0u,
     192u, 128u, 0u, 0u,   0u,   0u,   0u, 0u,
     0u,   0u,   0u, 131u, 14u};
+
+public:
+      // Transmit BiDi
+  void transmitBiDi(std::span<uint8_t const> bytes);
+
 };

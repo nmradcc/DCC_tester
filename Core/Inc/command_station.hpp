@@ -2,7 +2,7 @@
 
 #include <dcc/dcc.hpp>
 
-#define USE_TIMINGS
+//#define USE_TIMINGS
 
 #ifndef USE_TIMINGS
 struct CommandStation : dcc::tx::CrtpBase<CommandStation, dcc::Packet> {

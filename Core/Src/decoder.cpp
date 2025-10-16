@@ -1,5 +1,6 @@
 #include "decoder.hpp"
 #include <climits>
+#include <cstdint>
 #include <cstdio>
 #include "cmsis_os2.h"
 #include "main.h"
@@ -116,7 +117,11 @@ void DecoderThread(void *argument) {
     decoderRunning = true;
 
     while (decoderRunning) {
-      decoder.execute();
+      if (decoder.execute()) {
+        // Example: transmit a span from a buffer (replace with actual data as needed)
+uint8_t buffer[] = {0x55, 0xAA, 0xFF, 0x00}; // Example data
+        decoder.transmitBiDi(std::span<uint8_t const>(buffer));
+      }
       osDelay(3u);
     }
     HAL_TIM_IC_Stop_IT(&htim15, TIM_CHANNEL_1);

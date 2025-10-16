@@ -101,7 +101,7 @@ extern "C" void TIM2_IRQHandler(void)
     {
       __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
       auto const arr{command_station.transmit()};
-      htim2.Instance->ARR = arr - 1; // Set auto-reload register for next interrupt
+      htim2.Instance->ARR = arr; // Set auto-reload register for next interrupt
     }
   }
 }
@@ -158,15 +158,6 @@ void CommandStationThread(void *argument) {
   HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
       printf("Command station: set function F0\n");
       osDelay(300u);
-
-
-      BSP_LED_Toggle(LED_RED);
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
-      command_station.packet(dcc::make_function_group_f4_f0_packet(3u, 0b0'0010u));
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
-      printf("Command station: set function F1\n");
-      osDelay(300u);
-
 
 
       //      // Clear function
