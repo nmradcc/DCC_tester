@@ -67,6 +67,13 @@ bool Decoder::writeCv(uint32_t cv_addr, bool bit, uint32_t pos) {
 
 Decoder decoder;
 
+extern "C" void DEC_OnePulseTimeout_Callback(void)
+{
+  HAL_TIM_Base_Stop(&htim14);
+  // TODO: check for quite track voltage
+  decoder.biDiChannel1();
+  decoder.biDiChannel2();
+}
 
 extern "C" void TIM15_IRQHandler(void)
 {
@@ -88,6 +95,9 @@ extern "C" void TIM15_IRQHandler(void)
           // Get captured value (CH1)
           uint32_t ccr = HAL_TIM_ReadCapturedValue(&htim15, TIM_CHANNEL_1);
           decoder.receive(ccr);
+          if (decoder.packetEnd()) {
+            HAL_TIM_Base_Start_IT(&htim14);  // delay for BiDi response
+          }
         }
         htim15.Channel = HAL_TIM_ACTIVE_CHANNEL_CLEARED;
       }
@@ -123,11 +133,11 @@ void DecoderThread(void *argument) {
 //        if (decoder.packetEnd()) {
 //          decoder.biDiChannel1();
 //          decoder.biDiChannel2();
-        }
+//        }
 
-      if (decoder.packetEnd()) {
-        decoder.biDiChannel1();
-        decoder.biDiChannel2();
+//      if (decoder.packetEnd()) {
+//        decoder.biDiChannel1();
+//        decoder.biDiChannel2();
       }
       osDelay(3u);
     }

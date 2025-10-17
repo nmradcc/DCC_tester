@@ -66,6 +66,7 @@ SPI_HandleTypeDef hspi2;
 SPI_HandleTypeDef hspi5;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim14;
 TIM_HandleTypeDef htim15;
 
 UART_HandleTypeDef huart4;
@@ -99,6 +100,7 @@ static void MX_SPI2_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_USART6_UART_Init(void);
 static void MX_UART4_Init(void);
+static void MX_TIM14_Init(void);
 /* USER CODE BEGIN PFP */
 #if defined(__ICCARM__)
 /* New definition from EWARM V9, compatible with EWARM8 */
@@ -183,6 +185,7 @@ int main(void)
   MX_DAC1_Init();
   MX_USART6_UART_Init();
   MX_UART4_Init();
+  MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
 
   /* Initialize leds */
@@ -736,6 +739,41 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+  * @brief TIM14 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM14_Init(void)
+{
+
+  /* USER CODE BEGIN TIM14_Init 0 */
+
+  /* USER CODE END TIM14_Init 0 */
+
+  /* USER CODE BEGIN TIM14_Init 1 */
+
+  /* USER CODE END TIM14_Init 1 */
+  htim14.Instance = TIM14;
+  htim14.Init.Prescaler = 249;
+  htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim14.Init.Period = 40;
+  htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim14) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OnePulse_Init(&htim14, TIM_OPMODE_SINGLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM14_Init 2 */
+
+  /* USER CODE END TIM14_Init 2 */
+
+}
+
+/**
   * @brief TIM15 Initialization Function
   * @param None
   * @retval None
@@ -1196,6 +1234,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
+  if (htim->Instance == TIM14)
+  {
+      DEC_OnePulseTimeout_Callback();
+  }
 
   /* USER CODE END Callback 1 */
 }

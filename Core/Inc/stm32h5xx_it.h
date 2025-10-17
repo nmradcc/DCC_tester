@@ -58,6 +58,7 @@ void USART3_IRQHandler(void);
 void SDMMC1_IRQHandler(void);
 void SPI5_IRQHandler(void);
 void ETH_IRQHandler(void);
+void TIM14_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

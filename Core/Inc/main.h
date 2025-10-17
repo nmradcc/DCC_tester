@@ -39,6 +39,7 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim14;
 extern TIM_HandleTypeDef htim15;
 extern SD_HandleTypeDef hsd1;
 extern RTC_HandleTypeDef hrtc;
