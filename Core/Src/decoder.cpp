@@ -44,7 +44,6 @@ void Decoder::serviceAck() {}
 
 const int TX_MAX_DELAY_MS = 100;
 void Decoder::transmitBiDi(std::span<uint8_t const> bytes) {
-  (void)bytes;
   HAL_UART_Transmit(&huart4, bytes.data(), static_cast<uint16_t>(bytes.size()), TX_MAX_DELAY_MS);
 }
 
