@@ -151,15 +151,15 @@ void CommandStationThread(void *argument) {
     while (commandStationRunning) {
       // Set function F0
       BSP_LED_Toggle(LED_GREEN);
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
       command_station.packet(packet);
 //      command_station.packet(dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u));
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
       printf("Command station: set function F0\n");
       osDelay(300u);
 
-
+//commandStationRunning = false;
       //      // Clear function
 //      BSP_LED_Toggle(LED_GREEN);
 //      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
@@ -168,7 +168,7 @@ void CommandStationThread(void *argument) {
 //      timings = dcc::tx::packet2timings(dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u));
 //      command_station.transmit();
 //      printf("Command station: clear function F0\n");
-      osDelay(300);
+//      osDelay(300);
 #if 0
       // Accelerate
       BSP_LED_Toggle(LED_GREEN);

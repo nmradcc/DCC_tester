@@ -43,6 +43,7 @@ extern TIM_HandleTypeDef htim15;
 extern SD_HandleTypeDef hsd1;
 extern RTC_HandleTypeDef hrtc;
 extern DAC_HandleTypeDef hdac1;
+extern UART_HandleTypeDef huart4;
 extern UART_HandleTypeDef huart6;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi5;

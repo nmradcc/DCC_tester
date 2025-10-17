@@ -30,7 +30,9 @@ void Decoder::speed(uint16_t addr, int32_t speed) {
 void Decoder::function(uint16_t addr, uint32_t mask, uint32_t state) {
   if (!(mask & 0b0'0001u)) return;
   else if (state & 0b0'0001u) {
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
     printf("Decoder: set function F0\n");
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
   } else {
     printf("Decoder: clear function F0\n");
   }
@@ -40,21 +42,20 @@ void Decoder::serviceModeHook(bool service_mode) {}
 
 void Decoder::serviceAck() {}
 
+const int TX_MAX_DELAY_MS = 100;
 void Decoder::transmitBiDi(std::span<uint8_t const> bytes) {
-  printf("Decoder: BiDi transmit %u bytes:", (unsigned)bytes.size());
-  for (auto b : bytes) {
-    printf(" %02X", b);
-  }
-  printf("\n");
+  (void)bytes;
+  HAL_UART_Transmit(&huart4, bytes.data(), static_cast<uint16_t>(bytes.size()), TX_MAX_DELAY_MS);
 }
 
+
 uint8_t Decoder::readCv(uint32_t cv_addr, uint8_t) {
-  if (cv_addr >= size(_cvs)) return 0u;
+  if (cv_addr >= _cvs.size()) return 0u;
   return _cvs[cv_addr];
 }
 
 uint8_t Decoder::writeCv(uint32_t cv_addr, uint8_t byte) {
-  if (cv_addr >= size(_cvs)) return 0u;
+  if (cv_addr >= _cvs.size()) return 0u;
   return _cvs[cv_addr] = byte;
 }
 
@@ -65,6 +66,7 @@ bool Decoder::writeCv(uint32_t cv_addr, bool bit, uint32_t pos) {
 }
 
 Decoder decoder;
+
 
 extern "C" void TIM15_IRQHandler(void)
 {
@@ -118,9 +120,14 @@ void DecoderThread(void *argument) {
 
     while (decoderRunning) {
       if (decoder.execute()) {
-        // Example: transmit a span from a buffer (replace with actual data as needed)
-uint8_t buffer[] = {0x55, 0xAA, 0xFF, 0x00}; // Example data
-        decoder.transmitBiDi(std::span<uint8_t const>(buffer));
+//        if (decoder.packetEnd()) {
+//          decoder.biDiChannel1();
+//          decoder.biDiChannel2();
+        }
+
+      if (decoder.packetEnd()) {
+        decoder.biDiChannel1();
+        decoder.biDiChannel2();
       }
       osDelay(3u);
     }
