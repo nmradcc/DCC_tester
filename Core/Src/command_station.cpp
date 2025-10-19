@@ -15,7 +15,6 @@ static bool commandStationBidi = false;
 //static uint16_t dac_value =  DEFAULT_BIDIR_THRESHOLD; // DEFAULT BIDIR threshold value for 12-bit DAC
 static uint16_t dac_value =  100; // DEFAULT BIDIR threshold value for 12-bit DAC
 
-static uint8_t rx_byte;
 static uint8_t bidirBuffer[RX_BIDIR_MAX_SIZE] = {0}; // Buffer for BiDi data
 volatile uint16_t write_index = 0;
 
@@ -35,43 +34,61 @@ void CommandStation::trackOutputs(bool N, bool P)
                            (static_cast<uint32_t>(P) << TRACK_P_BS_Pos);
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    if (huart->Instance == USART6) {
-        bidirBuffer[write_index++] = rx_byte;
-//        write_index %= sizeof(bidirBuffer);
-        HAL_UART_Receive_IT(huart, &rx_byte, 1);
-    }
-}
-
-
+//void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
+//void HAL_UART_AbortCpltCallback(UART_HandleTypeDef *huart);
+//void HAL_UART_AbortTransmitCpltCallback(UART_HandleTypeDef *huart);
+//void HAL_UART_AbortReceiveCpltCallback(UART_HandleTypeDef *huart);
+//void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size);
 
 
 void CommandStation::biDiStart() {
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
-#if 0
-  huart6.Instance->CR1 |= USART_CR1_RXNEIE;
+
+//  HAL_UART_AbortReceive_IT(&huart6); // Stop receiving BiDi data
   for (uint16_t i = 0; i < RX_BIDIR_MAX_SIZE; ++i) {
     bidirBuffer[i] = 0; // Clear the buffer
   }
   write_index = 0; // Reset write index
-//  HAL_UART_Receive_IT(&huart6, &rx_byte, 1);
-#endif
+//  __HAL_UART_ENABLE_IT(&huart6, UART_IT_IDLE);
+//  huart6.Instance->CR1 |= USART_CR1_IDLEIE;
+
+  huart6.Instance->CR1 |= USART_CR1_RXNEIE;
 }
 
-void CommandStation::biDiChannel1() {}
+void CommandStation::biDiChannel1() {
+}
 
 void CommandStation::biDiChannel2() {}
 
 void CommandStation::biDiEnd() {
-//  HAL_UART_AbortReceive_IT(&huart6); // Stop receiving BiDi data
-//  huart6.Instance->CR1 &= ~USART_CR1_RXNEIE;
-  HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
+  HAL_UART_AbortReceive_IT(&huart6); // Stop receiving BiDi data
+  huart6.Instance->CR1 &= ~USART_CR1_RXNEIE;
+//  HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
+  if (write_index > 1) 
+  {
+  HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
+
+  }
 }
 
 CommandStation command_station;
 
+/**
+  * @brief This function handles USART6 global interrupt.
+  */
+extern "C" void USART6_IRQHandler(void)
+{
+    if (__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE)) {
+        // Read all bytes in FIFO
+        while (__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE)) {
+            bidirBuffer[write_index] = (uint8_t)(huart6.Instance->RDR);  // Read one byte
+            write_index = (write_index + 1) % sizeof(bidirBuffer);
+        }
+    }
+//  HAL_UART_IRQHandler(&huart6);
+}
 
 /**
   * @brief This function handles TIM2 global interrupt.
@@ -122,6 +139,7 @@ void CommandStationThread(void *argument) {
       // Write value to DAC OUT2
       HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_value);
       printf("DAC value: %d\n", dac_value);
+
     command_station.init({
       .num_preamble = DCC_TX_MIN_PREAMBLE_BITS,
       .bit1_duration = 58u,

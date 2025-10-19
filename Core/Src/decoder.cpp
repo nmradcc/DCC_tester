@@ -129,14 +129,7 @@ void DecoderThread(void *argument) {
 
     while (decoderRunning) {
       if (decoder.execute()) {
-//        if (decoder.packetEnd()) {
-//          decoder.biDiChannel1();
-//          decoder.biDiChannel2();
-//        }
-
-//      if (decoder.packetEnd()) {
-//        decoder.biDiChannel1();
-//        decoder.biDiChannel2();
+        // Processed a packet
       }
       osDelay(3u);
     }
