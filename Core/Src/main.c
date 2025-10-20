@@ -28,7 +28,6 @@
 #include "stm32_lock.h"
 #include "stm32h5xx_hal_spi.h"
 #include "version.h"
-#include "decoder.h"
 
 /* USER CODE END Includes */
 
@@ -1234,10 +1233,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-  if (htim->Instance == TIM14)
-  {
-      DEC_OnePulseTimeout_Callback();
-  }
 
   /* USER CODE END Callback 1 */
 }

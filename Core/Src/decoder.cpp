@@ -1,10 +1,12 @@
 #include "decoder.hpp"
+#include "decoder.h"
 #include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <dcc/bidi/timing.hpp>
 #include "cmsis_os2.h"
 #include "main.h"
+#include "stm32h563xx.h"
 
 static osThreadId_t decoderThread_id;
 static osSemaphoreId_t decoderStart_sem;
@@ -67,19 +69,32 @@ bool Decoder::writeCv(uint32_t cv_addr, bool bit, uint32_t pos) {
 
 Decoder decoder;
 
-extern "C" void DEC_OnePulseTimeout_Callback(void)
+extern "C" void TIM14_IRQHandler(void)
 {
-  HAL_TIM_Base_Stop(&htim14);
-  // TODO: check for quite track voltage
-  // we will use BR_ENABLE pin state for the time being 
-  // but should be replaced with proper no voltage on track detection
-  // as we can not assume we are always using our command station!
-  if (HAL_GPIO_ReadPin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin) == GPIO_PIN_RESET) 
+  uint32_t itsource = htim14.Instance->DIER;
+  uint32_t itflag   = htim14.Instance->SR;
+
+  /* TIM Update event */
+  if ((itflag & (TIM_FLAG_UPDATE)) == (TIM_FLAG_UPDATE))
   {
-    decoder.biDiChannel1();
-    decoder.biDiChannel2();
+    if ((itsource & (TIM_IT_UPDATE)) == (TIM_IT_UPDATE))
+    {
+      __HAL_TIM_CLEAR_FLAG(&htim14, TIM_FLAG_UPDATE);
+      htim14.Channel = HAL_TIM_ACTIVE_CHANNEL_CLEARED;
+      HAL_TIM_Base_Stop(&htim14);
+      // TODO: check for quite track voltage
+      // we will use BR_ENABLE pin state for the time being 
+      // but should be replaced with proper no voltage on track detection
+      // as we can not assume we are always using our command station!
+      if (HAL_GPIO_ReadPin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin) == GPIO_PIN_RESET) 
+      {
+        decoder.biDiChannel1();
+        decoder.biDiChannel2();
+      }
+    }
   }
 }
+
 
 extern "C" void TIM15_IRQHandler(void)
 {
@@ -129,7 +144,7 @@ void DecoderThread(void *argument) {
 
     decoder.init();
     
-    htim14.Init.Period = dcc::bidi::TTS1;  // cutout to start delay
+    htim14.Init.Period = (dcc::bidi::TTS1 - BIDI_CH1_START_OVERHEAD_US);  // cutout to start delay minus overhead
     HAL_TIM_Base_Init(&htim14);  // Reinitialize with new settings
 
     // Enable update interrupt
