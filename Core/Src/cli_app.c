@@ -252,7 +252,7 @@ void vCommandConsoleTask(void *pvParameters)
     
     print_help(); // Print help on startup
 
-    //test..
+    //TODO:  remove test..
     CommandStation_Start(true);
     printf("Start Command Station ...\n");
     Decoder_Start();

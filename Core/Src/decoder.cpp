@@ -2,6 +2,7 @@
 #include <climits>
 #include <cstdint>
 #include <cstdio>
+#include <dcc/bidi/timing.hpp>
 #include "cmsis_os2.h"
 #include "main.h"
 
@@ -70,8 +71,14 @@ extern "C" void DEC_OnePulseTimeout_Callback(void)
 {
   HAL_TIM_Base_Stop(&htim14);
   // TODO: check for quite track voltage
-  decoder.biDiChannel1();
-  decoder.biDiChannel2();
+  // we will use BR_ENABLE pin state for the time being 
+  // but should be replaced with proper no voltage on track detection
+  // as we can not assume we are always using our command station!
+  if (HAL_GPIO_ReadPin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin) == GPIO_PIN_RESET) 
+  {
+    decoder.biDiChannel1();
+    decoder.biDiChannel2();
+  }
 }
 
 extern "C" void TIM15_IRQHandler(void)
@@ -121,6 +128,9 @@ void DecoderThread(void *argument) {
     osSemaphoreAcquire(decoderStart_sem, osWaitForever);
 
     decoder.init();
+    
+    htim14.Init.Period = dcc::bidi::TTS1;  // cutout to start delay
+    HAL_TIM_Base_Init(&htim14);  // Reinitialize with new settings
 
     // Enable update interrupt
     __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);

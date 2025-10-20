@@ -1,8 +1,11 @@
 #include "command_station.hpp"
 #include <cstdint>
 #include <cstdio>
+#include <dcc/bidi/datagram.hpp>
+#include <dcc/bidi/dissector.hpp>
 #include "cmsis_os2.h"
 #include "main.h"
+#include "stm32h5xx_hal_gpio.h"
 #include "stm32h5xx_hal_uart.h"
 
 #define RX_BIDIR_MAX_SIZE 16 // Maximum size of the BiDi receive buffer
@@ -34,13 +37,6 @@ void CommandStation::trackOutputs(bool N, bool P)
                            (static_cast<uint32_t>(P) << TRACK_P_BS_Pos);
 }
 
-//void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
-//void HAL_UART_AbortCpltCallback(UART_HandleTypeDef *huart);
-//void HAL_UART_AbortTransmitCpltCallback(UART_HandleTypeDef *huart);
-//void HAL_UART_AbortReceiveCpltCallback(UART_HandleTypeDef *huart);
-//void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size);
-
-
 void CommandStation::biDiStart() {
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
@@ -57,6 +53,15 @@ void CommandStation::biDiStart() {
 }
 
 void CommandStation::biDiChannel1() {
+  if (write_index > 1) 
+  {
+  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
+std::array<uint8_t, 2> encoded = { bidirBuffer[0], bidirBuffer[1] };
+//auto decoded = dcc::bidi::decode_datagram(encoded);
+
+//dcc::bidi::Dissector dissector{datagram, 3}
+}
+
 }
 
 void CommandStation::biDiChannel2() {}
@@ -66,11 +71,6 @@ void CommandStation::biDiEnd() {
   huart6.Instance->CR1 &= ~USART_CR1_RXNEIE;
 //  HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
-  if (write_index > 1) 
-  {
-  HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
-
-  }
 }
 
 CommandStation command_station;
@@ -166,12 +166,15 @@ void CommandStationThread(void *argument) {
     // to see if the command station is working correctly.
 
     dcc::Packet packet{};
+ 
+
     while (commandStationRunning) {
       // Set function F0
       BSP_LED_Toggle(LED_GREEN);
 //  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
       command_station.packet(packet);
+      
 //      command_station.packet(dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u));
 //  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
       printf("Command station: set function F0\n");
