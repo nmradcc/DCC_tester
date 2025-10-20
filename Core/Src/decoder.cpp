@@ -12,6 +12,8 @@ static osThreadId_t decoderThread_id;
 static osSemaphoreId_t decoderStart_sem;
 static bool decoderRunning = false;
 
+Decoder decoder;
+
 /* Definitions for decoderTask */
 const osThreadAttr_t decoderTask_attributes = {
   .name = "decoderTask",
@@ -50,7 +52,6 @@ void Decoder::transmitBiDi(std::span<uint8_t const> bytes) {
   HAL_UART_Transmit(&huart4, bytes.data(), static_cast<uint16_t>(bytes.size()), TX_MAX_DELAY_MS);
 }
 
-
 uint8_t Decoder::readCv(uint32_t cv_addr, uint8_t) {
   if (cv_addr >= _cvs.size()) return 0u;
   return _cvs[cv_addr];
@@ -67,7 +68,6 @@ bool Decoder::writeCv(uint32_t cv_addr, bool bit, uint32_t pos) {
   return false;
 }
 
-Decoder decoder;
 
 extern "C" void TIM14_IRQHandler(void)
 {
@@ -94,7 +94,6 @@ extern "C" void TIM14_IRQHandler(void)
     }
   }
 }
-
 
 extern "C" void TIM15_IRQHandler(void)
 {
