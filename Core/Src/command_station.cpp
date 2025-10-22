@@ -236,7 +236,7 @@ void CommandStationThread(void *argument) {
     HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_1);
     __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
     osSemaphoreRelease(commandStationStart_sem);
-    osDelay(100u); // Give some time for the semaphore to be released
+    osDelay(5u); // Give some time for the semaphore to be released
   }
 
 }
