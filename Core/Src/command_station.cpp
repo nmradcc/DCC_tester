@@ -15,11 +15,14 @@ static osSemaphoreId_t commandStationStart_sem;
 static bool commandStationRunning = false;
 static bool commandStationBidi = false;
 
-//static uint16_t dac_value =  DEFAULT_BIDIR_THRESHOLD; // DEFAULT BIDIR threshold value for 12-bit DAC
-static uint16_t dac_value =  100; // DEFAULT BIDIR threshold value for 12-bit DAC
+static uint16_t dac_value =  DEFAULT_BIDIR_THRESHOLD; // DEFAULT BIDIR threshold value for 12-bit DAC
+//static uint16_t dac_value =  100; // DEFAULT BIDIR threshold value for 12-bit DAC
 
 static uint8_t bidirBuffer[RX_BIDIR_MAX_SIZE] = {0}; // Buffer for BiDi data
 volatile uint16_t write_index = 0;
+
+CommandStation command_station;
+dcc::bidi::Datagram<> datagram;
 
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
@@ -41,13 +44,10 @@ void CommandStation::biDiStart() {
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
 
-//  HAL_UART_AbortReceive_IT(&huart6); // Stop receiving BiDi data
   for (uint16_t i = 0; i < RX_BIDIR_MAX_SIZE; ++i) {
     bidirBuffer[i] = 0; // Clear the buffer
   }
   write_index = 0; // Reset write index
-//  __HAL_UART_ENABLE_IT(&huart6, UART_IT_IDLE);
-//  huart6.Instance->CR1 |= USART_CR1_IDLEIE;
 
   huart6.Instance->CR1 |= USART_CR1_RXNEIE;
 }
@@ -55,11 +55,10 @@ void CommandStation::biDiStart() {
 void CommandStation::biDiChannel1() {
   if (write_index > 1) 
   {
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
-std::array<uint8_t, 2> encoded = { bidirBuffer[0], bidirBuffer[1] };
+  std::array<uint8_t, 2> encoded = { bidirBuffer[1], bidirBuffer[0] };
 //auto decoded = dcc::bidi::decode_datagram(encoded);
 
-//dcc::bidi::Dissector dissector{datagram, 3}
+//dcc::bidi::Dissector dissector{decoded, 3};
 }
 
 }
@@ -69,11 +68,9 @@ void CommandStation::biDiChannel2() {}
 void CommandStation::biDiEnd() {
   HAL_UART_AbortReceive_IT(&huart6); // Stop receiving BiDi data
   huart6.Instance->CR1 &= ~USART_CR1_RXNEIE;
-//  HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
+  HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
 }
-
-CommandStation command_station;
 
 /**
   * @brief This function handles USART6 global interrupt.
@@ -170,27 +167,24 @@ void CommandStationThread(void *argument) {
 
     while (commandStationRunning) {
       // Set function F0
+
       BSP_LED_Toggle(LED_GREEN);
-//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
       command_station.packet(packet);
-      
-//      command_station.packet(dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u));
-//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
       printf("Command station: set function F0\n");
-      osDelay(300u);
-
-//commandStationRunning = false;
-      //      // Clear function
-//      BSP_LED_Toggle(LED_GREEN);
-//      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
+//      packet = dcc::make_cv_access_short_write_packet(3u, 0b0010u, 8u, 145u);
 //      command_station.packet(packet);
-//      timings = dcc::tx::packet2timings(dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u));
-//      timings = dcc::tx::packet2timings(dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u));
-//      command_station.transmit();
-//      printf("Command station: clear function F0\n");
-//      osDelay(300);
+//      printf("Command station: set CV 3, 0b0010u, 8u, 145u\n");
+
+       osDelay(500u);     // Clear function
+
 #if 0
+       BSP_LED_Toggle(LED_GREEN);
+      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
+      command_station.packet(packet);
+      printf("Command station: clear function F0\n");
+      osDelay(500);
+
       // Accelerate
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
@@ -242,7 +236,7 @@ void CommandStationThread(void *argument) {
     HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_1);
     __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
     osSemaphoreRelease(commandStationStart_sem);
-    osDelay(5u); // Give some time for the semaphore to be released
+    osDelay(100u); // Give some time for the semaphore to be released
   }
 
 }

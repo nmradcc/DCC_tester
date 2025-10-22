@@ -35,9 +35,7 @@ void Decoder::speed(uint16_t addr, int32_t speed) {
 void Decoder::function(uint16_t addr, uint32_t mask, uint32_t state) {
   if (!(mask & 0b0'0001u)) return;
   else if (state & 0b0'0001u) {
-//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
     printf("Decoder: set function F0\n");
-//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
   } else {
     printf("Decoder: clear function F0\n");
   }
@@ -59,6 +57,7 @@ uint8_t Decoder::readCv(uint32_t cv_addr, uint8_t) {
 
 uint8_t Decoder::writeCv(uint32_t cv_addr, uint8_t byte) {
   if (cv_addr >= _cvs.size()) return 0u;
+  printf("Decoder: wr cv %lu %u\n", static_cast<unsigned long>(cv_addr), static_cast<unsigned>(byte));
   return _cvs[cv_addr] = byte;
 }
 
@@ -89,7 +88,9 @@ extern "C" void TIM14_IRQHandler(void)
       if (HAL_GPIO_ReadPin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin) == GPIO_PIN_RESET) 
       {
         decoder.biDiChannel1();
+        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
         decoder.biDiChannel2();
+        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
       }
     }
   }
@@ -156,6 +157,21 @@ void DecoderThread(void *argument) {
         // Processed a packet
       }
       osDelay(3u);
+#if 0
+      decoder._cvs[105-1] = 1u;
+      decoder._cvs[106-1] = 2u;
+      decoder._cvs[107-1] = 0u;
+      decoder._cvs[108-1] = 0xffu;
+
+      uint8_t dyn_payload = (2 << 6) | (45 & 0x3F); // (2 << 6) | 45 = 0xC0 | 0x2D = 0xED
+      dcc::bidi::Datagram<> dg;
+      dg[0] = (dcc::bidi::app::Dyn::id << 2) | ((dyn_payload >> 6) & 0x03); // ID + upper bits
+      dg[1] = dyn_payload & 0x3F; // lower bits
+//      dcc::Address addr = dcc::Address::make_loco(3);
+      dcc::bidi::Dissector dissector(dg, 3);
+dcc::bidi::Datagram<> datagram{0x99u, 0xA5u, 0x59u, 0x2Eu, 0xD2u, 0x00u, 0x00u, 0x00u};
+      dcc::bidi::Dissector dissector2(datagram, 3);
+#endif
     }
     HAL_TIM_IC_Stop_IT(&htim15, TIM_CHANNEL_1);
     __HAL_TIM_DISABLE_IT(&htim15, TIM_IT_UPDATE);
