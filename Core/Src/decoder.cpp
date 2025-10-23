@@ -7,6 +7,7 @@
 #include "cmsis_os2.h"
 #include "main.h"
 #include "stm32h563xx.h"
+#include "stm32h5xx_hal_uart.h"
 
 static osThreadId_t decoderThread_id;
 static osSemaphoreId_t decoderStart_sem;
@@ -45,9 +46,8 @@ void Decoder::serviceModeHook(bool service_mode) {}
 
 void Decoder::serviceAck() {}
 
-const int TX_MAX_DELAY_MS = 100;
 void Decoder::transmitBiDi(std::span<uint8_t const> bytes) {
-  HAL_UART_Transmit(&huart4, bytes.data(), static_cast<uint16_t>(bytes.size()), TX_MAX_DELAY_MS);
+  HAL_UART_Transmit_IT(&huart4, bytes.data(), static_cast<uint16_t>(bytes.size()));
 }
 
 uint8_t Decoder::readCv(uint32_t cv_addr, uint8_t) {

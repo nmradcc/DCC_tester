@@ -8,21 +8,19 @@
 #include "stm32h5xx_hal_gpio.h"
 #include "stm32h5xx_hal_uart.h"
 
-#define RX_BIDIR_MAX_SIZE 16 // Maximum size of the BiDi receive buffer
-
 static osThreadId_t commandStationThread_id;
 static osSemaphoreId_t commandStationStart_sem;
 static bool commandStationRunning = false;
 static bool commandStationBidi = false;
 
 static uint16_t dac_value =  DEFAULT_BIDIR_THRESHOLD; // DEFAULT BIDIR threshold value for 12-bit DAC
-//static uint16_t dac_value =  100; // DEFAULT BIDIR threshold value for 12-bit DAC
 
-static uint8_t bidirBuffer[RX_BIDIR_MAX_SIZE] = {0}; // Buffer for BiDi data
-volatile uint16_t write_index = 0;
+volatile size_t write_index = 0;
 
 CommandStation command_station;
-dcc::bidi::Datagram<> datagram;
+dcc::bidi::Datagram<> rx_datagram;
+dcc::bidi::Datagram<> received_datagram;
+size_t received_datagram_size = 0;
 
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
@@ -44,24 +42,13 @@ void CommandStation::biDiStart() {
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
 
-  for (uint16_t i = 0; i < RX_BIDIR_MAX_SIZE; ++i) {
-    bidirBuffer[i] = 0; // Clear the buffer
-  }
+  std::fill(rx_datagram.begin(), rx_datagram.end(), 0);
   write_index = 0; // Reset write index
 
   huart6.Instance->CR1 |= USART_CR1_RXNEIE;
 }
 
-void CommandStation::biDiChannel1() {
-  if (write_index > 1) 
-  {
-  std::array<uint8_t, 2> encoded = { bidirBuffer[1], bidirBuffer[0] };
-//auto decoded = dcc::bidi::decode_datagram(encoded);
-
-//dcc::bidi::Dissector dissector{decoded, 3};
-}
-
-}
+void CommandStation::biDiChannel1() {}
 
 void CommandStation::biDiChannel2() {}
 
@@ -70,6 +57,10 @@ void CommandStation::biDiEnd() {
   huart6.Instance->CR1 &= ~USART_CR1_RXNEIE;
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
+  if (write_index > 1) {
+    received_datagram = rx_datagram;
+    received_datagram_size = write_index;
+  }
 }
 
 /**
@@ -80,11 +71,9 @@ extern "C" void USART6_IRQHandler(void)
     if (__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE)) {
         // Read all bytes in FIFO
         while (__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE)) {
-            bidirBuffer[write_index] = (uint8_t)(huart6.Instance->RDR);  // Read one byte
-            write_index = (write_index + 1) % sizeof(bidirBuffer);
+            rx_datagram[write_index++] = (uint8_t)(huart6.Instance->RDR);  // Read one byte
         }
     }
-//  HAL_UART_IRQHandler(&huart6);
 }
 
 /**
@@ -176,7 +165,25 @@ void CommandStationThread(void *argument) {
 //      command_station.packet(packet);
 //      printf("Command station: set CV 3, 0b0010u, 8u, 145u\n");
 
+      if (received_datagram_size >= 2) {
+        received_datagram_size = 0;
+
+        dcc::bidi::Dissector dissector{received_datagram, packet};
+
+        // Iterate
+        for (auto const& dg : dissector)
+          if (auto adr_low{get_if<dcc::bidi::app::AdrLow>(&dg)}) {
+            // Use app:adr_low data here
+            printf("Command station: received app:adr_low data: 0x%02X\n", *adr_low);
+          } else if (auto dyn{get_if<dcc::bidi::app::Dyn>(&dg)}) {
+            // Use app:dyn data here
+            printf("Command station: received app:dyn data: 0x%02X\n", *dyn);
+          }
+
+        std::fill(received_datagram.begin(), received_datagram.end(), 0);
+      }
        osDelay(500u);     // Clear function
+
 
 #if 0
        BSP_LED_Toggle(LED_GREEN);

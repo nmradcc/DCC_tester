@@ -194,6 +194,7 @@ NVIC.TIM2_IRQn=true\:5\:0\:true\:false\:false\:false\:true\:false\:true
 NVIC.TIM6_IRQn=true\:15\:0\:false\:false\:true\:false\:false\:true\:true
 NVIC.TimeBase=TIM6_IRQn
 NVIC.TimeBaseIP=TIM6
+NVIC.UART4_IRQn=true\:5\:0\:true\:false\:true\:false\:true\:true\:true
 NVIC.USART3_IRQn=true\:5\:0\:true\:false\:true\:false\:true\:true\:true
 NVIC.USART6_IRQn=true\:2\:0\:true\:false\:false\:false\:true\:false\:true
 NVIC.UsageFault_IRQn=true\:0\:0\:false\:false\:true\:false\:false\:false\:false

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <dcc/bidi/dissector.hpp>
 #include <dcc/dcc.hpp>
 
 struct Decoder : dcc::rx::CrtpBase<Decoder> {
@@ -45,5 +46,6 @@ public:
     192u, 128u, 0u, 0u,   0u,   0u,   0u, 0u,
     0u,   0u,   0u, 131u, 14u};
 
+    dcc::bidi::Dissector dissector{};
 };
 
