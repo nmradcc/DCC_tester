@@ -1,6 +1,5 @@
 #pragma once
 
-#include <dcc/bidi/dissector.hpp>
 #include <dcc/dcc.hpp>
 
 struct Decoder : dcc::rx::CrtpBase<Decoder> {

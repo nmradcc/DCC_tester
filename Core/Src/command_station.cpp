@@ -1,12 +1,8 @@
 #include "command_station.hpp"
 #include <cstdint>
 #include <cstdio>
-#include <dcc/bidi/datagram.hpp>
-#include <dcc/bidi/dissector.hpp>
 #include "cmsis_os2.h"
 #include "main.h"
-#include "stm32h5xx_hal_gpio.h"
-#include "stm32h5xx_hal_uart.h"
 
 static osThreadId_t commandStationThread_id;
 static osSemaphoreId_t commandStationStart_sem;

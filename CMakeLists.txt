@@ -53,8 +53,9 @@ add_subdirectory(cmake/stm32cubemx)
 
 include(FetchContent)
 
+# NMRA Public Domain & Do-it-yourself manufacturer ID for experimental use
 set(DCC_MANUFACTURER_ID
-    145u
+    13u
     CACHE STRING "Manufacturer ID")
 
 set(DCC_RX_DEQUE_SIZE

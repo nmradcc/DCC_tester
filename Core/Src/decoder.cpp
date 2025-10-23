@@ -3,11 +3,8 @@
 #include <climits>
 #include <cstdint>
 #include <cstdio>
-#include <dcc/bidi/timing.hpp>
 #include "cmsis_os2.h"
 #include "main.h"
-#include "stm32h563xx.h"
-#include "stm32h5xx_hal_uart.h"
 
 static osThreadId_t decoderThread_id;
 static osSemaphoreId_t decoderStart_sem;
