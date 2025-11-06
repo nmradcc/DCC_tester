@@ -3,6 +3,7 @@
 #include <climits>
 #include <cstdint>
 #include <cstdio>
+#include <dcc/bidi/app/dyn.hpp>
 #include "cmsis_os2.h"
 #include "main.h"
 
@@ -85,9 +86,14 @@ extern "C" void TIM14_IRQHandler(void)
       if (HAL_GPIO_ReadPin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin) == GPIO_PIN_RESET) 
       {
         decoder.biDiChannel1();
-        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
+//        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
+      uint8_t dyn_payload = (2 << 6) | (45 & 0x3F); // (2 << 6) | 45 = 0xC0 | 0x2D = 0xED
+      dcc::bidi::Datagram<> dg;
+      dg[0] = (dcc::bidi::app::Dyn::id << 2) | ((dyn_payload >> 6) & 0x03); // ID + upper bits
+      dg[1] = dyn_payload & 0x3F; // lower bits
+      [[maybe_unused]] auto dyn = dcc::bidi::app::Dyn(dg[0], dg[1]);
         decoder.biDiChannel2();
-        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
+//        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
       }
     }
   }
@@ -154,20 +160,16 @@ void DecoderThread(void *argument) {
         // Processed a packet
       }
       osDelay(3u);
+//      dcc::Address addr = dcc::Address::make_loco(3);
+//      dcc::bidi::Dissector dissector(dg, 3);
+//dcc::bidi::Datagram<> datagram{0x99u, 0xA5u, 0x59u, 0x2Eu, 0xD2u, 0x00u, 0x00u, 0x00u};
+//      dcc::bidi::Dissector dissector2(datagram, 3);
 #if 0
       decoder._cvs[105-1] = 1u;
       decoder._cvs[106-1] = 2u;
       decoder._cvs[107-1] = 0u;
       decoder._cvs[108-1] = 0xffu;
 
-      uint8_t dyn_payload = (2 << 6) | (45 & 0x3F); // (2 << 6) | 45 = 0xC0 | 0x2D = 0xED
-      dcc::bidi::Datagram<> dg;
-      dg[0] = (dcc::bidi::app::Dyn::id << 2) | ((dyn_payload >> 6) & 0x03); // ID + upper bits
-      dg[1] = dyn_payload & 0x3F; // lower bits
-//      dcc::Address addr = dcc::Address::make_loco(3);
-      dcc::bidi::Dissector dissector(dg, 3);
-dcc::bidi::Datagram<> datagram{0x99u, 0xA5u, 0x59u, 0x2Eu, 0xD2u, 0x00u, 0x00u, 0x00u};
-      dcc::bidi::Dissector dissector2(datagram, 3);
 #endif
     }
     HAL_TIM_IC_Stop_IT(&htim15, TIM_CHANNEL_1);

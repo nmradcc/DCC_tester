@@ -35,6 +35,9 @@ void CommandStation::trackOutputs(bool N, bool P)
 }
 
 void CommandStation::biDiStart() {
+ 
+  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
+
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
 
@@ -57,6 +60,7 @@ void CommandStation::biDiEnd() {
     received_datagram = rx_datagram;
     received_datagram_size = write_index;
   }
+  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
 /**
@@ -178,16 +182,15 @@ void CommandStationThread(void *argument) {
 
         std::fill(received_datagram.begin(), received_datagram.end(), 0);
       }
-       osDelay(500u);     // Clear function
-
+      osDelay(300u);
 
 #if 0
-       BSP_LED_Toggle(LED_GREEN);
+      BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
       command_station.packet(packet);
       printf("Command station: clear function F0\n");
       osDelay(500);
-
+//#endif
       // Accelerate
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
@@ -208,7 +211,7 @@ void CommandStationThread(void *argument) {
       command_station.packet(packet);
       printf("Command station: clear function F0\n");
       osDelay(2000u);
-
+//#if 0
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0010u);
       command_station.packet(packet);
       printf("Command station: clear function F0\n");
