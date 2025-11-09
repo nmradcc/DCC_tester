@@ -53,66 +53,28 @@ add_subdirectory(cmake/stm32cubemx)
 
 include(FetchContent)
 
-set(DCC_MANUFACTURER_ID
-    145u
-    CACHE STRING "Manufacturer ID")
+option(USE_ASIO_RPC "Use asio_net and rpc_core libraries" ON)
 
-set(DCC_RX_DEQUE_SIZE
-    31u
-    CACHE STRING "Size of the receiver deque of decoder")
-set(DCC_TX_DEQUE_SIZE
-    10u
-    CACHE STRING "Size of the transmitter deque of command station")
+if(USE_ASIO_RPC)
+  message(STATUS "Using asio_net and rpc_core libraries")
+    FetchContent_Declare(
+    asio_net
+    #  GIT_REPOSITORY https://github.com/shuai132/asio_net.git
+    GIT_REPOSITORY https://github.com/dvescovi1/asio_net.git
+    GIT_TAG        main  # or specify a commit/tag
+    )
 
-option(DCC_STANDARD_COMPLIANCE "Standard compliance" ON)
+    FetchContent_MakeAvailable(asio_net)
+else()
+  message(STATUS "Using rpc_core libraries")
+    FetchContent_Declare(
+    rpc_core
+    GIT_REPOSITORY https://github.com/shuai132/rpc_core.git
+    GIT_TAG        master  # or specify a commit/tag
+    )
 
-
-# Decoder timing settings
-set(DCC_RX_MIN_PREAMBLE_BITS
-    10u
-    CACHE STRING "Minimum number of preambel bits of decoder")
-set(DCC_RX_MIN_BIT_1_TIMING
-    52u
-    CACHE STRING "Minimum duration of a 1 bit of decoder")
-set(DCC_RX_MAX_BIT_1_TIMING
-    64u
-    CACHE STRING "Maximum duration of a 1 bit of decoder")
-set(DCC_RX_MIN_BIT_0_TIMING
-    90u
-    CACHE STRING "Minimum duration of a 0 bit of decoder")
-set(DCC_RX_MAX_BIT_0_TIMING
-    119u
-    CACHE STRING "Maximum duration of a 0 bit of decoder")
-
-
-# Command station timing settings
-set(DCC_TX_MIN_PREAMBLE_BITS
-    17u
-    CACHE STRING "Minimum number of preambel bits of command station")
-set(DCC_TX_MAX_PREAMBLE_BITS
-    30u
-    CACHE STRING "Maximum number of preambel bits of command station")
-
-set(DCC_TX_MIN_BIT_1_TIMING
-    56u
-    CACHE STRING "Minimum duration of a 1 bit of command station")
-set(DCC_TX_MAX_BIT_1_TIMING
-    60u
-    CACHE STRING "Maximum duration of a 1 bit of command station")
-set(DCC_TX_MIN_BIT_0_TIMING
-    97u
-    CACHE STRING "Minimum duration of a 0 bit of command station")
-set(DCC_TX_MAX_BIT_0_TIMING
-    114u
-    CACHE STRING "Maximum duration of a 0 bit of command station")
-
-set(DCC_TX_MIN_BIDI_BIT_TIMING
-    57u
-    CACHE STRING "Minimum duration of a BiDi bit of command station")
-set(DCC_TX_MAX_BIDI_BIT_TIMING
-    61u
-    CACHE STRING "Maximum duration of a BiDi bit of command station")
-
+    FetchContent_MakeAvailable(rpc_core)
+endif()
 
 
 FetchContent_Declare(
@@ -121,6 +83,11 @@ FetchContent_Declare(
   GIT_TAG v0.44.4)
 
 FetchContent_MakeAvailable(DCC)
+
+## NMRA Public Domain & Do-it-yourself manufacturer ID for experimental use
+target_compile_options(DCC INTERFACE -DDCC_MANUFACTURER_ID=13u)
+#target_compile_options(DCC INTERFACE -DDCC_TX_DEQUE_SIZE=10u)
+
 target_compile_features(DCC INTERFACE cxx_std_23)
 
 # Link directories setup
@@ -150,12 +117,26 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
+    RPC_CORE_LOG_DISABLE_ALL=1
 )
 
+
+if(USE_ASIO_RPC)
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
+    asio_net
     DCC::DCC
 )
+else()
+# Add linked libraries
+target_link_libraries(${CMAKE_PROJECT_NAME}
+    stm32cubemx
+
+    # Add user defined libraries
+    rpc_core
+    DCC::DCC
+)
+endif()
