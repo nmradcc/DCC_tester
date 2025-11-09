@@ -6,10 +6,11 @@
 
 #ifndef USE_TIMINGS
 struct CommandStation : dcc::tx::CrtpBase<CommandStation, dcc::Packet> {
+  friend dcc::tx::CrtpBase<CommandStation>;
 #else
 struct CommandStation : dcc::tx::CrtpBase<CommandStation, dcc::tx::Timings> {
+  friend dcc::tx::CrtpBase<CommandStation, dcc::tx::Timings>;
 #endif
-  friend dcc::tx::CrtpBase<CommandStation>;
 
 public:
   // Write track outputs
