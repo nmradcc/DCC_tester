@@ -120,15 +120,23 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     RPC_CORE_LOG_DISABLE_ALL=1
 )
 
+
+if(USE_ASIO_RPC)
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
-if(USE_ASIO_RPC)
     asio_net
-else()
-    rpc_core
-endif()
     DCC::DCC
 )
+else()
+# Add linked libraries
+target_link_libraries(${CMAKE_PROJECT_NAME}
+    stm32cubemx
+
+    # Add user defined libraries
+    rpc_core
+    DCC::DCC
+)
+endif()
