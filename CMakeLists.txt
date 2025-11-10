@@ -59,8 +59,7 @@ if(USE_ASIO_RPC)
   message(STATUS "Using asio_net and rpc_core libraries")
     FetchContent_Declare(
     asio_net
-    #  GIT_REPOSITORY https://github.com/shuai132/asio_net.git
-    GIT_REPOSITORY https://github.com/dvescovi1/asio_net.git
+    GIT_REPOSITORY https://github.com/shuai132/asio_net.git
     GIT_TAG        main  # or specify a commit/tag
     )
 
