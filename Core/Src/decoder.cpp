@@ -45,7 +45,9 @@ void Decoder::serviceModeHook(bool service_mode) {}
 void Decoder::serviceAck() {}
 
 void Decoder::transmitBiDi(std::span<uint8_t const> bytes) {
+//        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
   HAL_UART_Transmit_IT(&huart4, bytes.data(), static_cast<uint16_t>(bytes.size()));
+//        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
 uint8_t Decoder::readCv(uint32_t cv_addr, uint8_t) {

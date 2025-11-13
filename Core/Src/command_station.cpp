@@ -36,7 +36,7 @@ void CommandStation::trackOutputs(bool N, bool P)
 
 void CommandStation::biDiStart() {
  
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
 
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
@@ -60,7 +60,7 @@ void CommandStation::biDiEnd() {
     received_datagram = rx_datagram;
     received_datagram_size = write_index;
   }
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
 /**
@@ -68,7 +68,7 @@ void CommandStation::biDiEnd() {
   */
 extern "C" void USART6_IRQHandler(void)
 {
-    if (__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE)) {
+  if (__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE)) {
         // Read all bytes in FIFO
         while (__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE)) {
             rx_datagram[write_index++] = (uint8_t)(huart6.Instance->RDR);  // Read one byte

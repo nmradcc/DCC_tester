@@ -865,7 +865,9 @@ static void MX_UART4_Init(void)
   huart4.Init.OverSampling = UART_OVERSAMPLING_16;
   huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart4.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_TXINVERT_INIT|UART_ADVFEATURE_DATAINVERT_INIT;
+  huart4.AdvancedInit.TxPinLevelInvert = UART_ADVFEATURE_TXINV_ENABLE;
+  huart4.AdvancedInit.DataInvert = UART_ADVFEATURE_DATAINV_ENABLE;
   if (HAL_HalfDuplex_Init(&huart4) != HAL_OK)
   {
     Error_Handler();
@@ -1011,8 +1013,7 @@ static void MX_USART6_UART_Init(void)
   huart6.Init.OverSampling = UART_OVERSAMPLING_16;
   huart6.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart6.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart6.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_DATAINVERT_INIT;
-  huart6.AdvancedInit.DataInvert = UART_ADVFEATURE_DATAINV_ENABLE;
+  huart6.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
   if (HAL_HalfDuplex_Init(&huart6) != HAL_OK)
   {
     Error_Handler();
@@ -1021,11 +1022,11 @@ static void MX_USART6_UART_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_SetRxFifoThreshold(&huart6, UART_RXFIFO_THRESHOLD_8_8) != HAL_OK)
+  if (HAL_UARTEx_SetRxFifoThreshold(&huart6, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_EnableFifoMode(&huart6) != HAL_OK)
+  if (HAL_UARTEx_DisableFifoMode(&huart6) != HAL_OK)
   {
     Error_Handler();
   }
@@ -1139,12 +1140,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(BR_ENABLE_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PC7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
   /* USER CODE END MX_GPIO_Init_2 */
