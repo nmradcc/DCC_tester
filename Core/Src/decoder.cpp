@@ -12,6 +12,7 @@ static osSemaphoreId_t decoderStart_sem;
 static bool decoderRunning = false;
 
 Decoder decoder;
+std::span<uint8_t const> txedBIDI;
 
 /* Definitions for decoderTask */
 const osThreadAttr_t decoderTask_attributes = {
@@ -47,6 +48,7 @@ void Decoder::serviceAck() {}
 void Decoder::transmitBiDi(std::span<uint8_t const> bytes) {
 //        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
   HAL_UART_Transmit_IT(&huart4, bytes.data(), static_cast<uint16_t>(bytes.size()));
+  txedBIDI = bytes;
 //        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
@@ -162,6 +164,10 @@ void DecoderThread(void *argument) {
         // Processed a packet
       }
       osDelay(3u);
+      if (txedBIDI.size() > 0) {
+        printf("DEC:BiDi TX datagram of size %d:  0x%02X 0x%02X\n", (int)txedBIDI.size(), txedBIDI[0], txedBIDI[1]);
+        txedBIDI = std::span<uint8_t const>{};
+      }
 //      dcc::Address addr = dcc::Address::make_loco(3);
 //      dcc::bidi::Dissector dissector(dg, 3);
 //dcc::bidi::Datagram<> datagram{0x99u, 0xA5u, 0x59u, 0x2Eu, 0xD2u, 0x00u, 0x00u, 0x00u};

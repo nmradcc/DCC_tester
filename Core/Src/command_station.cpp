@@ -166,8 +166,8 @@ void CommandStationThread(void *argument) {
 //      printf("Command station: set CV 3, 0b0010u, 8u, 145u\n");
 
       if (received_datagram_size >= 2) {
+        printf("CMS:BiDi RX datagram of size %d: 0x%02X 0x%02X\n", received_datagram_size, received_datagram[0], received_datagram[1]);
         received_datagram_size = 0;
-
         dcc::bidi::Dissector dissector{received_datagram, packet};
 
         // Iterate
