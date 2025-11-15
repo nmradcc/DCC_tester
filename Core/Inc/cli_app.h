@@ -5,4 +5,5 @@
 
 void uart_receive_callback(char *input);
 void vCommandConsoleTask(void *pvParameters);
+void vRPCTask(void *pvParameters);
 #endif // CLI_APP_H

@@ -48,6 +48,13 @@ const osThreadAttr_t cmdLineTask_attributes = {
   .stack_size = 512 * 4
 };
 
+/* Definitions for RPCTask */
+const osThreadAttr_t rpcTask_attributes = {
+  .name = "rpcTask",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 512 * 4
+};
+
 
 /* USER CODE END PTD */
 
@@ -65,7 +72,7 @@ const osThreadAttr_t cmdLineTask_attributes = {
 /* USER CODE BEGIN PV */
 osThreadId_t ledThreadHandle;
 osThreadId_t cmdLineTaskHandle;
-osThreadId_t cmdStationTaskHandle;
+osThreadId_t rpcTaskHandle;
 
 /* USER CODE END PV */
 
@@ -91,10 +98,12 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
 
   /* USER CODE BEGIN App_ThreadX_Init */
 
-  /* Create the led line task */  
+  /* Create the led task */  
   ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes
   /* Create the command line task */
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
+  /* Create the RPC task */
+  rpcTaskHandle =  osThreadNew(vRPCTask, NULL, &rpcTask_attributes);
   /* Create the command station task ... but don't start it */
   CommandStation_Init();
   /* Create the decoder task ... but don't start it */

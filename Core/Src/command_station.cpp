@@ -12,6 +12,7 @@ static osThreadId_t commandStationThread_id;
 static osSemaphoreId_t commandStationStart_sem;
 static bool commandStationRunning = false;
 static bool commandStationBidi = false;
+static bool commandStationLoop = false;
 
 static uint16_t dac_value =  DEFAULT_BIDIR_THRESHOLD; // DEFAULT BIDIR threshold value for 12-bit DAC
 
@@ -46,6 +47,7 @@ void CommandStation::biDiEnd() {
 }
 
 CommandStation command_station;
+
 
 
 /**
@@ -116,56 +118,64 @@ void CommandStationThread(void *argument) {
     __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
     HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);
     commandStationRunning = true;
-
-    // Main loop
-    // Send a few packets to test the command station
-    // This is not part of the command station functionality, but rather a test
-    // to see if the command station is working correctly.
-
     dcc::Packet packet{};
-    while (commandStationRunning) {
-      // Set function F0
-      BSP_LED_Toggle(LED_GREEN);
-      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
-      command_station.packet(packet);
-      printf("Command station: set function F0\n");
-      osDelay(2000u);
 
-      // Accelerate
-      BSP_LED_Toggle(LED_GREEN);
-      packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
-      command_station.packet(packet);
-      printf("\nCommand station: accelerate to speed step 42 forward\n");
-      osDelay(2000u);
+    if (commandStationLoop) {
+      // Test loop
+      // Send a few packets to test the command station
+      // This is not part of the command station functionality, but rather a test loop
+      // to see if the command station is working correctly.
+      while (commandStationRunning) {
+        // Set function F0
+        BSP_LED_Toggle(LED_GREEN);
+        packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
+        command_station.packet(packet);
+        printf("Command station: set function F0\n");
+        osDelay(2000u);
 
-      // Decelerate
-      BSP_LED_Toggle(LED_GREEN);
-      packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 0u);
-      command_station.packet(packet);
-      printf("Command station: stop (forward)\n");
-      osDelay(2000u);
+        // Accelerate
+        BSP_LED_Toggle(LED_GREEN);
+        packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
+        command_station.packet(packet);
+        printf("\nCommand station: accelerate to speed step 42 forward\n");
+        osDelay(2000u);
 
-      // Clear function
-      BSP_LED_Toggle(LED_GREEN);
-      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
-      command_station.packet(packet);
-      printf("Command station: clear function F0\n");
-      osDelay(2000u);
+        // Decelerate
+        BSP_LED_Toggle(LED_GREEN);
+        packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 0u);
+        command_station.packet(packet);
+        printf("Command station: stop (forward)\n");
+        osDelay(2000u);
 
-      // Accelerate
-      BSP_LED_Toggle(LED_GREEN);
-      packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
-      command_station.packet(packet);
-      printf("\nCommand station: accelerate to speed step 42 reverse\n");
-      osDelay(2000u);
+        // Clear function
+        BSP_LED_Toggle(LED_GREEN);
+        packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
+        command_station.packet(packet);
+        printf("Command station: clear function F0\n");
+        osDelay(2000u);
 
-      // Decelerate
-      BSP_LED_Toggle(LED_GREEN);
-      packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
-      command_station.packet(packet);
-      printf("Command station: stop (reverse)\n");
-      osDelay(2000u);
+        // Accelerate
+        BSP_LED_Toggle(LED_GREEN);
+        packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
+        command_station.packet(packet);
+        printf("\nCommand station: accelerate to speed step 42 reverse\n");
+        osDelay(2000u);
 
+        // Decelerate
+        BSP_LED_Toggle(LED_GREEN);
+        packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
+        command_station.packet(packet);
+        printf("Command station: stop (reverse)\n");
+        osDelay(2000u);
+
+      }
+    }
+    else {
+      // Wait until stopped
+      while (commandStationRunning) {
+        //TODO: test for (RPC) commands via queue to send packets
+        osDelay(100u);
+      }
     }
     HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_1);
     __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
@@ -183,13 +193,14 @@ extern "C" void CommandStation_Init(void)
 }
 
 // Can be called from anywhere
-extern "C" void CommandStation_Start(bool bidi)
+extern "C" void CommandStation_Start(bool bidi, bool loop)
 {
   if (!commandStationRunning) {
     commandStationBidi = bidi;
+    commandStationLoop = loop;
     HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
     osSemaphoreRelease(commandStationStart_sem);
-    printf("Command station started\n");
+    printf("Command station started (bidi=%d, loop=%d)\n", bidi, loop);
   }
   else {
     printf("Command station already running\n");

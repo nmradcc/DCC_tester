@@ -87,9 +87,11 @@ void command_station_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
     if (stricmp(arg1,"start") == 0) {
         if (stricmp(arg2, "bidi") == 0) {
-            CommandStation_Start(true);
+            CommandStation_Start(true, false);
+        } else if (stricmp(arg2, "loop") == 0) {
+            CommandStation_Start(true, true);
         } else {
-            CommandStation_Start(false);
+            CommandStation_Start(false, false);
         }
         printf("Start Command Station ...\n");
     }
@@ -176,7 +178,7 @@ Command cmd_bidi = {
 Command cmd_cms = {
     .name = "cms", 
     .execute = command_station_command,
-    .help = "Command Station: cms <start|stop> [bidi]",
+    .help = "Command Station: cms <start|stop> [bidi|loop]",
     .next = &cmd_bidi
 };
 Command cmd_dec = {

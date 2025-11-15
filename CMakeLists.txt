@@ -99,10 +99,12 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/Src/cmsis_os2.c
     Core/Src/cli_app.c
+    Core/Src/rpc_server.cpp
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
     Core/Src/SUSI_Master.c
     Core/Src/SUSI_Slave.c
+
 )
 
 # Add include paths
