@@ -11,6 +11,7 @@
 #include "cli_app.h"
 #include "version.h"
 #include "main.h"
+#include "rpc_server.h"
 #include "command_station.h"
 #include "decoder.h"
 #include "susi.h"
@@ -119,6 +120,21 @@ void decoder_command(const char *arg1, const char *arg2) {
     }
 }
 
+void rpc_server_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    if (stricmp(arg1,"start") == 0) {
+        printf("Start RPC Server ...\n");
+        RpcServer_Start(false);
+    }
+    else if (stricmp(arg1,"stop") == 0) {
+        printf("Stop RPC Server ...\n");
+        RpcServer_Stop();
+    }
+    else {
+        printf("Unknown RPC Server command: %s\n", arg1);
+    }
+}
+
 void bidi_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
     if (arg1[0]) {
@@ -175,11 +191,17 @@ Command cmd_bidi = {
     .next = &cmd_help
 
 };
+Command cmd_rpcs = {
+    .name = "rpc_server", 
+    .execute = rpc_server_command,
+    .help = "RPC Server: rpc_server <start|stop>",
+    .next = &cmd_bidi
+};
 Command cmd_cms = {
     .name = "cms", 
     .execute = command_station_command,
     .help = "Command Station: cms <start|stop> [bidi|loop]",
-    .next = &cmd_bidi
+    .next = &cmd_rpcs
 };
 Command cmd_dec = {
     .name = "dec", 

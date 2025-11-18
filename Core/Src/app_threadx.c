@@ -27,6 +27,7 @@
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
 #include "main.h"
+#include "rpc_server.h"
 #include "command_station.h"
 #include "decoder.h"
 #include "SUSI.h"
@@ -48,14 +49,6 @@ const osThreadAttr_t cmdLineTask_attributes = {
   .stack_size = 512 * 4
 };
 
-/* Definitions for RPCTask */
-const osThreadAttr_t rpcTask_attributes = {
-  .name = "rpcTask",
-  .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 512 * 4
-};
-
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -72,7 +65,6 @@ const osThreadAttr_t rpcTask_attributes = {
 /* USER CODE BEGIN PV */
 osThreadId_t ledThreadHandle;
 osThreadId_t cmdLineTaskHandle;
-osThreadId_t rpcTaskHandle;
 
 /* USER CODE END PV */
 
@@ -102,8 +94,8 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes
   /* Create the command line task */
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
-  /* Create the RPC task */
-  rpcTaskHandle =  osThreadNew(vRPCTask, NULL, &rpcTask_attributes);
+  /* Create the RPC task ... but don't start it */
+  RpcServer_Init();
   /* Create the command station task ... but don't start it */
   CommandStation_Init();
   /* Create the decoder task ... but don't start it */
