@@ -89,7 +89,6 @@ static void MX_ICACHE_Init(void);
 static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM2_Init(void);
-static void MX_USB_PCD_Init(void);
 static void MX_FDCAN1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_RTC_Init(void);
@@ -173,7 +172,6 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM2_Init();
   MX_SDMMC1_SD_Init();
-  MX_USB_PCD_Init();
   MX_FDCAN1_Init();
   MX_USART2_UART_Init();
   MX_RTC_Init();
@@ -997,7 +995,7 @@ static void MX_USART6_UART_Init(void)
   * @param None
   * @retval None
   */
-static void MX_USB_PCD_Init(void)
+void MX_USB_PCD_Init(void)
 {
 
   /* USER CODE BEGIN USB_Init 0 */

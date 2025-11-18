@@ -94,7 +94,7 @@ VOID USBD_CDC_ACM_Activate(VOID *cdc_acm_instance)
     Error_Handler();
   }
 
-/* USER CODE END USBD_CDC_ACM_Activate */
+  /* USER CODE END USBD_CDC_ACM_Activate */
 
   return;
 }

@@ -74,6 +74,7 @@ extern SPI_HandleTypeDef hspi5;
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 void MX_SDMMC1_SD_Init(void);
+void MX_USB_PCD_Init(void);
 
 /* USER CODE BEGIN EFP */
 

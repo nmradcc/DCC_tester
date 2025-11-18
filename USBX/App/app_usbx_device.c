@@ -23,6 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "main.h"
 
 /* USER CODE END Includes */
 
@@ -50,7 +51,10 @@ static TX_THREAD ux_device_app_thread;
 
 /* USER CODE BEGIN PV */
 TX_QUEUE ux_app_MsgQueue;
-
+static TX_THREAD ux_cdc_read_thread;
+static TX_THREAD ux_cdc_write_thread;
+__ALIGN_BEGIN USB_MODE_STATE USB_Device_State_Msg __ALIGN_END;
+extern PCD_HandleTypeDef hpcd_USB_DRD_FS;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -180,13 +184,51 @@ UINT MX_USBX_Device_Init(VOID *memory_ptr)
 
   /* USER CODE BEGIN MX_USBX_Device_Init1 */
 
-    /* Create the MsgQueue */
+ 
+  /* Allocate the stack for usbx cdc acm read thread */
+  if (tx_byte_allocate(byte_pool, (VOID **) &pointer, 1024, TX_NO_WAIT) != TX_SUCCESS)
+  {
+    return TX_POOL_ERROR;
+  }
+
+  /* Create the usbx cdc acm read thread */
+  if (tx_thread_create(&ux_cdc_read_thread, "cdc_acm_read_usbx_app_thread_entry",
+                       usbx_cdc_acm_read_thread_entry, 1, pointer,
+                       1024, 20, 20, TX_NO_TIME_SLICE,
+                       TX_AUTO_START) != TX_SUCCESS)
+  {
+    return TX_THREAD_ERROR;
+  }
+
+  /* Allocate the stack for usbx cdc acm write thread */
+  if (tx_byte_allocate(byte_pool, (VOID **) &pointer, 1024, TX_NO_WAIT) != TX_SUCCESS)
+  {
+    return TX_POOL_ERROR;
+  }
+
+  /* Create the usbx_cdc_acm_write_thread_entry thread */
+  if (tx_thread_create(&ux_cdc_write_thread, "cdc_acm_write_usbx_app_thread_entry",
+                       usbx_cdc_acm_write_thread_entry, 1, pointer,
+                       1024, 20, 20, TX_NO_TIME_SLICE,
+                       TX_AUTO_START) != TX_SUCCESS)
+  {
+    return TX_THREAD_ERROR;
+  }
+
+    /* Allocate Memory for the Queue */
+  if (tx_byte_allocate(byte_pool, (VOID **) &pointer, APP_QUEUE_SIZE*sizeof(ULONG),
+                       TX_NO_WAIT) != TX_SUCCESS)
+  {
+    return TX_POOL_ERROR;
+  }
+
+ /* Create the MsgQueue */
   if (tx_queue_create(&ux_app_MsgQueue, "Message Queue app", TX_1_ULONG,
                       pointer, APP_QUEUE_SIZE * sizeof(ULONG)) != TX_SUCCESS)
   {
     return TX_QUEUE_ERROR;
   }
-/* USER CODE END MX_USBX_Device_Init1 */
+  /* USER CODE END MX_USBX_Device_Init1 */
 
   return ret;
 }
@@ -199,7 +241,41 @@ UINT MX_USBX_Device_Init(VOID *memory_ptr)
 static VOID app_ux_device_thread_entry(ULONG thread_input)
 {
   /* USER CODE BEGIN app_ux_device_thread_entry */
+
   TX_PARAMETER_NOT_USED(thread_input);
+  /* Initialization of USB device */
+  USBX_APP_Device_Init();
+
+  /* Wait for message queue to start/stop the device */
+  while(1)
+  {
+    /* Wait for a device to be connected */
+    if (tx_queue_receive(&ux_app_MsgQueue, &USB_Device_State_Msg,
+                         TX_WAIT_FOREVER)!= TX_SUCCESS)
+    {
+      /*Error*/
+      Error_Handler();
+    }
+
+    /* Check if received message equal to USB_PCD_START */
+    if (USB_Device_State_Msg == START_USB_DEVICE)
+    {
+      /* Start device USB */
+      HAL_PCD_Start(&hpcd_USB_DRD_FS);
+    }
+    /* Check if received message equal to USB_PCD_STOP */
+    else if (USB_Device_State_Msg == STOP_USB_DEVICE)
+    {
+      /* Stop device USB */
+      HAL_PCD_Stop(&hpcd_USB_DRD_FS);
+    }
+    /* Else Error */
+    else
+    {
+      /*Error*/
+      Error_Handler();
+    }
+  }
   /* USER CODE END app_ux_device_thread_entry */
 }
 
@@ -292,5 +368,37 @@ static UINT USBD_ChangeFunction(ULONG Device_State)
   return status;
 }
 /* USER CODE BEGIN 1 */
+
+/**
+  * @brief  USBX_APP_Device_Init
+  *         Initialization of USB device.
+  * @param  none
+  * @retval none
+  */
+VOID USBX_APP_Device_Init(VOID)
+{
+  /* USER CODE BEGIN USB_Device_Init_PreTreatment_0 */
+  /* USER CODE END USB_Device_Init_PreTreatment_0 */
+
+  /* initialize the device controller HAL driver */
+  MX_USB_PCD_Init();
+
+  /* USER CODE BEGIN USB_Device_Init_PreTreatment_1 */
+  HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x00, PCD_SNG_BUF, 0x20);
+  HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x80, PCD_SNG_BUF, 0x60);
+  HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x81, PCD_SNG_BUF, 0xA0);
+  HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x01, PCD_SNG_BUF, 0xE0);
+  HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x82, PCD_SNG_BUF, 0x120);
+  HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x83, PCD_SNG_BUF, 0x140);
+  /* USER CODE END USB_Device_Init_PreTreatment_1 */
+
+  /* Initialize the device controller driver*/
+  _ux_dcd_stm32_initialize((ULONG)USB_DRD_FS, (ULONG)&hpcd_USB_DRD_FS);
+
+  /* USER CODE BEGIN USB_Device_Init_PostTreatment */
+
+  /* USER CODE END USB_Device_Init_PostTreatment */
+}
+
 
 /* USER CODE END 1 */
