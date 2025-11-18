@@ -3,6 +3,7 @@ mx.scratch
 !.settings
 **/Backup/
 .clangd
+.mxproject
 
 # CubeMX generated files and folders
 Drivers
