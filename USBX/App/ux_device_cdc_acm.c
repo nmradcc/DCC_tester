@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "main.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,6 +43,24 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+
+UX_SLAVE_CLASS_CDC_ACM  *cdc_acm;
+
+#if defined ( __ICCARM__ ) /* IAR Compiler */
+#pragma location = ".UsbxAppSection"
+#elif defined ( __CC_ARM ) || defined(__ARMCC_VERSION) /* ARM Compiler 5/6 */
+__attribute__((section(".UsbxAppSection")))
+#elif defined ( __GNUC__ ) /* GNU Compiler */
+__attribute__((section(".UsbxAppSection")))
+#endif
+
+UX_SLAVE_CLASS_CDC_ACM_LINE_CODING_PARAMETER CDC_VCP_LineCoding =
+{
+  115200, /* baud rate */
+  0x00,   /* stop bits-1 */
+  0x00,   /* parity - none */
+  0x08    /* nb. of bits 8 */
+};
 
 /* USER CODE END PV */
 
@@ -65,8 +83,18 @@
 VOID USBD_CDC_ACM_Activate(VOID *cdc_acm_instance)
 {
   /* USER CODE BEGIN USBD_CDC_ACM_Activate */
-  UX_PARAMETER_NOT_USED(cdc_acm_instance);
-  /* USER CODE END USBD_CDC_ACM_Activate */
+
+  /* Save the CDC instance */
+  cdc_acm = (UX_SLAVE_CLASS_CDC_ACM*) cdc_acm_instance;
+ 
+  /* Set device class_cdc_acm with default parameters */
+  if (ux_device_class_cdc_acm_ioctl(cdc_acm, UX_SLAVE_CLASS_CDC_ACM_IOCTL_SET_LINE_CODING,
+                                    &CDC_VCP_LineCoding) != UX_SUCCESS)
+  {
+    Error_Handler();
+  }
+
+/* USER CODE END USBD_CDC_ACM_Activate */
 
   return;
 }
@@ -102,5 +130,25 @@ VOID USBD_CDC_ACM_ParameterChange(VOID *cdc_acm_instance)
 }
 
 /* USER CODE BEGIN 1 */
+
+/**
+  * @brief  Function implementing usbx_cdc_acm_thread_entry.
+  * @param  thread_input: Not used
+  * @retval none
+  */
+VOID usbx_cdc_acm_read_thread_entry(ULONG thread_input)
+{
+  UX_PARAMETER_NOT_USED(thread_input);
+}
+
+/**
+  * @brief  Function implementing usbx_cdc_acm_write_thread_entry.
+  * @param  thread_input: Not used
+  * @retval none
+  */
+VOID usbx_cdc_acm_write_thread_entry(ULONG thread_input)
+{
+  UX_PARAMETER_NOT_USED(thread_input);
+}
 
 /* USER CODE END 1 */

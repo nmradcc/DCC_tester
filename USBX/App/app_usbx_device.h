@@ -60,12 +60,12 @@ extern "C" {
 UINT MX_USBX_Device_Init(VOID *memory_ptr);
 
 /* USER CODE BEGIN EFP */
-
+VOID USBX_APP_Device_Init(VOID);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define APP_QUEUE_SIZE          5
 /* USER CODE END PD */
 
 #ifndef UX_DEVICE_APP_THREAD_NAME
@@ -85,7 +85,11 @@ UINT MX_USBX_Device_Init(VOID *memory_ptr);
 #endif
 
 /* USER CODE BEGIN 1 */
-
+typedef enum
+{
+  STOP_USB_DEVICE = 1,
+  START_USB_DEVICE,
+} USB_MODE_STATE;
 /* USER CODE END 1 */
 
 #ifdef __cplusplus

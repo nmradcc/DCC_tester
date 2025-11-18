@@ -49,6 +49,7 @@ static UX_SLAVE_CLASS_CDC_ACM_PARAMETER cdc_acm_parameter;
 static TX_THREAD ux_device_app_thread;
 
 /* USER CODE BEGIN PV */
+TX_QUEUE ux_app_MsgQueue;
 
 /* USER CODE END PV */
 
@@ -179,7 +180,13 @@ UINT MX_USBX_Device_Init(VOID *memory_ptr)
 
   /* USER CODE BEGIN MX_USBX_Device_Init1 */
 
-  /* USER CODE END MX_USBX_Device_Init1 */
+    /* Create the MsgQueue */
+  if (tx_queue_create(&ux_app_MsgQueue, "Message Queue app", TX_1_ULONG,
+                      pointer, APP_QUEUE_SIZE * sizeof(ULONG)) != TX_SUCCESS)
+  {
+    return TX_QUEUE_ERROR;
+  }
+/* USER CODE END MX_USBX_Device_Init1 */
 
   return ret;
 }
