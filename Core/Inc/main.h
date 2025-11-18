@@ -31,6 +31,18 @@ extern "C" {
 
 #include "stm32h5xx_nucleo.h"
 
+#include "stm32h5xx_ll_ucpd.h"
+#include "stm32h5xx_ll_bus.h"
+#include "stm32h5xx_ll_cortex.h"
+#include "stm32h5xx_ll_rcc.h"
+#include "stm32h5xx_ll_system.h"
+#include "stm32h5xx_ll_utils.h"
+#include "stm32h5xx_ll_pwr.h"
+#include "stm32h5xx_ll_gpio.h"
+#include "stm32h5xx_ll_dma.h"
+
+#include "stm32h5xx_ll_exti.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 

@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32h5xx_it.h"
+#include "usbpd.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
@@ -71,6 +72,7 @@ extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi5;
 extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart6;
+extern PCD_HandleTypeDef hpcd_USB_DRD_FS;
 extern TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN EV */
@@ -223,6 +225,35 @@ void USART3_IRQHandler(void)
   /* USER CODE BEGIN USART3_IRQn 1 */
 
   /* USER CODE END USART3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USB FS global interrupt.
+  */
+void USB_DRD_FS_IRQHandler(void)
+{
+  /* USER CODE BEGIN USB_DRD_FS_IRQn 0 */
+
+  /* USER CODE END USB_DRD_FS_IRQn 0 */
+  HAL_PCD_IRQHandler(&hpcd_USB_DRD_FS);
+  /* USER CODE BEGIN USB_DRD_FS_IRQn 1 */
+
+  /* USER CODE END USB_DRD_FS_IRQn 1 */
+}
+
+/**
+  * @brief This function handles UCPD1 global interrupt.
+  */
+void UCPD1_IRQHandler(void)
+{
+  /* USER CODE BEGIN UCPD1_IRQn 0 */
+
+  /* USER CODE END UCPD1_IRQn 0 */
+  USBPD_PORT0_IRQHandler();
+
+  /* USER CODE BEGIN UCPD1_IRQn 1 */
+
+  /* USER CODE END UCPD1_IRQn 1 */
 }
 
 /**
