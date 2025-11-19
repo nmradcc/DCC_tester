@@ -154,9 +154,7 @@ VOID tx_application_define(VOID *first_unused_memory)
     if (status != FX_SUCCESS)
     {
       /* USER CODE BEGIN  MX_FileX_Init_Error */
-      while(1)
-      {
-      }
+      Error_Handler();
       /* USER CODE END  MX_FileX_Init_Error */
     }
     /* USER CODE BEGIN  MX_FileX_Init_Success */
