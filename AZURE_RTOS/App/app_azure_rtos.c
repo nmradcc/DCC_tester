@@ -139,6 +139,7 @@ VOID tx_application_define(VOID *first_unused_memory)
   if (tx_byte_pool_create(&fx_app_byte_pool, "Fx App memory pool", fx_byte_pool_buffer, FX_APP_MEM_POOL_SIZE) != TX_SUCCESS)
   {
     /* USER CODE BEGIN FX_Byte_Pool_Error */
+    Error_Handler();
 
     /* USER CODE END FX_Byte_Pool_Error */
   }
@@ -181,9 +182,7 @@ VOID tx_application_define(VOID *first_unused_memory)
     if (status != NX_SUCCESS)
     {
       /* USER CODE BEGIN  MX_NetXDuo_Init_Error */
-      while(1)
-      {
-      }
+      Error_Handler();
       /* USER CODE END  MX_NetXDuo_Init_Error */
     }
     /* USER CODE BEGIN  MX_NetXDuo_Init_Success */
@@ -195,6 +194,7 @@ VOID tx_application_define(VOID *first_unused_memory)
   if (tx_byte_pool_create(&ux_device_app_byte_pool, "Ux App memory pool", ux_device_byte_pool_buffer, UX_DEVICE_APP_MEM_POOL_SIZE) != TX_SUCCESS)
   {
     /* USER CODE BEGIN UX_Device_Byte_Pool_Error */
+    Error_Handler();
 
     /* USER CODE END UX_Device_Byte_Pool_Error */
   }
@@ -222,6 +222,7 @@ VOID tx_application_define(VOID *first_unused_memory)
   if (tx_byte_pool_create(&usbpd_app_byte_pool, "USBPD App memory pool", usbpd_byte_pool_buffer, USBPD_DEVICE_APP_MEM_POOL_SIZE) != TX_SUCCESS)
   {
     /* USER CODE BEGIN USBPD_Byte_Pool_Error */
+    Error_Handler();
 
     /* USER CODE END USBPD_Byte_Pool_Error */
   }

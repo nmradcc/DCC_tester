@@ -185,7 +185,7 @@
 
 /* Defined, this value is the maximum number of interfaces in the device framework.  */
 
-/* #define UX_MAX_SLAVE_INTERFACES    16 */
+#define UX_MAX_SLAVE_INTERFACES       3
 
 /* Defined, this value represents the current number of SCSI logical units represented in the device
    storage class driver.  */
@@ -253,7 +253,7 @@
    is 2048 bytes but can be reduced in memory constrained environments. For cd-rom support in the storage
    class, this value cannot be less than 2048.  */
 
-/* #define UX_SLAVE_REQUEST_DATA_MAX_LENGTH                 2048 */
+#define UX_SLAVE_REQUEST_DATA_MAX_LENGTH                    512
 
 /* Defined, this enables processing of Get String Descriptor requests with zero Language ID.
    The first language ID in the language ID framework will be used if the request has a zero
@@ -598,11 +598,11 @@
 
 /* it define USBX device max number of endpoints (1~n). */
 
-/* #define UX_MAX_DEVICE_ENDPOINTS           6 */
+#define UX_MAX_DEVICE_ENDPOINTS              4
 
 /* it define USBX device max number of interfacess (1~n). */
 
-/* #define UX_MAX_DEVICE_INTERFACES          6 */
+#define UX_MAX_DEVICE_INTERFACES             2
 
 /* Define USBX max root hub port (1 ~ n).  */
 
