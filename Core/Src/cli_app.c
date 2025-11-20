@@ -11,7 +11,7 @@
 #include "cli_app.h"
 #include "version.h"
 #include "main.h"
-#include "rpc_server.h"
+//#include "rpc_server.h"
 #include "command_station.h"
 #include "decoder.h"
 #include "susi.h"

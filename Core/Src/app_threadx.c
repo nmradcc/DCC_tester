@@ -27,7 +27,7 @@
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
 #include "main.h"
-#include "rpc_server.h"
+//#include "rpc_server.h"
 #include "command_station.h"
 #include "decoder.h"
 #include "SUSI.h"
