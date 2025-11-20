@@ -124,11 +124,6 @@ int _gettimeofday(struct timeval* ptimeval,
   return 0;
 }
 
-void init_thread_safe_system(void)
-{
-    stm32_lock_init(&newlib_lock);
-}
-
 /* USER CODE END 0 */
 
 /**
@@ -161,9 +156,6 @@ int main(void)
   PeriphCommonClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
-  // Initialize thread-safe lock
-  init_thread_safe_system();
 
   /* USER CODE END SysInit */
 

@@ -71,10 +71,8 @@
 #define TX_USER_H
 
 /* USER CODE BEGIN 1 */
+/* CMSIS RTOS V2 */
 #define USE_MEMORY_POOL_ALLOCATION
-#define TX_BYTE_POOL_MIN            (1024) /* Minimum size of a byte pool block */ 
-#define RTOS2_BYTE_POOL_HEAP_SIZE   (1024 * 16) /* 16 KB for ThreadX byte pool heap */
-#define RTOS2_BYTE_POOL_STACK_SIZE  (1024 * 64) /* 64 KB for ThreadX byte pool stack */
 #define TX_THREAD_USER_EXTENSION     ULONG tx_thread_detached_joinable;
 
 /* USER CODE END 1 */
