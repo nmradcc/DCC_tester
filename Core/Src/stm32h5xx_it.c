@@ -23,7 +23,6 @@
 #include "usbpd.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdbool.h>
 #include "cli_app.h"
 #include "SUSI.h"
 
