@@ -33,6 +33,7 @@ set(CMAKE_PROJECT_NAME DCC_tester)
 
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")
+#include("cmake/starm-clang.cmake")
 
 # Enable compile command to ease indexing with e.g. clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
@@ -99,7 +100,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     USBPD/Target/stm32h5xx_nucleo_usbpd_pwr.c
     Core/Src/cmsis_os2.c
     Core/Src/cli_app.c
-    Core/Src/rpc_server.cpp
+#    Core/Src/rpc_server.cpp
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
     Core/Src/SUSI_Master.c
@@ -112,7 +113,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_CURRENT_SOURCE_DIR}/
     ${CMAKE_CURRENT_BINARY_DIR}/generated
-    ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/bsp/stm32hXX_Nucleo
 )
 
 # Add project symbols (macros)
@@ -123,6 +123,8 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 
 # Remove wrong libob.a library dependency when using cpp files
 list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
+#set_target_properties(DCC_tester PROPERTIES LINKER_LANGUAGE C)
+
 
 if(USE_ASIO_RPC)
 # Add linked libraries

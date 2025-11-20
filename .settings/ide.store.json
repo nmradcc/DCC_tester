@@ -3,5 +3,5 @@
   "device": "STM32H563ZIT6",
   "core": "Cortex-M33",
   "order": 0,
-  "toolchain": "CLANG_GCC"
+  "toolchain": "GCC"
 }

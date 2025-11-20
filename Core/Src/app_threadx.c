@@ -95,7 +95,7 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   /* Create the command line task */
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
   /* Create the RPC task ... but don't start it */
-  RpcServer_Init();
+//  RpcServer_Init();
   /* Create the command station task ... but don't start it */
   CommandStation_Init();
   /* Create the decoder task ... but don't start it */
