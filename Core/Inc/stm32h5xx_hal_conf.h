@@ -1,10 +1,12 @@
 /* USER CODE BEGIN Header */
 /**
   **********************************************************************************************************************
+
   * @file    stm32h5xx_hal_conf.h
   * @author  MCD Application Team
   * @brief   HAL configuration file.
   **********************************************************************************************************************
+
   * @attention
   *
   * Copyright (c) 2023 STMicroelectronics.
@@ -15,6 +17,7 @@
   * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   **********************************************************************************************************************
+
   */
 /* USER CODE END Header */
 

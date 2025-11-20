@@ -115,6 +115,7 @@ UINT MX_NetXDuo_Init(VOID *memory_ptr);
 
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 #define NX_APP_DEFAULT_TIMEOUT               (10 * NX_IP_PERIODIC_RATE)
