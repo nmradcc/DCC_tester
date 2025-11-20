@@ -98,13 +98,13 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     USBPD/Target/stm32h5xx_nucleo_usbpd_pwr.c
     Core/Src/cmsis_os2.c
+    newlib_lock_glue.c
     Core/Src/cli_app.c
 #    Core/Src/rpc_server.cpp
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
     Core/Src/SUSI_Master.c
     Core/Src/SUSI_Slave.c
-
 )
 
 # Add include paths
