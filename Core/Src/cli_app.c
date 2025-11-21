@@ -12,7 +12,7 @@
 #include "cli_app.h"
 #include "version.h"
 #include "main.h"
-//#include "rpc_server.h"
+#include "rpc_server.h"
 #include "command_station.h"
 #include "decoder.h"
 #include "susi.h"
@@ -124,12 +124,12 @@ void rpc_server_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
     if (strcasecmp(arg1,"start") == 0) {
         printf("Start RPC Server ...\n");
-//        RpcServer_Start(false);
+        RpcServer_Start(false);
     }
     else if (strcasecmp(arg1,"stop") == 0) {
         printf("Stop RPC Server ...\n");
         printf("Stop RPC Server ...\n");
-//        RpcServer_Stop();
+        RpcServer_Stop();
     }
     else {
         printf("Unknown RPC Server command: %s\n", arg1);

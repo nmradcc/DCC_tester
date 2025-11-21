@@ -32,8 +32,8 @@ endif()
 set(CMAKE_PROJECT_NAME DCC_tester)
 
 # Include toolchain file
-#include("gcc-arm-none-eabi.cmake")
-include("starm-clang.cmake")
+include("gcc-arm-none-eabi.cmake")
+#include("starm-clang.cmake")
 
 if(DEFINED STARM_TOOLCHAIN_CONFIG)
     message(STATUS "Using ST toolchain config: ${STARM_TOOLCHAIN_CONFIG}")
@@ -106,7 +106,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 #    newlib_lock_glue.c
 #    picolibc_threadx_lock.c
     Core/Src/cli_app.c
-#    Core/Src/rpc_server.cpp
+    Core/Src/rpc_server.cpp
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
     Core/Src/SUSI_Master.c
