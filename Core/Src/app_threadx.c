@@ -27,7 +27,7 @@
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
 #include "main.h"
-//#include "rpc_server.h"
+#include "rpc_server.h"
 #include "command_station.h"
 #include "decoder.h"
 #include "SUSI.h"
@@ -95,7 +95,7 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   /* Create the command line task */
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
   /* Create the RPC task ... but don't start it */
-//  RpcServer_Init();
+  RpcServer_Init();
   /* Create the command station task ... but don't start it */
   CommandStation_Init();
   /* Create the decoder task ... but don't start it */

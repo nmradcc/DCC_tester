@@ -27,19 +27,25 @@ const osThreadAttr_t rpcServerTask_attributes = {
 
 // ---------------- Transport using USBX CDC ACM ----------------
 
-// Blocking receive: waits until a packet arrives, returns as string
+// Blocking receive: waits until a full string arrives (terminated by CRLF), returns as string
+// Note: maybe multiple packets are needed to receive full message
 static bool transport_receive(std::string& out) {
-    UCHAR buf[128];
+    UCHAR buf[64] = {0} ;
     ULONG actual_length = 0;
+    out.clear();
 
-    // Blocking read from USB CDC ACM
-    UINT status = ux_device_class_cdc_acm_read(cdc_acm, buf, sizeof(buf)-1, &actual_length);
-    if (status != UX_SUCCESS || actual_length == 0) {
-        return false;
+    while (true) {
+        UINT status = ux_device_class_cdc_acm_read(cdc_acm, buf, sizeof(buf), &actual_length);
+        if (status != UX_SUCCESS || actual_length == 0) {
+            return false;
+        }
+        out.append(reinterpret_cast<char*>(buf), actual_length);
+
+        // Stop when CRLF seen
+        if (out.find("\r\n") != std::string::npos) {
+            break;
+        }
     }
-
-    buf[actual_length] = '\0';  // ensure null-terminated
-    out.assign(reinterpret_cast<char*>(buf));
     return true;
 }
 
