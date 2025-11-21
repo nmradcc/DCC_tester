@@ -32,8 +32,13 @@ endif()
 set(CMAKE_PROJECT_NAME DCC_tester)
 
 # Include toolchain file
-include("cmake/gcc-arm-none-eabi.cmake")
+#include("gcc-arm-none-eabi.cmake")
+include("starm-clang.cmake")
 
+if(DEFINED STARM_TOOLCHAIN_CONFIG)
+    message(STATUS "Using ST toolchain config: ${STARM_TOOLCHAIN_CONFIG}")
+endif()
+    
 # Enable compile command to ease indexing with e.g. clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
@@ -52,7 +57,7 @@ add_subdirectory(cmake/stm32cubemx)
 
 include(FetchContent)
 
-option(USE_ASIO_RPC "Use asio_net and rpc_core libraries" ON)
+option(USE_ASIO_RPC "Use asio_net and rpc_core libraries" OFF)
 
 if(USE_ASIO_RPC)
   message(STATUS "Using asio_net and rpc_core libraries")
@@ -98,7 +103,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     USBPD/Target/stm32h5xx_nucleo_usbpd_pwr.c
     Core/Src/cmsis_os2.c
-    newlib_lock_glue.c
+#    newlib_lock_glue.c
+#    picolibc_threadx_lock.c
     Core/Src/cli_app.c
 #    Core/Src/rpc_server.cpp
     Core/Src/command_station.cpp

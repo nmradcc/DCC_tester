@@ -26,7 +26,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <sys/time.h>
-#include "stm32_lock.h"
+//#include "stm32_lock.h"
+#include <sys/lock.h>
 #include "stm32h5xx_hal_spi.h"
 #include "version.h"
 #include "decoder.h"
@@ -78,8 +79,9 @@ UART_HandleTypeDef huart6;
 PCD_HandleTypeDef hpcd_USB_DRD_FS;
 
 /* USER CODE BEGIN PV */
-TX_MUTEX newlib_mutex;
-LockingData_t newlib_lock = LOCKING_DATA_INIT;
+_LOCK_T my_lock;
+//TX_MUTEX newlib_mutex;
+//LockingData_t newlib_lock = LOCKING_DATA_INIT;
 
 /* USER CODE END PV */
 
@@ -116,7 +118,7 @@ int iar_fputc(int ch);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-int _gettimeofday(struct timeval* ptimeval,
+int gettimeofday(struct timeval* ptimeval,
                   void* ptimezone __attribute__((unused))) {
   uint32_t const tick_ms = HAL_GetTick();
   ptimeval->tv_sec = tick_ms / 1000;
@@ -145,7 +147,8 @@ int main(void)
   /* USER CODE BEGIN Init */
 
   // Override alignment issue with DCC library on M33
-  SCB->CCR &= ~SCB_CCR_UNALIGN_TRP_Msk;
+  // note: not needed anymore
+//  SCB->CCR &= ~SCB_CCR_UNALIGN_TRP_Msk;
 
   /* USER CODE END Init */
 
@@ -156,7 +159,7 @@ int main(void)
   PeriphCommonClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+    __retarget_lock_init(&my_lock);
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -1200,9 +1203,11 @@ int _write(int file, char *ptr, int len) {
   return len;
 #endif
   // Use mutex to ensure thread safety
-    stm32_lock_acquire(&newlib_lock);
+//    stm32_lock_acquire(&newlib_lock);
+    __retarget_lock_acquire(my_lock);
     HAL_StatusTypeDef status = HAL_UART_Transmit(&huart3, (uint8_t*)ptr, (uint16_t)len, HAL_MAX_DELAY);
-    stm32_lock_release(&newlib_lock);
+//    stm32_lock_release(&newlib_lock);
+    __retarget_lock_release(my_lock);
     return (status == HAL_OK) ? len : 0;
 }
 
