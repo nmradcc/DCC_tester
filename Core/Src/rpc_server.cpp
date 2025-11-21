@@ -1,9 +1,3 @@
-#include "cmsis_os2.h"
-#include "stm32h5xx_nucleo.h"
-#include "stm32h5xx_hal.h"
-#include "main.h"
-#include "command_station.h"
-
 #include "rpc_server.hpp"
 #include <iostream>
 
