@@ -22,7 +22,7 @@ static bool rpcServerRunning = false;
 const osThreadAttr_t rpcServerTask_attributes = {
   .name = "rpcServerTask",
   .stack_size = 8192,
-  .priority = (osPriority_t) osPriorityHigh
+  .priority = osPriorityBelowNormal4    //(osPriority_t) osPriorityHigh
 };
 
 // ---------------- Transport using USBX CDC ACM ----------------
@@ -30,23 +30,29 @@ const osThreadAttr_t rpcServerTask_attributes = {
 // Blocking receive: waits until a full string arrives (terminated by CRLF), returns as string
 // Note: maybe multiple packets are needed to receive full message
 static bool transport_receive(std::string& out) {
-    UCHAR buf[64] = {0} ;
+    static std::string rx_buffer;   // persistent buffer across calls
+    UCHAR buf[64];
     ULONG actual_length = 0;
-    out.clear();
 
+    // Keep reading until we see CRLF
     while (true) {
         UINT status = ux_device_class_cdc_acm_read(cdc_acm, buf, sizeof(buf), &actual_length);
         if (status != UX_SUCCESS || actual_length == 0) {
             return false;
         }
-        out.append(reinterpret_cast<char*>(buf), actual_length);
 
-        // Stop when CRLF seen
-        if (out.find("\r\n") != std::string::npos) {
-            break;
+        rx_buffer.append(reinterpret_cast<char*>(buf), actual_length);
+
+        // Check for end-of-message marker
+        size_t pos = rx_buffer.find("\r\n");
+        if (pos != std::string::npos) {
+            // Extract one complete message
+            out = rx_buffer.substr(0, pos);
+            // Remove it from buffer (keep leftovers for next message)
+            rx_buffer.erase(0, pos + 2);
+            return true;
         }
     }
-    return true;
 }
 
 // Send data over USB CDC ACM

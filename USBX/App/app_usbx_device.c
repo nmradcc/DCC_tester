@@ -53,13 +53,16 @@ static TX_THREAD ux_device_app_thread;
 TX_QUEUE ux_app_MsgQueue;
 static TX_THREAD ux_cdc_read_thread;
 static TX_THREAD ux_cdc_write_thread;
+TX_EVENT_FLAGS_GROUP EventFlag;
+#if defined ( __ICCARM__ ) /* IAR Compiler */
+  #pragma data_alignment=4
+#endif /* defined ( __ICCARM__ ) */
 __ALIGN_BEGIN USB_MODE_STATE USB_Device_State_Msg __ALIGN_END;
 extern PCD_HandleTypeDef hpcd_USB_DRD_FS;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 static VOID app_ux_device_thread_entry(ULONG thread_input);
-static UINT USBD_ChangeFunction(ULONG Device_State);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -128,7 +131,7 @@ UINT MX_USBX_Device_Init(VOID *memory_ptr)
                                  string_framework_length,
                                  language_id_framework,
                                  language_id_framework_length,
-                                 USBD_ChangeFunction) != UX_SUCCESS)
+                                 UX_NULL) != UX_SUCCESS)
   {
     /* USER CODE BEGIN USBX_DEVICE_INITIALIZE_ERROR */
     return UX_ERROR;
@@ -215,6 +218,12 @@ UINT MX_USBX_Device_Init(VOID *memory_ptr)
     return TX_THREAD_ERROR;
   }
 
+  /* Create the event flags group */
+  if (tx_event_flags_create(&EventFlag, "Event Flag") != TX_SUCCESS)
+  {
+    return TX_GROUP_ERROR;
+  }
+
     /* Allocate Memory for the Queue */
   if (tx_byte_allocate(byte_pool, (VOID **) &pointer, APP_QUEUE_SIZE*sizeof(ULONG),
                        TX_NO_WAIT) != TX_SUCCESS)
@@ -279,94 +288,6 @@ static VOID app_ux_device_thread_entry(ULONG thread_input)
   /* USER CODE END app_ux_device_thread_entry */
 }
 
-/**
-  * @brief  USBD_ChangeFunction
-  *         This function is called when the device state changes.
-  * @param  Device_State: USB Device State
-  * @retval status
-  */
-static UINT USBD_ChangeFunction(ULONG Device_State)
-{
-   UINT status = UX_SUCCESS;
-
-  /* USER CODE BEGIN USBD_ChangeFunction0 */
-
-  /* USER CODE END USBD_ChangeFunction0 */
-
-  switch (Device_State)
-  {
-    case UX_DEVICE_ATTACHED:
-
-      /* USER CODE BEGIN UX_DEVICE_ATTACHED */
-
-      /* USER CODE END UX_DEVICE_ATTACHED */
-
-      break;
-
-    case UX_DEVICE_REMOVED:
-
-      /* USER CODE BEGIN UX_DEVICE_REMOVED */
-
-      /* USER CODE END UX_DEVICE_REMOVED */
-
-      break;
-
-    case UX_DCD_STM32_DEVICE_CONNECTED:
-
-      /* USER CODE BEGIN UX_DCD_STM32_DEVICE_CONNECTED */
-
-      /* USER CODE END UX_DCD_STM32_DEVICE_CONNECTED */
-
-      break;
-
-    case UX_DCD_STM32_DEVICE_DISCONNECTED:
-
-      /* USER CODE BEGIN UX_DCD_STM32_DEVICE_DISCONNECTED */
-
-      /* USER CODE END UX_DCD_STM32_DEVICE_DISCONNECTED */
-
-      break;
-
-    case UX_DCD_STM32_DEVICE_SUSPENDED:
-
-      /* USER CODE BEGIN UX_DCD_STM32_DEVICE_SUSPENDED */
-
-      /* USER CODE END UX_DCD_STM32_DEVICE_SUSPENDED */
-
-      break;
-
-    case UX_DCD_STM32_DEVICE_RESUMED:
-
-      /* USER CODE BEGIN UX_DCD_STM32_DEVICE_RESUMED */
-
-      /* USER CODE END UX_DCD_STM32_DEVICE_RESUMED */
-
-      break;
-
-    case UX_DCD_STM32_SOF_RECEIVED:
-
-      /* USER CODE BEGIN UX_DCD_STM32_SOF_RECEIVED */
-
-      /* USER CODE END UX_DCD_STM32_SOF_RECEIVED */
-
-      break;
-
-    default:
-
-      /* USER CODE BEGIN DEFAULT */
-
-      /* USER CODE END DEFAULT */
-
-      break;
-
-  }
-
-  /* USER CODE BEGIN USBD_ChangeFunction1 */
-
-  /* USER CODE END USBD_ChangeFunction1 */
-
-  return status;
-}
 /* USER CODE BEGIN 1 */
 
 /**
@@ -400,5 +321,21 @@ VOID USBX_APP_Device_Init(VOID)
   /* USER CODE END USB_Device_Init_PostTreatment */
 }
 
+/**
+  * @brief  USBX_APP_UART_Init
+  *         Initialization of UART.
+  * @param  huart: Pointer to UART handler
+  * @retval none
+  */
+VOID USBX_APP_UART_Init(UART_HandleTypeDef **huart)
+{
+  /* USER CODE BEGIN USBX_APP_UART_Init */
+
+//  MX_USART3_UART_Init();
+
+  *huart = &huart3;
+
+  /* USER CODE END USBX_APP_UART_Init */
+}
 
 /* USER CODE END 1 */

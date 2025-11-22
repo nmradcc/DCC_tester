@@ -23,7 +23,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "cmsis_os2.h"
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
 #include "main.h"
