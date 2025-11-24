@@ -1,9 +1,10 @@
 #pragma once
 
-#include <string>
+//#include <string>
 #include <functional>
 #include <cstring>
 
+#include "rpc_server.h"
 // RapidJSON headers
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>

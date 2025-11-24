@@ -59,6 +59,7 @@ extern UART_HandleTypeDef huart6;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi5;
 
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -129,6 +130,9 @@ void MX_ADC1_Init(void);
 
 /* Default BiDi threshold */
 #define DEFAULT_BIDIR_THRESHOLD 466
+
+#define RPC_RX_DATA_SIZE   2048
+
 
 /* USER CODE END Private defines */
 

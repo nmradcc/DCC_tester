@@ -1,4 +1,6 @@
 #include <stdbool.h>
+#include "main.h"
+#include "tx_api.h"
 
 #ifdef __cplusplus
 extern "C" {

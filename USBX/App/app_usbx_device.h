@@ -38,7 +38,7 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-extern UART_HandleTypeDef huart3;
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -61,7 +61,7 @@ UINT MX_USBX_Device_Init(VOID *memory_ptr);
 
 /* USER CODE BEGIN EFP */
 VOID USBX_APP_Device_Init(VOID);
-VOID USBX_APP_UART_Init(UART_HandleTypeDef **huart);
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

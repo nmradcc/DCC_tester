@@ -23,7 +23,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "main.h"
 
 /* USER CODE END Includes */
 
@@ -51,6 +50,8 @@ static TX_THREAD ux_device_app_thread;
 
 /* USER CODE BEGIN PV */
 TX_QUEUE ux_app_MsgQueue;
+TX_QUEUE rpc_rxqueue;
+
 static TX_THREAD ux_cdc_read_thread;
 static TX_THREAD ux_cdc_write_thread;
 TX_EVENT_FLAGS_GROUP EventFlag;
@@ -203,21 +204,6 @@ UINT MX_USBX_Device_Init(VOID *memory_ptr)
     return TX_THREAD_ERROR;
   }
 
-  /* Allocate the stack for usbx cdc acm write thread */
-  if (tx_byte_allocate(byte_pool, (VOID **) &pointer, 1024, TX_NO_WAIT) != TX_SUCCESS)
-  {
-    return TX_POOL_ERROR;
-  }
-
-  /* Create the usbx_cdc_acm_write_thread_entry thread */
-  if (tx_thread_create(&ux_cdc_write_thread, "cdc_acm_write_usbx_app_thread_entry",
-                       usbx_cdc_acm_write_thread_entry, 1, pointer,
-                       1024, 20, 20, TX_NO_TIME_SLICE,
-                       TX_AUTO_START) != TX_SUCCESS)
-  {
-    return TX_THREAD_ERROR;
-  }
-
   /* Create the event flags group */
   if (tx_event_flags_create(&EventFlag, "Event Flag") != TX_SUCCESS)
   {
@@ -237,6 +223,20 @@ UINT MX_USBX_Device_Init(VOID *memory_ptr)
   {
     return TX_QUEUE_ERROR;
   }
+
+    /* Allocate Memory for the Queue */
+  if (tx_byte_allocate(byte_pool, (VOID **) &pointer, APP_QUEUE_SIZE*sizeof(ULONG),
+                       TX_NO_WAIT) != TX_SUCCESS)
+  {
+    return TX_POOL_ERROR;
+  }
+
+  if (tx_queue_create(&rpc_rxqueue, "RPC RX Queue", TX_1_ULONG,
+                      pointer, APP_QUEUE_SIZE * sizeof(ULONG)) != TX_SUCCESS)
+  {
+    return TX_QUEUE_ERROR;
+  }
+
   /* USER CODE END MX_USBX_Device_Init1 */
 
   return ret;
@@ -319,23 +319,6 @@ VOID USBX_APP_Device_Init(VOID)
   /* USER CODE BEGIN USB_Device_Init_PostTreatment */
 
   /* USER CODE END USB_Device_Init_PostTreatment */
-}
-
-/**
-  * @brief  USBX_APP_UART_Init
-  *         Initialization of UART.
-  * @param  huart: Pointer to UART handler
-  * @retval none
-  */
-VOID USBX_APP_UART_Init(UART_HandleTypeDef **huart)
-{
-  /* USER CODE BEGIN USBX_APP_UART_Init */
-
-//  MX_USART3_UART_Init();
-
-  *huart = &huart3;
-
-  /* USER CODE END USBX_APP_UART_Init */
 }
 
 /* USER CODE END 1 */

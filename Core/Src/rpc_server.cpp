@@ -5,14 +5,13 @@
 #include "command_station.h"
 
 #include "rpc_server.hpp"
-extern "C" {
-#include "ux_api.h"
+
+#include "ux_device_cdc_acm.h"
 #include "ux_device_class_cdc_acm.h"
-}
 #include <cstring>
 
-// USBX CDC ACM handle (CubeMX usually generates this)
-extern UX_SLAVE_CLASS_CDC_ACM *cdc_acm;
+extern TX_QUEUE rpc_rxqueue;
+extern UX_SLAVE_CLASS_CDC_ACM  *cdc_acm;
 
 static osThreadId_t rpcServerThread_id;
 static osSemaphoreId_t rpcServerStart_sem;
@@ -25,51 +24,6 @@ const osThreadAttr_t rpcServerTask_attributes = {
   .priority = osPriorityBelowNormal4    //(osPriority_t) osPriorityHigh
 };
 
-// ---------------- Transport using USBX CDC ACM ----------------
-
-// Blocking receive: waits until a full string arrives (terminated by CRLF), returns as string
-// Note: maybe multiple packets are needed to receive full message
-static bool transport_receive(std::string& out) {
-    static std::string rx_buffer;   // persistent buffer across calls
-    UCHAR buf[64];
-    ULONG actual_length = 0;
-
-    // Keep reading until we see CRLF
-    while (true) {
-        UINT status = ux_device_class_cdc_acm_read(cdc_acm, buf, sizeof(buf), &actual_length);
-        if (status != UX_SUCCESS || actual_length == 0) {
-            return false;
-        }
-
-        rx_buffer.append(reinterpret_cast<char*>(buf), actual_length);
-
-        // Check for end-of-message marker
-        size_t pos = rx_buffer.find("\r\n");
-        if (pos != std::string::npos) {
-            // Extract one complete message
-            out = rx_buffer.substr(0, pos);
-            // Remove it from buffer (keep leftovers for next message)
-            rx_buffer.erase(0, pos + 2);
-            return true;
-        }
-    }
-}
-
-// Send data over USB CDC ACM
-static void transport_send(const std::string& msg) {
-    ULONG actual_length = 0;
-    ux_device_class_cdc_acm_write(cdc_acm,
-                                  (UCHAR*)msg.c_str(),
-                                  msg.size(),
-                                  &actual_length);
-
-    // Append CRLF for framing
-    const char newline[] = "\r\n";
-    ux_device_class_cdc_acm_write(cdc_acm,
-                                  (UCHAR*)newline,
-                                  2,
-                                  &actual_length);
-}
 
 // ---------------- RpcServer methods ----------------
 
@@ -183,6 +137,8 @@ RpcServer server;
 
 void RpcServerThread(void* argument) {
     (void)argument;
+    rpc_rxbuffer_t* msg;
+    ULONG actual_length;
 
     osSemaphoreAcquire(rpcServerStart_sem, osWaitForever);
     rpcServerRunning = true;
@@ -192,11 +148,16 @@ void RpcServerThread(void* argument) {
 
     while (rpcServerRunning) {
         std::string request;
-        if (transport_receive(request)) {
+        // Block until a message pointer is available from RX thread
+        if (tx_queue_receive(&rpc_rxqueue, &msg, MS_TO_TICK(10)) == TX_SUCCESS)
+        {
+            std::string request(msg->data, msg->length);
             std::string response = server.handle(request);
-            transport_send(response);
+            /* transport_send(response);*/
+            /* Send response data over the class cdc_acm_write */
+            ux_device_class_cdc_acm_write(cdc_acm, (UCHAR *)response.c_str(),
+                                                response.size(), &actual_length);
         }
-        osDelay(10);
     }
     osSemaphoreRelease(rpcServerStart_sem);
     osDelay(5u);

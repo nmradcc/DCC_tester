@@ -36,16 +36,21 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
 
+#define RX_POOL_SIZE    4
+#define RX_BUFFER_SIZE  2048
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
+typedef struct {
+    char data[RX_BUFFER_SIZE];
+    uint16_t length;
+} rpc_rxbuffer_t;
 
 /* USER CODE END EM */
 
@@ -56,7 +61,7 @@ VOID USBD_CDC_ACM_ParameterChange(VOID *cdc_acm_instance);
 
 /* USER CODE BEGIN EFP */
 VOID usbx_cdc_acm_read_thread_entry(ULONG thread_input);
-VOID usbx_cdc_acm_write_thread_entry(ULONG thread_input);
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
