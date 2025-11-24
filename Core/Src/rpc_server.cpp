@@ -53,82 +53,67 @@ RpcHandlerFn RpcServer::find(const char* name) const {
 }
 
 std::string RpcServer::error_response(const char* msg) {
-    rapidjson::Document resp;
-    resp.SetObject();
-    auto& alloc = resp.GetAllocator();
-
-    resp.AddMember("status", "error", alloc);
-    resp.AddMember("message", rapidjson::Value(msg ? msg : "error", alloc), alloc);
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    resp.Accept(writer);
-
-    return buffer.GetString();
+    json resp = {
+        {"status", "error"},
+        {"message", msg ? msg : "error"}
+    };
+    return resp.dump();
 }
 
 std::string RpcServer::handle(const std::string& request_str) {
-    rapidjson::Document request;
-    if (request.Parse(request_str.c_str()).HasParseError()) {
+    json request;
+    if (!json::accept(request_str)) {
         return error_response("Invalid JSON");
     }
+    request = json::parse(request_str);
 
-    if (!request.HasMember("method") || !request.HasMember("params")) {
+    if (!request.contains("method") || !request.contains("params")) {
         return error_response("Malformed request");
     }
 
-    if (!request["method"].IsString()) {
+    if (!request["method"].is_string()) {
         return error_response("Method must be string");
     }
 
-    const char* method_cstr = request["method"].GetString();
-    RpcHandlerFn handler = find(method_cstr);
+    std::string method_str = request["method"].get<std::string>();
+    RpcHandlerFn handler = find(method_str.c_str());
     if (!handler) {
         return error_response("Unknown method");
     }
 
-    rapidjson::Document response = handler(request["params"]);
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    response.Accept(writer);
-
-    return buffer.GetString();
+    json response = handler(request["params"]);
+    return response.dump();
 }
 
 // ---------------- Example handlers ----------------
 
-static rapidjson::Document add_handler(const rapidjson::Value& params) {
-    rapidjson::Document resp;
-    resp.SetObject();
-    auto& alloc = resp.GetAllocator();
-
-    if (!params.IsArray() || params.Size() < 2) {
-        resp.AddMember("status", "error", alloc);
-        resp.AddMember("message", "missing params", alloc);
-        return resp;
+static json add_handler(const json& params) {
+    if (!params.is_array() || params.size() < 2) {
+        return {
+            {"status", "error"},
+            {"message", "missing params"}
+        };
     }
-    if (!params[0].IsInt() || !params[1].IsInt()) {
-        resp.AddMember("status", "error", alloc);
-        resp.AddMember("message", "params must be integers", alloc);
-        return resp;
+    if (!params[0].is_number_integer() || !params[1].is_number_integer()) {
+        return {
+            {"status", "error"},
+            {"message", "params must be integers"}
+        };
     }
 
-    int a = params[0].GetInt();
-    int b = params[1].GetInt();
-    resp.AddMember("status", "ok", alloc);
-    resp.AddMember("result", a + b, alloc);
-    return resp;
+    int a = params[0].get<int>();
+    int b = params[1].get<int>();
+    return {
+        {"status", "ok"},
+        {"result", a + b}
+    };
 }
 
-static rapidjson::Document echo_handler(const rapidjson::Value& params) {
-    rapidjson::Document resp;
-    resp.SetObject();
-    auto& alloc = resp.GetAllocator();
-
-    resp.AddMember("status", "ok", alloc);
-    resp.AddMember("echo", rapidjson::Value(params, alloc), alloc);
-    return resp;
+static json echo_handler(const json& params) {
+    return {
+        {"status", "ok"},
+        {"echo", params}
+    };
 }
 
 // ---------------- RTOS Task ----------------

@@ -1,21 +1,20 @@
 #pragma once
 
-//#include <string>
+#include <string>
 #include <functional>
 #include <cstring>
 
 #include "rpc_server.h"
-// RapidJSON headers
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
+// nlohmann json headers
+#include <nlohmann/json.hpp>
 
 // Task entry point for hosting the RPC server
 extern "C" void vRPCTask(void* ctx);
 
-// Plain C-style handler signature to reduce overhead
-// Handlers take a JSON Value (the "params" node) and return a response Document
-typedef rapidjson::Document (*RpcHandlerFn)(const rapidjson::Value&);
+// Handler signature using nlohmann json
+// Handlers take a JSON object (the "params" node) and return a response JSON object
+using json = nlohmann::json;
+typedef json (*RpcHandlerFn)(const json&);
 
 // Fixed-size registry entry
 struct RpcEntry {
@@ -26,8 +25,6 @@ struct RpcEntry {
 // Simple RPC server class for embedded systems
 class RpcServer {
 public:
-    using json = rapidjson::Document;
-
     RpcServer() : count(0) {
         for (int i = 0; i < kMaxMethods; ++i) {
             table[i] = {nullptr, nullptr};
