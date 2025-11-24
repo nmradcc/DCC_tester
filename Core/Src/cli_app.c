@@ -277,10 +277,6 @@ void vCommandConsoleTask(void *pvParameters)
     
     print_help(); // Print help on startup
 
-    //TODO:  remove test..
-    RpcServer_Start(false);
-    printf("Start RPC remove me ...\n");
-
     for (;;)
     {
         // Wait for data from ISR

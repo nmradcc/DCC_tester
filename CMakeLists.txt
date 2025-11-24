@@ -57,27 +57,13 @@ add_subdirectory(cmake/stm32cubemx)
 
 include(FetchContent)
 
-option(USE_ASIO_RPC "Use asio_net and rpc_core libraries" OFF)
+FetchContent_Declare(
+rpc_core
+GIT_REPOSITORY https://github.com/shuai132/rpc_core.git
+GIT_TAG        master  # or specify a commit/tag
+)
 
-if(USE_ASIO_RPC)
-  message(STATUS "Using asio_net and rpc_core libraries")
-    FetchContent_Declare(
-    asio_net
-    GIT_REPOSITORY https://github.com/shuai132/asio_net.git
-    GIT_TAG        main  # or specify a commit/tag
-    )
-
-    FetchContent_MakeAvailable(asio_net)
-else()
-  message(STATUS "Using rpc_core libraries")
-    FetchContent_Declare(
-    rpc_core
-    GIT_REPOSITORY https://github.com/shuai132/rpc_core.git
-    GIT_TAG        master  # or specify a commit/tag
-    )
-
-    FetchContent_MakeAvailable(rpc_core)
-endif()
+FetchContent_MakeAvailable(rpc_core)
 
 
 FetchContent_Declare(
@@ -130,16 +116,6 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 
 
-if(USE_ASIO_RPC)
-# Add linked libraries
-target_link_libraries(${CMAKE_PROJECT_NAME}
-    stm32cubemx
-
-    # Add user defined libraries
-    asio_net
-    DCC::DCC
-)
-else()
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
@@ -148,4 +124,4 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     rpc_core
     DCC::DCC
 )
-endif()
+
