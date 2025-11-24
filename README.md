@@ -55,7 +55,7 @@ Generate the code by launching the STM32CubeMX utility, open the DCC_testor.ioc 
 
 After code generation you can launch VSC and build.
 
-NOTE: THe code is NOT buildable or runable after cloning! You must do an initial GENERATE CODE with the CubeMX utility!
+NOTE: The code is NOT buildable or runable after cloning! You must do an initial GENERATE CODE with the CubeMX utility!
 
 
 ### Build
