@@ -148,11 +148,11 @@
 
 /* Define control transfer timeout value in millisecond.
    The default is 10000 milliseconds.  */
-#define UX_CONTROL_TRANSFER_TIMEOUT                         valueNotSetted
+/* #define UX_CONTROL_TRANSFER_TIMEOUT                      10000 */
 
 /* Define non control transfer timeout value in millisecond.
    The default is 50000 milliseconds.  */
-#define UX_NON_CONTROL_TRANSFER_TIMEOUT                     valueNotSetted
+/* #define UX_NON_CONTROL_TRANSFER_TIMEOUT                  50000 */
 
 /* Defined, this value is the maximum number of classes that can be loaded by USBX. This value
    represents the class container and not the number of instances of a class. For instance, if a
@@ -185,7 +185,7 @@
 
 /* Defined, this value is the maximum number of interfaces in the device framework.  */
 
-/* #define UX_MAX_SLAVE_INTERFACES    16 */
+#define UX_MAX_SLAVE_INTERFACES       2
 
 /* Defined, this value represents the current number of SCSI logical units represented in the device
    storage class driver.  */
@@ -253,7 +253,7 @@
    is 2048 bytes but can be reduced in memory constrained environments. For cd-rom support in the storage
    class, this value cannot be less than 2048.  */
 
-/* #define UX_SLAVE_REQUEST_DATA_MAX_LENGTH                 2048 */
+#define UX_SLAVE_REQUEST_DATA_MAX_LENGTH                    512
 
 /* Defined, this enables processing of Get String Descriptor requests with zero Language ID.
    The first language ID in the language ID framework will be used if the request has a zero
@@ -426,7 +426,7 @@
 
 /* Defined, this macro disables CDC ACM non-blocking transmission support. */
 
-/* #define UX_DEVICE_CLASS_CDC_ACM_TRANSMISSION_DISABLE */
+#define UX_DEVICE_CLASS_CDC_ACM_TRANSMISSION_DISABLE
 
 /* Defined, this macro enables device audio feedback endpoint support.  */
 
@@ -437,7 +437,7 @@
 
 /* Defined, class _write is pending ZLP automatically (complete transfer) after buffer is sent.  */
 
-/* #define UX_DEVICE_CLASS_CDC_ACM_WRITE_AUTO_ZLP  */
+#define UX_DEVICE_CLASS_CDC_ACM_WRITE_AUTO_ZLP
 
 /* #define UX_DEVICE_CLASS_PRINTER_WRITE_AUTO_ZLP  */
 
@@ -447,7 +447,7 @@
 
 /* Defined, this macro enables device bi-directional endpoint support. */
 
-/* #define UX_DEVICE_BIDIRECTIONAL_ENDPOINT_SUPPORT */
+#define UX_DEVICE_BIDIRECTIONAL_ENDPOINT_SUPPORT
 
 /* Defined, this macro disables interface alternate setting support.
    Device stalls
@@ -511,7 +511,7 @@
 /* #define UX_HOST_SIDE_ONLY */
 
 /* Defined, this value will only enable the device side of usbx.  */
-/* #define UX_DEVICE_SIDE_ONLY */
+#define UX_DEVICE_SIDE_ONLY
 /* Defined, this value will include the OTG polling thread. OTG can only be active if both host/device are present.
 */
 #ifndef UX_HOST_SIDE_ONLY
@@ -598,11 +598,11 @@
 
 /* it define USBX device max number of endpoints (1~n). */
 
-/* #define UX_MAX_DEVICE_ENDPOINTS           6 */
+#define UX_MAX_DEVICE_ENDPOINTS              4
 
 /* it define USBX device max number of interfacess (1~n). */
 
-/* #define UX_MAX_DEVICE_INTERFACES          6 */
+#define UX_MAX_DEVICE_INTERFACES             2
 
 /* Define USBX max root hub port (1 ~ n).  */
 

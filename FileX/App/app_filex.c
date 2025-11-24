@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2023 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -92,7 +92,7 @@ UINT MX_FileX_Init(VOID *memory_ptr)
   VOID *pointer;
 
 /* USER CODE BEGIN MX_FileX_MEM_POOL */
- 
+
 /* USER CODE END MX_FileX_MEM_POOL */
 
 /* USER CODE BEGIN 0 */

@@ -31,6 +31,18 @@ extern "C" {
 
 #include "stm32h5xx_nucleo.h"
 
+#include "stm32h5xx_ll_ucpd.h"
+#include "stm32h5xx_ll_bus.h"
+#include "stm32h5xx_ll_cortex.h"
+#include "stm32h5xx_ll_rcc.h"
+#include "stm32h5xx_ll_system.h"
+#include "stm32h5xx_ll_utils.h"
+#include "stm32h5xx_ll_pwr.h"
+#include "stm32h5xx_ll_gpio.h"
+#include "stm32h5xx_ll_dma.h"
+
+#include "stm32h5xx_ll_exti.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -47,6 +59,7 @@ extern UART_HandleTypeDef huart6;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi5;
 
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -62,6 +75,8 @@ extern SPI_HandleTypeDef hspi5;
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 void MX_SDMMC1_SD_Init(void);
+void MX_USB_PCD_Init(void);
+void MX_ADC1_Init(void);
 
 /* USER CODE BEGIN EFP */
 
@@ -115,6 +130,9 @@ void MX_SDMMC1_SD_Init(void);
 
 /* Default BiDi threshold */
 #define DEFAULT_BIDIR_THRESHOLD 466
+
+#define RPC_RX_DATA_SIZE   2048
+
 
 /* USER CODE END Private defines */
 

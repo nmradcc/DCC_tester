@@ -32,8 +32,13 @@ endif()
 set(CMAKE_PROJECT_NAME DCC_tester)
 
 # Include toolchain file
-include("cmake/gcc-arm-none-eabi.cmake")
+include("gcc-arm-none-eabi.cmake")
+#include("starm-clang.cmake")
 
+if(DEFINED STARM_TOOLCHAIN_CONFIG)
+    message(STATUS "Using ST toolchain config: ${STARM_TOOLCHAIN_CONFIG}")
+endif()
+    
 # Enable compile command to ease indexing with e.g. clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
@@ -47,33 +52,18 @@ enable_language(C ASM)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME})
 
-
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
 include(FetchContent)
 
-option(USE_ASIO_RPC "Use asio_net and rpc_core libraries" ON)
+FetchContent_Declare(
+rpc_core
+GIT_REPOSITORY https://github.com/shuai132/rpc_core.git
+GIT_TAG        master  # or specify a commit/tag
+)
 
-if(USE_ASIO_RPC)
-  message(STATUS "Using asio_net and rpc_core libraries")
-    FetchContent_Declare(
-    asio_net
-    GIT_REPOSITORY https://github.com/shuai132/asio_net.git
-    GIT_TAG        main  # or specify a commit/tag
-    )
-
-    FetchContent_MakeAvailable(asio_net)
-else()
-  message(STATUS "Using rpc_core libraries")
-    FetchContent_Declare(
-    rpc_core
-    GIT_REPOSITORY https://github.com/shuai132/rpc_core.git
-    GIT_TAG        master  # or specify a commit/tag
-    )
-
-    FetchContent_MakeAvailable(rpc_core)
-endif()
+FetchContent_MakeAvailable(rpc_core)
 
 
 FetchContent_Declare(
@@ -97,8 +87,12 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
+    USBPD/Target/stm32h5xx_nucleo_usbpd_pwr.c
     Core/Src/cmsis_os2.c
+#    newlib_lock_glue.c
+#    picolibc_threadx_lock.c
     Core/Src/cli_app.c
+    Core/Src/rpc_server.cpp
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
     Core/Src/SUSI_Master.c
@@ -110,7 +104,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_CURRENT_SOURCE_DIR}/
     ${CMAKE_CURRENT_BINARY_DIR}/generated
-    ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/bsp/stm32hXX_Nucleo
 )
 
 # Add project symbols (macros)
@@ -119,17 +112,10 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     RPC_CORE_LOG_DISABLE_ALL=1
 )
 
+# Remove wrong libob.a library dependency when using cpp files
+list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 
-if(USE_ASIO_RPC)
-# Add linked libraries
-target_link_libraries(${CMAKE_PROJECT_NAME}
-    stm32cubemx
 
-    # Add user defined libraries
-    asio_net
-    DCC::DCC
-)
-else()
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
@@ -138,4 +124,4 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     rpc_core
     DCC::DCC
 )
-endif()
+

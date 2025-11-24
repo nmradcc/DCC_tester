@@ -29,19 +29,18 @@ extern "C" {
 #error stm32_lock_user.h not compatible with current version of stm32_lock.h
 #endif
 
-#include "tx_api.h"
-
-/* Global mutex for protecting Newlib operations */
-extern TX_MUTEX newlib_mutex;
+/* Remove the following line when you have implemented your own thread-safe
+ * solution. */
+#error Please implement your own thread-safe solution
 
 /* Private defines -----------------------------------------------------------*/
 /** Initialize members in instance of <code>LockingData_t</code> structure */
-#define LOCKING_DATA_INIT { .mutex = &newlib_mutex }
+#define LOCKING_DATA_INIT { /* Add fields initialization here */ }
 
 /* Private typedef -----------------------------------------------------------*/
 typedef struct
 {
-  TX_MUTEX *mutex;
+  /* Add fields here */
 } LockingData_t;
 
 /* Private functions ---------------------------------------------------------*/
@@ -52,13 +51,7 @@ typedef struct
   */
 static inline void stm32_lock_init(LockingData_t *lock)
 {
-  static bool initialized = false;
-  if (!initialized)
-  {
-    tx_mutex_create(&newlib_mutex, "Newlib Mutex", TX_NO_INHERIT);
-    initialized = true;
-  }
-  lock->mutex = &newlib_mutex;
+  /* Replace with your implementation */
 }
 
 /**
@@ -67,7 +60,7 @@ static inline void stm32_lock_init(LockingData_t *lock)
   */
 static inline void stm32_lock_acquire(LockingData_t *lock)
 {
-  tx_mutex_get(lock->mutex, TX_WAIT_FOREVER);
+  /* Replace with your implementation */
 }
 
 /**
@@ -76,7 +69,7 @@ static inline void stm32_lock_acquire(LockingData_t *lock)
   */
 static inline void stm32_lock_release(LockingData_t *lock)
 {
-  tx_mutex_put(lock->mutex);
+  /* Replace with your implementation */
 }
 
 #ifdef __cplusplus

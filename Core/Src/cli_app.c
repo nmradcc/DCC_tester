@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 
 #include "cmsis_os2.h"
 #include "stm32h5xx_nucleo.h"
@@ -11,6 +12,7 @@
 #include "cli_app.h"
 #include "version.h"
 #include "main.h"
+#include "rpc_server.h"
 #include "command_station.h"
 #include "decoder.h"
 #include "susi.h"
@@ -52,14 +54,14 @@ void help_command(const char *arg1, const char *arg2) {
     printf("Firmware version: %s\n", FW_VERSION_STRING);
     print_help();
 }
-
 void susi_slave_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
-    if (stricmp(arg1,"start") == 0) {
+    if (strcasecmp(arg1,"start") == 0) {
         printf("Start SUSI Slave ...\n");
         SUSI_Slave_Start();
     }
-    else if (stricmp(arg1,"stop") == 0) {
+    else if (strcasecmp(arg1,"stop") == 0) {
+        printf("Stop SUSI Slave ...\n");
         printf("Stop SUSI Slave ...\n");
         SUSI_Slave_Stop();
     }
@@ -67,14 +69,14 @@ void susi_slave_command(const char *arg1, const char *arg2) {
         printf("Unknown SUSI command: %s\n", arg1);
     }
 }
-
 void susi_master_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
-    if (stricmp(arg1,"start") == 0) {
+    if (strcasecmp(arg1,"start") == 0) {
         printf("Start SUSI Master ...\n");
         SUSI_Master_Start();
     }
-    else if (stricmp(arg1,"stop") == 0) {
+    else if (strcasecmp(arg1,"stop") == 0) {
+        printf("Stop SUSI Master ...\n");
         printf("Stop SUSI Master ...\n");
         SUSI_Master_Stop();
     }
@@ -82,18 +84,20 @@ void susi_master_command(const char *arg1, const char *arg2) {
         printf("Unknown SUSI command: %s\n", arg1);
     }
 }
-
 void command_station_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
-    if (stricmp(arg1,"start") == 0) {
-        if (stricmp(arg2, "bidi") == 0) {
-            CommandStation_Start(true);
+    if (strcasecmp(arg1,"start") == 0) {
+        if (strcasecmp(arg2, "bidi") == 0) {
+            CommandStation_Start(true, false);
+        } else if (strcasecmp(arg2, "loop") == 0) {
+            CommandStation_Start(true, true);
         } else {
-            CommandStation_Start(false);
+            CommandStation_Start(false, false);
         }
         printf("Start Command Station ...\n");
     }
-    else if (stricmp(arg1,"stop") == 0) {
+    else if (strcasecmp(arg1,"stop") == 0) {
+        printf("Stop Command Station ...\n");
         printf("Stop Command Station ...\n");
         CommandStation_Stop();
     }
@@ -101,19 +105,34 @@ void command_station_command(const char *arg1, const char *arg2) {
         printf("Unknown command station command: %s\n", arg1);
     }
 }
-
 void decoder_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
-    if (stricmp(arg1,"start") == 0) {
+    if (strcasecmp(arg1,"start") == 0) {
         printf("Start Decoder ...\n");
         Decoder_Start();
     }
-    else if (stricmp(arg1,"stop") == 0) {
+    else if (strcasecmp(arg1,"stop") == 0) {
+        printf("Stop Decoder ...\n");
         printf("Stop Decoder ...\n");
         Decoder_Stop();
     }
     else {
         printf("Unknown decoder command: %s\n", arg1);
+    }
+}
+void rpc_server_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    if (strcasecmp(arg1,"start") == 0) {
+        printf("Start RPC Server ...\n");
+        RpcServer_Start(false);
+    }
+    else if (strcasecmp(arg1,"stop") == 0) {
+        printf("Stop RPC Server ...\n");
+        printf("Stop RPC Server ...\n");
+        RpcServer_Stop();
+    }
+    else {
+        printf("Unknown RPC Server command: %s\n", arg1);
     }
 }
 
@@ -173,11 +192,17 @@ Command cmd_bidi = {
     .next = &cmd_help
 
 };
+Command cmd_rpcs = {
+    .name = "rpc_server", 
+    .execute = rpc_server_command,
+    .help = "RPC Server: rpc_server <start|stop>",
+    .next = &cmd_bidi
+};
 Command cmd_cms = {
     .name = "cms", 
     .execute = command_station_command,
-    .help = "Command Station: cms <start|stop> [bidi]",
-    .next = &cmd_bidi
+    .help = "Command Station: cms <start|stop> [bidi|loop]",
+    .next = &cmd_rpcs
 };
 Command cmd_dec = {
     .name = "dec", 

@@ -46,7 +46,6 @@
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
-
 extern ETH_HandleTypeDef heth;
 
 #define eth_handle  heth

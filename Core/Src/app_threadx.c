@@ -23,10 +23,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "cmsis_os2.h"
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
 #include "main.h"
+#include "rpc_server.h"
 #include "command_station.h"
 #include "decoder.h"
 #include "SUSI.h"
@@ -48,7 +48,6 @@ const osThreadAttr_t cmdLineTask_attributes = {
   .stack_size = 512 * 4
 };
 
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -65,7 +64,6 @@ const osThreadAttr_t cmdLineTask_attributes = {
 /* USER CODE BEGIN PV */
 osThreadId_t ledThreadHandle;
 osThreadId_t cmdLineTaskHandle;
-osThreadId_t cmdStationTaskHandle;
 
 /* USER CODE END PV */
 
@@ -91,10 +89,12 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
 
   /* USER CODE BEGIN App_ThreadX_Init */
 
-  /* Create the led line task */  
+  /* Create the led task */  
   ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes
   /* Create the command line task */
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
+  /* Create the RPC task ... but don't start it */
+  RpcServer_Init();
   /* Create the command station task ... but don't start it */
   CommandStation_Init();
   /* Create the decoder task ... but don't start it */
