@@ -6,7 +6,7 @@
 
 #ifndef USE_TIMINGS
 struct CommandStation : dcc::tx::CrtpBase<CommandStation, dcc::Packet> {
-  friend dcc::tx::CrtpBase<CommandStation>;
+  friend dcc::tx::CrtpBase<CommandStation, dcc::Packet>;
 #else
 struct CommandStation : dcc::tx::CrtpBase<CommandStation, dcc::tx::Timings> {
   friend dcc::tx::CrtpBase<CommandStation, dcc::tx::Timings>;
@@ -27,4 +27,5 @@ public:
 
   // BiDi end
   void biDiEnd();
+  
 };

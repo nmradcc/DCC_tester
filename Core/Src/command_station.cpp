@@ -6,7 +6,6 @@
 #include "stm32h5xx_hal_uart.h"
 #include "rpc_core.hpp"
 
-#define RX_BIDIR_MAX_SIZE 16 // Maximum size of the BiDi receive buffer
 
 static osThreadId_t commandStationThread_id;
 static osSemaphoreId_t commandStationStart_sem;
@@ -15,6 +14,13 @@ static bool commandStationBidi = false;
 static bool commandStationLoop = false;
 
 static uint16_t dac_value =  DEFAULT_BIDIR_THRESHOLD; // DEFAULT BIDIR threshold value for 12-bit DAC
+
+volatile size_t write_index = 0;
+
+CommandStation command_station;
+dcc::bidi::Datagram<> rx_datagram;
+dcc::bidi::Datagram<> received_datagram;
+size_t received_datagram_size = 0;
 
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
@@ -33,8 +39,16 @@ void CommandStation::trackOutputs(bool N, bool P)
 }
 
 void CommandStation::biDiStart() {
+ 
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
+
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
+
+  std::fill(rx_datagram.begin(), rx_datagram.end(), 0);
+  write_index = 0; // Reset write index
+
+  huart6.Instance->CR1 |= USART_CR1_RXNEIE;
 }
 
 void CommandStation::biDiChannel1() {}
@@ -42,13 +56,29 @@ void CommandStation::biDiChannel1() {}
 void CommandStation::biDiChannel2() {}
 
 void CommandStation::biDiEnd() {
+  HAL_UART_AbortReceive_IT(&huart6); // Stop receiving BiDi data
+  huart6.Instance->CR1 &= ~USART_CR1_RXNEIE;
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
+  if (write_index > 1) {
+    received_datagram = rx_datagram;
+    received_datagram_size = write_index;
+  }
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
-CommandStation command_station;
-
-
+/**
+  * @brief This function handles USART6 global interrupt.
+  */
+extern "C" void USART6_IRQHandler(void)
+{
+  if (__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE)) {
+        // Read all bytes in FIFO
+        while (__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE)) {
+            rx_datagram[write_index++] = (uint8_t)(huart6.Instance->RDR);  // Read one byte
+        }
+    }
+}
 
 /**
   * @brief This function handles TIM2 global interrupt.
@@ -131,8 +161,36 @@ void CommandStationThread(void *argument) {
         packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
         command_station.packet(packet);
         printf("Command station: set function F0\n");
-        osDelay(2000u);
+//      packet = dcc::make_cv_access_short_write_packet(3u, 0b0010u, 8u, 145u);
+//      command_station.packet(packet);
+//      printf("Command station: set CV 3, 0b0010u, 8u, 145u\n");
 
+      if (received_datagram_size >= 2) {
+        printf("CMS:BiDi RX datagram of size %d: 0x%02X 0x%02X\n", received_datagram_size, received_datagram[0], received_datagram[1]);
+        received_datagram_size = 0;
+        dcc::bidi::Dissector dissector{received_datagram, packet};
+
+        // Iterate
+        for (auto const& dg : dissector)
+          if (auto adr_low{get_if<dcc::bidi::app::AdrLow>(&dg)}) {
+            // Use app:adr_low data here
+            printf("Command station: received app:adr_low data: 0x%02X\n", *adr_low);
+          } else if (auto dyn{get_if<dcc::bidi::app::Dyn>(&dg)}) {
+            // Use app:dyn data here
+            printf("Command station: received app:dyn data: 0x%02X\n", *dyn);
+          }
+
+        std::fill(received_datagram.begin(), received_datagram.end(), 0);
+      }
+      osDelay(300u);
+
+#if 0
+      BSP_LED_Toggle(LED_GREEN);
+      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
+      command_station.packet(packet);
+      printf("Command station: clear function F0\n");
+      osDelay(500);
+//#endif
         // Accelerate
         BSP_LED_Toggle(LED_GREEN);
         packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
@@ -167,14 +225,7 @@ void CommandStationThread(void *argument) {
         command_station.packet(packet);
         printf("Command station: stop (reverse)\n");
         osDelay(2000u);
-
-      }
-    }
-    else {
-      // Wait until stopped
-      while (commandStationRunning) {
-        //TODO: test for (RPC) commands via queue to send packets
-        osDelay(100u);
+#endif
       }
     }
     HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_1);
