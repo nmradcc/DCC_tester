@@ -280,8 +280,8 @@ void vCommandConsoleTask(void *pvParameters)
     //TODO:  remove test..
     CommandStation_Start(true, true);
     printf("Start Command Station remove me!...\n");
-    Decoder_Start();
-    printf("Start Decoder remove me! ...\n");
+//    Decoder_Start();
+//    printf("Start Decoder remove me! ...\n");
 
     for (;;)
     {

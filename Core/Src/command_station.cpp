@@ -187,12 +187,13 @@ void CommandStationThread(void *argument) {
 
       osDelay(300u);
 
-#if 0
+
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
       command_station.packet(packet);
       printf("Command station: clear function F0\n");
-      osDelay(500);
+      osDelay(300);
+#if 0
 //#endif
         // Accelerate
         BSP_LED_Toggle(LED_GREEN);
