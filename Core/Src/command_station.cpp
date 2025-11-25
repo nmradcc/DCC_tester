@@ -40,7 +40,7 @@ void CommandStation::trackOutputs(bool N, bool P)
 
 void CommandStation::biDiStart() {
  
-//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
+  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
 
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
@@ -64,7 +64,7 @@ void CommandStation::biDiEnd() {
     received_datagram = rx_datagram;
     received_datagram_size = write_index;
   }
-//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
+  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
 /**
@@ -168,6 +168,7 @@ void CommandStationThread(void *argument) {
       if (received_datagram_size >= 2) {
         printf("CMS:BiDi RX datagram of size %d: 0x%02X 0x%02X\n", received_datagram_size, received_datagram[0], received_datagram[1]);
         received_datagram_size = 0;
+
         dcc::bidi::Dissector dissector{received_datagram, packet};
 
         // Iterate
@@ -181,7 +182,9 @@ void CommandStationThread(void *argument) {
           }
 
         std::fill(received_datagram.begin(), received_datagram.end(), 0);
+
       }
+
       osDelay(300u);
 
 #if 0

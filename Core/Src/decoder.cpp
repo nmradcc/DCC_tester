@@ -161,11 +161,11 @@ void DecoderThread(void *argument) {
       if (decoder.execute()) {
         // Processed a packet
       }
-      osDelay(3u);
       if (txedBIDI.size() > 0) {
         printf("DEC:BiDi TX datagram of size %d:  0x%02X 0x%02X\n", (int)txedBIDI.size(), txedBIDI[0], txedBIDI[1]);
         txedBIDI = std::span<uint8_t const>{};
       }
+      osDelay(3u);
 //      dcc::Address addr = dcc::Address::make_loco(3);
 //      dcc::bidi::Dissector dissector(dg, 3);
 //dcc::bidi::Datagram<> datagram{0x99u, 0xA5u, 0x59u, 0x2Eu, 0xD2u, 0x00u, 0x00u, 0x00u};

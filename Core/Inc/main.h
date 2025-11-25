@@ -109,8 +109,8 @@ void MX_ADC1_Init(void);
 #define IN1_GPIO_Port GPIOE
 #define IN3_Pin GPIO_PIN_15
 #define IN3_GPIO_Port GPIOE
-#define UART4_TX_BIDI_Pin GPIO_PIN_12
-#define UART4_TX_BIDI_GPIO_Port GPIOD
+#define UART4_TX_BIDIR_Pin GPIO_PIN_12
+#define UART4_TX_BIDIR_GPIO_Port GPIOD
 #define REF_OSC_Pin GPIO_PIN_13
 #define REF_OSC_GPIO_Port GPIOD
 #define SD_DETECT_Pin GPIO_PIN_2
