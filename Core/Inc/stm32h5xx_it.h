@@ -58,11 +58,11 @@ void GPDMA1_Channel5_IRQHandler(void);
 void TIM6_IRQHandler(void);
 void SPI2_IRQHandler(void);
 void USART3_IRQHandler(void);
+void UART4_IRQHandler(void);
 void USB_DRD_FS_IRQHandler(void);
 void UCPD1_IRQHandler(void);
 void SDMMC1_IRQHandler(void);
 void SPI5_IRQHandler(void);
-void USART6_IRQHandler(void);
 void ETH_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
