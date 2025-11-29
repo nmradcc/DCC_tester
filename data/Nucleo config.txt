@@ -1,0 +1,22 @@
+The Nucleo STM32H562 board needs to be initially configured to work with the DCC Tester project.
+From the factory the Nucleo board is configured to be powered from the STLink debug USB connection. It is not initially setup to operate stand alone.
+These two modifications need to be made before operating with the Sender test board.
+
+1. The jumper on J2 needs to be moved from STLK to E5V.
+This allows operating from the Sender test board's 5 volt power supply and not via the STLink USB connection.
+
+2. Two small solder bridge jumpers need to be added and one removed. See mb1404-h563zi-c01-schematic for locations.
+SB3 and SB4 needs to be added as this connects the optional 25MHZ crystal (which is populated but not connected) to the processors main clock input. SB49 needs to be removed which is the original 8MHZ clock from the STLink controller. These mods allow for standalone operation at full 250 MHZ speed without requiring the debug STLink USB connection.
+SB3 and SB4 connections are located near the main processor on the top of the board. 
+SB49 is located on the bottom side of the board.
+
+
+Note: The USB debug capability is still possible even after making these modifications.
+
+
+
+
+
+
+David Vescovi
+R1 11/29/2025
