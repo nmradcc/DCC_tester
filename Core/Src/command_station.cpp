@@ -40,7 +40,7 @@ void CommandStation::trackOutputs(bool N, bool P)
 
 void CommandStation::biDiStart() {
  
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
 
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BiDi high
@@ -56,7 +56,7 @@ void CommandStation::biDiChannel1() {}
 void CommandStation::biDiChannel2() {}
 
 void CommandStation::biDiEnd() {
-  HAL_UART_AbortReceive_IT(&huart6); // Stop receiving BiDi data
+//  HAL_UART_AbortReceive_IT(&huart6); // Stop receiving BiDi data
   huart6.Instance->CR1 &= ~USART_CR1_RXNEIE;
   HAL_GPIO_WritePin(BIDIR_EN_GPIO_Port, BIDIR_EN_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET)); // Set BiDi low
   HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
@@ -64,7 +64,7 @@ void CommandStation::biDiEnd() {
     received_datagram = rx_datagram;
     received_datagram_size = write_index;
   }
-  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
+//  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
 /**
@@ -159,8 +159,10 @@ void CommandStationThread(void *argument) {
         // Set function F0
         BSP_LED_Toggle(LED_GREEN);
         packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
+  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
         command_station.packet(packet);
-        printf("Command station: set function F0\n");
+  HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
+///        printf("Command station: set function F0\n");
 //      packet = dcc::make_cv_access_short_write_packet(3u, 0b0010u, 8u, 145u);
 //      command_station.packet(packet);
 //      printf("Command station: set CV 3, 0b0010u, 8u, 145u\n");
@@ -185,15 +187,16 @@ void CommandStationThread(void *argument) {
 
       }
 
-      osDelay(300u);
+      osDelay(5u);
+//      osDelay(300u);
 
-
+#if 0
       BSP_LED_Toggle(LED_GREEN);
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
       command_station.packet(packet);
       printf("Command station: clear function F0\n");
       osDelay(300);
-#if 0
+
 //#endif
         // Accelerate
         BSP_LED_Toggle(LED_GREEN);
@@ -230,6 +233,13 @@ void CommandStationThread(void *argument) {
         printf("Command station: stop (reverse)\n");
         osDelay(2000u);
 #endif
+      }
+    }
+    else {
+      // Wait until stopped
+      while (commandStationRunning) {
+        //TODO: test for (RPC) commands via queue to send packets
+        osDelay(100u);
       }
     }
     HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_1);

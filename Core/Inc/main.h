@@ -97,6 +97,8 @@ void MX_ADC1_Init(void);
 #define SUSI_M_CLK_GPIO_Port GPIOF
 #define SUSI_M_DAT_Pin GPIO_PIN_9
 #define SUSI_M_DAT_GPIO_Port GPIOF
+#define SUSI_S_DAT_Pin GPIO_PIN_2
+#define SUSI_S_DAT_GPIO_Port GPIOC
 #define TRACK_P_Pin GPIO_PIN_0
 #define TRACK_P_GPIO_Port GPIOA
 #define BIDIR_EN_Pin GPIO_PIN_3
@@ -109,6 +111,8 @@ void MX_ADC1_Init(void);
 #define IN1_GPIO_Port GPIOE
 #define IN3_Pin GPIO_PIN_15
 #define IN3_GPIO_Port GPIOE
+#define SUSI_S_CLK_Pin GPIO_PIN_10
+#define SUSI_S_CLK_GPIO_Port GPIOB
 #define UART4_TX_BIDIR_Pin GPIO_PIN_12
 #define UART4_TX_BIDIR_GPIO_Port GPIOD
 #define REF_OSC_Pin GPIO_PIN_13

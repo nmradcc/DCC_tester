@@ -44,10 +44,8 @@ void Decoder::serviceModeHook(bool service_mode) {}
 void Decoder::serviceAck() {}
 
 void Decoder::transmitBiDi(std::span<uint8_t const> bytes) {
-//        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
   HAL_UART_Transmit_IT(&huart4, bytes.data(), static_cast<uint16_t>(bytes.size()));
   txedBIDI = bytes;
-//        HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET); // Set DCC trigger low
 }
 
 uint8_t Decoder::readCv(uint32_t cv_addr, uint8_t) {
@@ -122,6 +120,7 @@ extern "C" void TIM15_IRQHandler(void)
           uint32_t ccr = HAL_TIM_ReadCapturedValue(&htim15, TIM_CHANNEL_1);
           decoder.receive(ccr);
           if (decoder.packetEnd()) {
+//            HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set DCC trigger high
             HAL_TIM_Base_Start_IT(&htim14);  // delay for BiDi response
           }
         }

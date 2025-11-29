@@ -27,5 +27,4 @@ public:
 
   // BiDi end
   void biDiEnd();
-  
 };
