@@ -23,6 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
 #include "main.h"
@@ -30,6 +31,7 @@
 #include "command_station.h"
 #include "decoder.h"
 #include "SUSI.h"
+#include "parameter_manager.h"
 
 /* USER CODE END Includes */
 
@@ -86,8 +88,20 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   /* USER CODE BEGIN App_ThreadX_MEM_POOL */
   (void)memory_ptr;
   /* USER CODE END App_ThreadX_MEM_POOL */
-
+  
   /* USER CODE BEGIN App_ThreadX_Init */
+  parameter_manager_init(0);
+    // Use parameters
+    uint16_t voltage = 15000;
+    printf("Setting voltage to %u mV\n", voltage);
+    
+    // Save
+    parameter_manager_save();
+    
+    // Later, restore
+    parameter_manager_restore();
+    
+    printf("Voltage: %u mV\n", voltage);
 
   /* Create the led task */  
   ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes
