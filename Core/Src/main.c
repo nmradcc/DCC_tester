@@ -19,7 +19,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "app_threadx.h"
 #include "main.h"
-#include "stm32h5xx_nucleo.h"
 #include "usbpd.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -223,10 +222,10 @@ int main(void)
   {
 
     /* USER CODE END WHILE */
-    BSP_LED_Toggle(LED_RED);
-    HAL_Delay(500);
 
     /* USER CODE BEGIN 3 */
+    BSP_LED_Toggle(LED_RED);
+    HAL_Delay(500);
   }
   /* USER CODE END 3 */
 }
