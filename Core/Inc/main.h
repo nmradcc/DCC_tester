@@ -83,6 +83,9 @@ uint32_t GetBank_EDATA(uint32_t Address);
 
 /* USER CODE BEGIN EFP */
 
+uint32_t GetSector_EDATA(uint32_t Address);
+uint32_t GetBank_EDATA(uint32_t Address);
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
