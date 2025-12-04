@@ -12,6 +12,7 @@
 #include "cli_app.h"
 #include "version.h"
 #include "main.h"
+#include "parameter_manager.h"
 #include "rpc_server.h"
 #include "command_station.h"
 #include "decoder.h"
@@ -160,8 +161,20 @@ void status_command(const char *arg1, const char *arg2) {
     printf("System Status: %s %s\n", arg1[0] ? arg1 : "OK", arg2[0] ? arg2 : "");
 }
 
-void set_command(const char *arg1, const char *arg2) {
-    printf("Setting %s to %s\n", arg1[0] ? arg1 : "default", arg2[0] ? arg2 : "value");
+void reboot_command(const char *arg1, const char *arg2) {
+    (void)arg1; // Unused
+    (void)arg2; // Unused
+    printf("rebooting ...\n");
+    osDelay(500);
+    // Software reset
+    HAL_NVIC_SystemReset();    
+}
+
+void reset_command(const char *arg1, const char *arg2) {
+    (void)arg1; // Unused
+    (void)arg2; // Unused
+    parameter_manager_factory_reset();
+    printf("System reset complete.\n");
 }
 
 void date_time_command(const char *arg1, const char *arg2) {
@@ -240,14 +253,20 @@ Command cmd_date_time = {
     .help = "Get current date and time",
     .next = &cmd_status
 };
-Command cmd_set = {
-    .name = "set",
-    .execute = set_command,
-    .help = NULL,
+Command cmd_reboot = {
+    .name = "reboot",
+    .execute = reboot_command,
+    .help = "Reboot system",
     .next = &cmd_date_time
 };
+Command cmd_reset = {
+    .name = "reset",
+    .execute = reset_command,
+    .help = "Factory reset",
+    .next = &cmd_reboot
+};
 
-Command *command_list = &cmd_set;
+Command *command_list = &cmd_reset;
 
 static void print_help(void) {
     Command *current = command_list;

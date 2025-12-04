@@ -339,8 +339,39 @@ int parameter_manager_restore(void) {
  * @brief Factory reset - restore defaults
  */
 void parameter_manager_factory_reset(void) {
+
+    /* Variable used for OB Program procedure */
+    FLASH_OBProgramInitTypeDef FLASH_OBInitStruct;
+
     printf("\n=== Performing Factory Reset ===\n");
     
+    /* Unlock the Flash to enable the flash control register access *************/
+    HAL_FLASH_Unlock();
+
+    /* Unlock the Flash option bytes to enable the flash option control register access */
+    HAL_FLASH_OB_Unlock();
+
+    /* Erase the EDATA Flash area
+    (area defined by EDATA_USER_START_ADDR and EDATA_USER_END_ADDR) ***********/
+
+    /* Configure 8 sectors for FLASH high-cycle data */
+    FLASH_OBInitStruct.OptionType = OPTIONBYTE_EDATA;
+    FLASH_OBInitStruct.Banks = GetBank_EDATA(EDATA_USER_START_ADDR);
+    FLASH_OBInitStruct.EDATASize = GetSector_EDATA(EDATA_USER_END_ADDR) - GetSector_EDATA(EDATA_USER_START_ADDR) + 1;
+    if(HAL_FLASHEx_OBProgram(&FLASH_OBInitStruct) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    /* Start option byte load operation after successful programming operation */
+    HAL_FLASH_OB_Launch();
+
+    /* Lock the Flash control option to restrict register access */
+    HAL_FLASH_OB_Lock();
+
+    HAL_FLASH_Lock();
+
+
     // Reinitialize with forced defaults
     int result = parameter_manager_init(1);
     
@@ -352,6 +383,7 @@ void parameter_manager_factory_reset(void) {
         printf("Factory defaults saved to flash\n");
     } else {
         printf("Factory reset failed\n");
+        printf(" please perform reboot and try again!\n");
     }
     
     printf("=================================\n\n");

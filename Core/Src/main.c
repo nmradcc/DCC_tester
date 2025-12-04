@@ -86,17 +86,6 @@ _LOCK_T my_lock;
 //TX_MUTEX newlib_mutex;
 //LockingData_t newlib_lock = LOCKING_DATA_INIT;
 
-uint32_t FirstSector = 0, NbOfSectors = 0, EndSector = 0;
-uint32_t Address = 0, SectorError = 0;
-uint32_t Index= 0;
-
-uint32_t offset = 2;
-uint16_t FlashHalfWord[1] = { 0xAA55 };
-uint16_t FlashHalfWord_FF[1] = { 0xFFFF };
-
-/* Variable used for OB Program procedure */
-FLASH_OBProgramInitTypeDef FLASH_OBInitStruct;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -313,43 +302,6 @@ int main(void)
   printf("CPU ID: 0x%X\n", (unsigned int)HAL_GetDEVID());
   printf("Revision ID: 0x%X\n", (unsigned int)HAL_GetREVID());
   printf("Compiled at %s %s\n\n", __DATE__, __TIME__);
-
-  /* ------------------typically only do below once ----------------------*/
-  /* Unlock the Flash to enable the flash control register access *************/
-  HAL_FLASH_Unlock();
-
-  /* Unlock the Flash option bytes to enable the flash option control register access */
-  HAL_FLASH_OB_Unlock();
-
-  /* Erase the EDATA Flash area
-    (area defined by EDATA_USER_START_ADDR and EDATA_USER_END_ADDR) ***********/
-
-  /* Get the 1st sector of FLASH high-cycle data area */
-  FirstSector = GetSector_EDATA(EDATA_USER_START_ADDR);
-
-  /* Get the last sector of FLASH high-cycle data area */
-  EndSector = GetSector_EDATA(EDATA_USER_END_ADDR);
-
-  /* Get the number of sectors */
-  NbOfSectors = EndSector - FirstSector + 1;
-
-  /* Configure 8 sectors for FLASH high-cycle data */
-  FLASH_OBInitStruct.OptionType = OPTIONBYTE_EDATA;
-  FLASH_OBInitStruct.Banks = GetBank_EDATA(EDATA_USER_START_ADDR);
-  FLASH_OBInitStruct.EDATASize = NbOfSectors;
-  if(HAL_FLASHEx_OBProgram(&FLASH_OBInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /* Start option byte load operation after successful programming operation */
-  HAL_FLASH_OB_Launch();
-
-  /* Lock the Flash control option to restrict register access */
-  HAL_FLASH_OB_Lock();
-
-  HAL_FLASH_Lock();
-  /* ------------------typically only do above once ----------------------*/
 
   /* USER CODE END 2 */
 
