@@ -78,6 +78,9 @@ void MX_SDMMC1_SD_Init(void);
 void MX_USB_PCD_Init(void);
 void MX_ADC1_Init(void);
 
+uint32_t GetSector_EDATA(uint32_t Address);
+uint32_t GetBank_EDATA(uint32_t Address);
+
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
@@ -125,6 +128,24 @@ void MX_ADC1_Init(void);
 #define MC_OUT_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
+
+/* Base address of the Flash sectors */
+#define ADDR_EDATA1_STRT_0     (0x0900A800U) /* Base @ of last sector of Bank1 reserved to EDATA (EDATA1_STRT = 0), 6 Kbytes    */
+#define ADDR_EDATA1_STRT_1     (0x09009000U) /* Base @ of last 2 sectors of Bank1 reserved to EDATA (EDATA1_STRT = 1), 6 Kbytes */
+#define ADDR_EDATA1_STRT_2     (0x09007800U) /* Base @ of last 3 sectors of Bank1 reserved to EDATA (EDATA1_STRT = 2), 6 Kbytes */
+#define ADDR_EDATA1_STRT_3     (0x09006000U) /* Base @ of last 4 sectors of Bank1 reserved to EDATA (EDATA1_STRT = 3), 6 Kbytes */
+#define ADDR_EDATA1_STRT_4     (0x09004800U) /* Base @ of last 5 sectors of Bank1 reserved to EDATA (EDATA1_STRT = 4), 6 Kbytes */
+#define ADDR_EDATA1_STRT_5     (0x09003000U) /* Base @ of last 6 sectors of Bank1 reserved to EDATA (EDATA1_STRT = 5), 6 Kbytes */
+#define ADDR_EDATA1_STRT_6     (0x09001800U) /* Base @ of last 7 sectors of Bank1 reserved to EDATA (EDATA1_STRT = 6), 6 Kbytes */
+#define ADDR_EDATA1_STRT_7     (0x09000000U) /* Base @ of last 8 sectors of Bank1 reserved to EDATA (EDATA1_STRT = 7), 6 Kbytes */
+
+/* Start @ of user Flash eData area */
+#define EDATA_USER_START_ADDR   ADDR_EDATA1_STRT_7
+/* End @ of user Flash eData area */
+/* (FLASH_EDATA_SIZE/16) is the sector size of high-cycle area (6KB) */
+#define EDATA_USER_END_ADDR     (ADDR_EDATA1_STRT_7 + (8*(FLASH_EDATA_SIZE/16)) - 1)
+
+
 /* set and reset TR bit positions */
 #define TR_P_BS_Pos GPIO_BSRR_BS2_Pos
 #define TR_P_BR_Pos GPIO_BSRR_BR2_Pos

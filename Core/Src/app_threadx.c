@@ -23,6 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
 #include "cli_app.h"
 #include "stm32h5xx_nucleo.h"
 #include "main.h"
@@ -30,6 +31,7 @@
 #include "command_station.h"
 #include "decoder.h"
 #include "SUSI.h"
+#include "parameter_manager.h"
 
 /* USER CODE END Includes */
 
@@ -88,6 +90,11 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   /* USER CODE END App_ThreadX_MEM_POOL */
 
   /* USER CODE BEGIN App_ThreadX_Init */
+
+  /* Init parameter manager by restoring setting from flash */
+  // Note: may need to bypass this on very first initial commissioning before parameter flash is setup??
+  // flash setup is normally done onle once ... see cli_app.c command "reset"  
+  parameter_manager_init(0);
 
   /* Create the led task */  
   ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes

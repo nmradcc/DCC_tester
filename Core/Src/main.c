@@ -119,6 +119,7 @@ int iar_fputc(int ch);
 #elif defined(__GNUC__)
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 #endif /* __ICCARM__ */
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -130,6 +131,100 @@ int gettimeofday(struct timeval* ptimeval,
   ptimeval->tv_sec = tick_ms / 1000;
   ptimeval->tv_usec = (suseconds_t)tick_ms % 1000;
   return 0;
+}
+
+/**
+  * @brief  Gets the sector of a given address
+  * @param  Addr: Address of the FLASH Memory
+  * @retval The sector of a given address
+  */
+uint32_t GetSector_EDATA(uint32_t Address)
+{
+  uint32_t sector = 0;
+  uint32_t edataSectorSize = 0;
+
+  /*
+    (FLASH_EDATA_SIZE/2) is the size of high-cycle area of flash BANK1.
+    Flash high-cycle area have 8 sectors in each Bank.
+  */
+  edataSectorSize = (FLASH_EDATA_SIZE / 2) / 8;
+  /* Check if the address is located in the FLASH high-cycle data area of BANK1 */
+  if((Address >= FLASH_EDATA_BASE) && (Address < FLASH_EDATA_BASE + (FLASH_EDATA_SIZE / 2)))
+  {
+    sector = (Address & ~FLASH_EDATA_BASE) / edataSectorSize;
+    sector += 120;
+  }
+  /* Check if the address is located in the FLASH high-cycle data area of BANK2 */
+  else if ((Address >= FLASH_EDATA_BASE + (FLASH_EDATA_SIZE / 2)) && (Address < FLASH_EDATA_BASE + FLASH_EDATA_SIZE))
+  {
+    sector = ((Address & ~FLASH_EDATA_BASE) - (FLASH_EDATA_SIZE / 2)) / edataSectorSize;
+    sector += 120;
+  }
+  else
+  {
+    sector = 0xFFFFFFFF; /* Address out of range */
+  }
+
+  return sector;
+}
+
+/**
+  * @brief  Gets the bank of a given address in EDATA area
+  * @param  Addr: Address of A given address in EDATA area
+  * @retval The bank of a given address in EDATA area
+  */
+uint32_t GetBank_EDATA(uint32_t Addr)
+{
+  uint32_t bank = 0;
+
+  /* (FLASH_EDATA_SIZE/2) is the size of high-cycle area of flash BANK1 */
+  if((Addr >= FLASH_EDATA_BASE) && (Addr < FLASH_EDATA_BASE + (FLASH_EDATA_SIZE/2)))
+  {
+    bank = FLASH_BANK_1;
+  }
+  else if ((Addr >= FLASH_EDATA_BASE + (FLASH_EDATA_SIZE/2)) && (Addr < FLASH_EDATA_BASE + FLASH_EDATA_SIZE))
+  {
+    bank = FLASH_BANK_2;
+  }
+  else
+  {
+    bank = 0xFFFFFFFF; /* Address out of range */
+  }
+  return bank;
+}
+
+/**
+  * @brief  Configure the MPU attributes as non-cacheable for Flash high-cycle data area
+  * @note   The Base Address is Flash high-cycle data area
+  * @param  None
+  * @retval None
+  */
+static void MPU_Config(void)
+{
+  MPU_Attributes_InitTypeDef   attr;
+  MPU_Region_InitTypeDef       region;
+
+  /* Disable MPU before perloading and config update */
+  HAL_MPU_Disable();
+
+  /* Define cacheable memory via MPU */
+  attr.Number             = MPU_ATTRIBUTES_NUMBER0;
+  attr.Attributes         = 0 ;
+  HAL_MPU_ConfigMemoryAttributes(&attr);
+
+  /* BaseAddress-LimitAddress configuration */
+  region.Enable           = MPU_REGION_ENABLE;
+  region.Number           = MPU_REGION_NUMBER0;
+  region.AttributesIndex  = MPU_ATTRIBUTES_NUMBER0;
+  region.BaseAddress      = EDATA_USER_START_ADDR;
+  region.LimitAddress     = EDATA_USER_END_ADDR;
+  region.AccessPermission = MPU_REGION_ALL_RW;
+  region.DisableExec      = MPU_INSTRUCTION_ACCESS_ENABLE;
+  region.IsShareable      = MPU_ACCESS_NOT_SHAREABLE;
+  HAL_MPU_ConfigRegion(&region);
+
+  /* Enable the MPU */
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 }
 
 /* USER CODE END 0 */
@@ -187,6 +282,11 @@ int main(void)
   /* Call PreOsInit function */
   USBPD_PreInitOs();
   /* USER CODE BEGIN 2 */
+  /* MPU Configuration--------------------------------------------------------*/
+  /* By default, all the AHB memory range is cacheable. For regions where caching is not
+     practical (High-cycle data area), MPU has to be used to disable local cacheability.
+  */
+  MPU_Config();
 
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
@@ -222,6 +322,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    BSP_LED_Toggle(LED_RED);
+    HAL_Delay(500);
   }
   /* USER CODE END 3 */
 }
