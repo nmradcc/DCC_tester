@@ -78,9 +78,6 @@ void MX_SDMMC1_SD_Init(void);
 void MX_USB_PCD_Init(void);
 void MX_ADC1_Init(void);
 
-uint32_t GetSector_EDATA(uint32_t Address);
-uint32_t GetBank_EDATA(uint32_t Address);
-
 /* USER CODE BEGIN EFP */
 
 uint32_t GetSector_EDATA(uint32_t Address);
