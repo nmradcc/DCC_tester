@@ -107,36 +107,13 @@ int parameter_manager_save(void);
 int parameter_manager_restore(void);
 
 /**
- * @brief Example function declarations for usage
- * 
- * These demonstrate how to work with the parameter manager.
+ * @brief Factory reset - restore defaults
  */
+void parameter_manager_factory_reset(void);
 
-/* Initialization examples */
-int initialize_parameters(void);
-void parameter_startup_sequence(void);
-
-/* Configuration examples */
-void configure_dcc_system(void);
-void display_current_configuration(void);
-void update_configuration_from_command(uint16_t new_voltage, uint16_t new_current_limit);
-
-/* Utility examples */
-void factory_reset(void);
-void periodic_parameter_check(void);
-
-/* Complete examples */
-void complete_example(void);
-void minimal_example(void);
-
-/* Task examples */
-void parameter_monitor_task(unsigned long thread_input);
-
-/* Individual parameter access examples */
+/* Individual parameter accessor */
 int set_dcc_track_voltage(uint16_t voltage_mv);
 int get_dcc_track_voltage(uint16_t *voltage_mv);
-int save_parameters_to_flash(void);
-int restore_parameters_from_flash(void);
 
 /**
  * @brief Usage Notes:
@@ -144,16 +121,11 @@ int restore_parameters_from_flash(void);
  * INITIALIZATION:
  * ---------------
  * Always call parameter_manager_init() before using any other functions.
- * Typically done once in your main() or App_ThreadX_Init().
- * 
- * THREAD SAFETY:
- * --------------
- * The parameter manager uses ThreadX mutexes for thread safety.
- * Safe to call from multiple tasks/threads.
+ * Typically done once in your App_ThreadX().
  * 
  * FLASH PERSISTENCE:
  * ------------------
- * - Parameters are stored in the last flash sector (sector 255)
+ * - Parameters are stored in the first flash sector
  * - Automatic wear leveling for flash longevity
  * - CRC32 validation ensures data integrity
  * - Call save() to persist changes to flash
@@ -161,8 +133,8 @@ int restore_parameters_from_flash(void);
  * 
  * MEMORY USAGE:
  * -------------
- * - ~4KB RAM for parameter cache
- * - ~8KB flash for persistent storage
+ * - ~2KB RAM for parameter cache
+ * - 6KB flash for persistent storage
  * 
  * TYPICAL USAGE PATTERN:
  * ----------------------

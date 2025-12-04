@@ -90,18 +90,9 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   /* USER CODE END App_ThreadX_MEM_POOL */
 
   /* USER CODE BEGIN App_ThreadX_Init */
+
+  /* Init parameter manager by restoring setting from flash */
   parameter_manager_init(0);
-    // Use parameters
-    uint16_t voltage = 15000;
-    printf("Setting voltage to %u mV\n", voltage);
-    
-    // Save
-    parameter_manager_save();
-    
-    // Later, restore
-    parameter_manager_restore();
-    
-    printf("Voltage: %u mV\n", voltage);
 
   /* Create the led task */  
   ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes

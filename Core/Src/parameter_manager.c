@@ -11,6 +11,7 @@
 #include "parameter_manager.h"
 #include "stm32h5xx_hal.h"
 #include "tx_api.h"
+#include "main.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -35,15 +36,48 @@ static const uint32_t DEFAULT_SYSTEM_BAUD_RATE = 115200;
 static const uint8_t DEFAULT_SYSTEM_DEBUG_LEVEL = 2;
 
 // Flash storage configuration
-#define FLASH_BASE_ADDRESS      0x08000000
-#define FLASH_TOTAL_SIZE        (2048 * 1024)  // 2MB
-#define FLASH_SECTOR_SIZE       (8 * 1024)     // 8KB sectors
-#define PARAM_FLASH_SECTOR      255            // Last sector
-#define PARAM_FLASH_ADDRESS     (FLASH_BASE_ADDRESS + (PARAM_FLASH_SECTOR * FLASH_SECTOR_SIZE))
+/* Start @ of user Flash eData area */
+#define EDATA_USER_START_ADDR   ADDR_EDATA1_STRT_7
+/* End @ of user Flash eData area */
+/* (FLASH_EDATA_SIZE/16) is the sector size of high-cycle area (6KB) */
+#define EDATA_USER_END_ADDR     (ADDR_EDATA1_STRT_7 + (8*(FLASH_EDATA_SIZE/16)) - 1)
+
+#define FLASH_BASE_ADDRESS      EDATA_USER_START_ADDR
+#define PARAM_SECTOR_SIZE       (FLASH_EDATA_SIZE/16)     // 6KB sectors
+#define PARAM_FLASH_SECTOR      0            // first sector
+#define PARAM_FLASH_ADDRESS     (FLASH_BASE_ADDRESS + (PARAM_FLASH_SECTOR * PARAM_SECTOR_SIZE))
 
 #define MAGIC_NUMBER            0x50415241  // 'PARA'
 #define VERSION                 1
-#define PARAM_DATA_SIZE         4096
+#define PARAM_DATA_SIZE         512
+
+// Parameter data structure matching the layout in g_paramData
+typedef struct {
+    // DCC Command Station parameters
+    uint16_t dcc_track_voltage;
+    uint16_t dcc_track_current_limit;
+    uint8_t dcc_preamble_bits;
+    uint8_t _padding1;  // Alignment padding
+    uint16_t dcc_short_circuit_threshold;
+    
+    // Network parameters
+    uint32_t network_ip_address;
+    uint32_t network_subnet_mask;
+    uint32_t network_gateway;
+    uint16_t network_port;
+    uint8_t _padding2[2];  // Alignment padding
+    
+    // System parameters
+    uint32_t system_device_id;
+    uint32_t system_baud_rate;
+    uint8_t system_debug_level;
+    uint8_t _padding3[3];  // Alignment padding
+    
+    // User-defined parameters
+    uint32_t user_param_1;
+    uint32_t user_param_2;
+    uint32_t user_param_3;
+} ParameterData_t;
 
 // Flash storage structure
 typedef struct {
@@ -54,11 +88,19 @@ typedef struct {
     uint8_t data[PARAM_DATA_SIZE];
 } FlashStorage_t;
 
-// Runtime parameter storage
-static uint8_t g_paramData[PARAM_DATA_SIZE];
+// Runtime parameter storage - use union for type-safe access
+static union {
+    uint8_t bytes[PARAM_DATA_SIZE];
+    ParameterData_t params;
+} g_paramData;
+
 static int g_initialized = 0;
 static int g_modified = 0;
-static TX_MUTEX g_paramMutex;
+
+// Static storage buffer to avoid stack overflow
+static FlashStorage_t g_flashStorage;
+
+
 
 // CRC32 lookup table
 static const uint32_t crc32_table[256] = {
@@ -100,6 +142,11 @@ static const uint32_t crc32_table[256] = {
  * @brief Calculate CRC32 checksum
  */
 static uint32_t calculate_crc32(const void* data, size_t length) {
+    // Safety checks
+    if (data == NULL || length == 0 || length > PARAM_DATA_SIZE) {
+        return 0;
+    }
+    
     const uint8_t* bytes = (const uint8_t*)data;
     uint32_t crc = 0xFFFFFFFF;
     
@@ -115,43 +162,27 @@ static uint32_t calculate_crc32(const void* data, size_t length) {
  * @brief Load default parameter values
  */
 static void load_defaults(void) {
-    size_t offset = 0;
+    // Note: This function assumes mutex is already held by caller
     
-    // DCC parameters
-    memcpy(&g_paramData[offset], &DEFAULT_DCC_TRACK_VOLTAGE, sizeof(uint16_t));
-    offset += sizeof(uint16_t);
+    // Clear all data
+    memset(&g_paramData, 0, sizeof(g_paramData));
     
-    memcpy(&g_paramData[offset], &DEFAULT_DCC_TRACK_CURRENT_LIMIT, sizeof(uint16_t));
-    offset += sizeof(uint16_t);
+    // Set default values using direct structure access
+    g_paramData.params.dcc_track_voltage = DEFAULT_DCC_TRACK_VOLTAGE;
+    g_paramData.params.dcc_track_current_limit = DEFAULT_DCC_TRACK_CURRENT_LIMIT;
+    g_paramData.params.dcc_preamble_bits = DEFAULT_DCC_PREAMBLE_BITS;
+    g_paramData.params.dcc_short_circuit_threshold = DEFAULT_DCC_SHORT_CIRCUIT_THRESHOLD;
     
-    memcpy(&g_paramData[offset], &DEFAULT_DCC_PREAMBLE_BITS, sizeof(uint8_t));
-    offset += sizeof(uint8_t);
+    g_paramData.params.network_ip_address = DEFAULT_NETWORK_IP_ADDRESS;
+    g_paramData.params.network_subnet_mask = DEFAULT_NETWORK_SUBNET_MASK;
+    g_paramData.params.network_gateway = DEFAULT_NETWORK_GATEWAY;
+    g_paramData.params.network_port = DEFAULT_NETWORK_PORT;
     
-    memcpy(&g_paramData[offset], &DEFAULT_DCC_SHORT_CIRCUIT_THRESHOLD, sizeof(uint16_t));
-    offset += sizeof(uint16_t);
+    g_paramData.params.system_device_id = DEFAULT_SYSTEM_DEVICE_ID;
+    g_paramData.params.system_baud_rate = DEFAULT_SYSTEM_BAUD_RATE;
+    g_paramData.params.system_debug_level = DEFAULT_SYSTEM_DEBUG_LEVEL;
     
-    // Network parameters
-    memcpy(&g_paramData[offset], &DEFAULT_NETWORK_IP_ADDRESS, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    
-    memcpy(&g_paramData[offset], &DEFAULT_NETWORK_SUBNET_MASK, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    
-    memcpy(&g_paramData[offset], &DEFAULT_NETWORK_GATEWAY, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    
-    memcpy(&g_paramData[offset], &DEFAULT_NETWORK_PORT, sizeof(uint16_t));
-    offset += sizeof(uint16_t);
-    
-    // System parameters
-    memcpy(&g_paramData[offset], &DEFAULT_SYSTEM_DEVICE_ID, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    
-    memcpy(&g_paramData[offset], &DEFAULT_SYSTEM_BAUD_RATE, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    
-    memcpy(&g_paramData[offset], &DEFAULT_SYSTEM_DEBUG_LEVEL, sizeof(uint8_t));
-    offset += sizeof(uint8_t);
+    g_modified = 1;
 }
 
 /**
@@ -162,15 +193,11 @@ int parameter_manager_init(int force_defaults) {
         return 0;  // Already initialized
     }
     
-    // Create mutex
-    UINT status = tx_mutex_create(&g_paramMutex, "ParamMutex", TX_NO_INHERIT);
-    if (status != TX_SUCCESS) {
-        return -1;
-    }
-    
-    // Load defaults
-    memset(g_paramData, 0, sizeof(g_paramData));
+    // Load defaults (will clear data inside)
     load_defaults();
+    
+    g_initialized = 1;
+    g_modified = 0;
     
     if (!force_defaults) {
         // Try to restore from flash
@@ -179,9 +206,6 @@ int parameter_manager_init(int force_defaults) {
             load_defaults();
         }
     }
-    
-    g_initialized = 1;
-    g_modified = 0;
     
     return 0;
 }
@@ -194,41 +218,51 @@ int parameter_manager_save(void) {
         return -1;
     }
     
-    FlashStorage_t storage;
-    storage.magic = MAGIC_NUMBER;
-    storage.version = VERSION;
-    storage.dataSize = PARAM_DATA_SIZE;
-    memcpy(storage.data, g_paramData, PARAM_DATA_SIZE);
-    storage.crc32 = calculate_crc32(storage.data, storage.dataSize);
+    // Use static storage buffer to avoid stack overflow
+    g_flashStorage.magic = MAGIC_NUMBER;
+    g_flashStorage.version = VERSION;
+    g_flashStorage.dataSize = PARAM_DATA_SIZE;
+    memcpy(g_flashStorage.data, g_paramData.bytes, PARAM_DATA_SIZE);
+    g_flashStorage.crc32 = calculate_crc32(g_flashStorage.data, g_flashStorage.dataSize);
     
     // Unlock flash
     HAL_FLASH_Unlock();
+
+    // Calculate how many sectors we need for the storage structure
+    size_t storageSize = sizeof(FlashStorage_t);
+    size_t sectorsNeeded = (storageSize + PARAM_SECTOR_SIZE - 1) / PARAM_SECTOR_SIZE;
     
-    // Erase sector
-    FLASH_EraseInitTypeDef eraseInit;
-    eraseInit.TypeErase = FLASH_TYPEERASE_SECTORS;
-    eraseInit.Banks = FLASH_BANK_1;
-    eraseInit.Sector = PARAM_FLASH_SECTOR;
-    eraseInit.NbSectors = 1;
-    
-    uint32_t sectorError = 0;
-    HAL_StatusTypeDef status = HAL_FLASHEx_Erase(&eraseInit, &sectorError);
+    // Erase the required sectors
+    FLASH_EraseInitTypeDef EraseInitStruct;
+    EraseInitStruct.TypeErase = FLASH_TYPEERASE_SECTORS;
+    EraseInitStruct.Banks = GetBank_EDATA(PARAM_FLASH_ADDRESS);
+    EraseInitStruct.Sector = GetSector_EDATA(PARAM_FLASH_ADDRESS);
+    EraseInitStruct.NbSectors = sectorsNeeded;
+
+    uint32_t SectorError = 0;
+    HAL_StatusTypeDef status = HAL_FLASHEx_Erase(&EraseInitStruct, &SectorError);
     
     if (status != HAL_OK) {
         HAL_FLASH_Lock();
         return -1;
     }
+
+    // Write the entire storage structure as halfwords (16-bit)
+    uint32_t Address = PARAM_FLASH_ADDRESS;
+    uint16_t* pData = (uint16_t*)&g_flashStorage;
+    size_t halfwordCount = (storageSize + 1) / 2;  // Round up to halfwords
     
-    // Write data (STM32H5 uses 128-bit QUADWORD programming)
-    uint32_t address = PARAM_FLASH_ADDRESS;
-    uint32_t* data = (uint32_t*)&storage;
-    size_t wordCount = (sizeof(storage) + 15) / 16;  // Round up to quadword
-    
-    for (size_t i = 0; i < wordCount && status == HAL_OK; i++) {
-        status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_QUADWORD, address, (uint32_t)&data[i * 4]);
-        address += 16;
+    for (size_t i = 0; i < halfwordCount; i++) {
+        status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD_EDATA, Address, (uint32_t)&pData[i]);
+        
+        if (status != HAL_OK) {
+            HAL_FLASH_Lock();
+            return -1;
+        }
+        
+        Address += 2;  // Move to next halfword
     }
-    
+   
     HAL_FLASH_Lock();
     
     if (status == HAL_OK) {
@@ -247,179 +281,64 @@ int parameter_manager_restore(void) {
         return -1;
     }
     
-    // Read from flash
-    const FlashStorage_t* storage = (const FlashStorage_t*)PARAM_FLASH_ADDRESS;
+    // Validate flash address is within valid range
+    if (PARAM_FLASH_ADDRESS < EDATA_USER_START_ADDR || 
+        PARAM_FLASH_ADDRESS > EDATA_USER_END_ADDR) {
+        return -1;
+    }
+    
+    // Read flash data word by word to avoid alignment issues
+    const uint32_t* flashAddr = (const uint32_t*)PARAM_FLASH_ADDRESS;
+    uint32_t* destAddr = (uint32_t*)&g_flashStorage;
+    size_t wordCount = sizeof(FlashStorage_t) / 4;
+    
+    // Copy data from flash word by word
+    for (size_t i = 0; i < wordCount; i++) {
+        destAddr[i] = flashAddr[i];
+    }
+    
+    // Handle remaining bytes if structure size is not multiple of 4
+    size_t remainingBytes = sizeof(FlashStorage_t) % 4;
+    if (remainingBytes > 0) {
+        uint8_t* destByte = (uint8_t*)&destAddr[wordCount];
+        const uint8_t* flashByte = (const uint8_t*)&flashAddr[wordCount];
+        for (size_t i = 0; i < remainingBytes; i++) {
+            destByte[i] = flashByte[i];
+        }
+    }
     
     // Validate magic number
-    if (storage->magic != MAGIC_NUMBER) {
+    if (g_flashStorage.magic != MAGIC_NUMBER) {
         return -1;
     }
     
     // Validate version
-    if (storage->version != VERSION) {
+    if (g_flashStorage.version != VERSION) {
+        return -1;
+    }
+    
+    // Validate data size
+    if (g_flashStorage.dataSize != PARAM_DATA_SIZE) {
         return -1;
     }
     
     // Validate CRC
-    uint32_t calculated_crc = calculate_crc32(storage->data, storage->dataSize);
-    if (calculated_crc != storage->crc32) {
+    uint32_t calculated_crc = calculate_crc32(g_flashStorage.data, g_flashStorage.dataSize);
+    if (calculated_crc != g_flashStorage.crc32) {
         return -1;
     }
     
-    // Copy data
-    memcpy(g_paramData, storage->data, PARAM_DATA_SIZE);
+    // Copy validated data to runtime parameter storage
+    memcpy(g_paramData.bytes, g_flashStorage.data, PARAM_DATA_SIZE);
     g_modified = 0;
     
     return 0;
 }
 
-/* ============================================================================
- * EXAMPLE FUNCTIONS
- * ============================================================================ */
-
 /**
- * @brief Initialize the parameter manager
- * @return 0 on success, -1 on failure
+ * @brief Factory reset - restore defaults
  */
-int initialize_parameters(void) {
-    // Initialize parameter manager
-    // Pass 0 to restore from flash, 1 to force defaults
-    int result = parameter_manager_init(0);
-    
-    if (result == 0) {
-        printf("Parameter manager initialized successfully\n");
-        return 0;
-    } else {
-        printf("Parameter manager initialization failed\n");
-        // Try with defaults
-        result = parameter_manager_init(1);
-        if (result == 0) {
-            printf("Initialized with default values\n");
-            return 0;
-        }
-        return -1;
-    }
-}
-
-/**
- * @brief Set DCC track voltage parameter
- * @param voltage_mv Voltage in millivolts (e.g., 15000 for 15V)
- * @return 0 on success, -1 on failure
- */
-int set_dcc_track_voltage(uint16_t voltage_mv) {
-    // Use the C++ interface through the C wrapper
-    // You can still use C++ in a .c file by calling extern "C" functions
-    
-    // For pure C access, you would typically create C wrapper functions
-    // like the ones below. For now, printf shows the value
-    printf("Setting DCC track voltage to %u mV\n", voltage_mv);
-    
-    // In production, you'd call a C wrapper that internally uses C++:
-    // return parameter_set_uint16(PARAM_DCC_TRACK_VOLTAGE, voltage_mv);
-    
-    return 0;
-}
-
-/**
- * @brief Get DCC track voltage parameter
- * @param voltage_mv Pointer to store voltage in millivolts
- * @return 0 on success, -1 on failure
- */
-int get_dcc_track_voltage(uint16_t *voltage_mv) {
-    if (voltage_mv == NULL) {
-        return -1;
-    }
-    
-    // In production, call C wrapper:
-    // return parameter_get_uint16(PARAM_DCC_TRACK_VOLTAGE, voltage_mv);
-    
-    // For demonstration
-    *voltage_mv = 15000;
-    printf("Read DCC track voltage: %u mV\n", *voltage_mv);
-    
-    return 0;
-}
-
-/**
- * @brief Save all parameters to flash memory
- * @return 0 on success, -1 on failure
- */
-int save_parameters_to_flash(void) {
-    printf("Saving parameters to flash...\n");
-    
-    int result = parameter_manager_save();
-    
-    if (result == 0) {
-        printf("Parameters saved successfully!\n");
-        return 0;
-    } else {
-        printf("Failed to save parameters\n");
-        return -1;
-    }
-}
-
-/**
- * @brief Restore all parameters from flash memory
- * @return 0 on success, -1 on failure
- */
-int restore_parameters_from_flash(void) {
-    printf("Restoring parameters from flash...\n");
-    
-    int result = parameter_manager_restore();
-    
-    if (result == 0) {
-        printf("Parameters restored successfully!\n");
-        return 0;
-    } else {
-        printf("Failed to restore parameters (may not exist or corrupted)\n");
-        return -1;
-    }
-}
-
-/**
- * @brief Example: Configure DCC system parameters
- */
-void configure_dcc_system(void) {
-    printf("\n=== Configuring DCC System ===\n");
-    
-    // Set track voltage (15V)
-    set_dcc_track_voltage(15000);
-    
-    // Set current limit (3A)
-    printf("Setting current limit to 3000 mA\n");
-    
-    // Set preamble bits
-    printf("Setting preamble bits to 14\n");
-    
-    // Save to flash
-    save_parameters_to_flash();
-    
-    printf("=== DCC Configuration Complete ===");
-}
-
-/**
- * @brief Example: Read and display current configuration
- */
-void display_current_configuration(void) {
-    printf("\n=== Current Configuration ===\n");
-    
-    uint16_t voltage = 0;
-    if (get_dcc_track_voltage(&voltage) == 0) {
-        printf("DCC Track Voltage: %u mV (%.1f V)\n", 
-               voltage, voltage / 1000.0f);
-    }
-    
-    // Read other parameters similarly
-    printf("Current Limit: 3000 mA (3.0 A)\n");
-    printf("Preamble Bits: 14\n");
-    
-    printf("=============================\n\n");
-}
-
-/**
- * @brief Example: Factory reset - restore defaults
- */
-void factory_reset(void) {
+void parameter_manager_factory_reset(void) {
     printf("\n=== Performing Factory Reset ===\n");
     
     // Reinitialize with forced defaults
@@ -438,161 +357,42 @@ void factory_reset(void) {
     printf("=================================\n\n");
 }
 
+/* ============================================================================
+ * ACCESSOR FUNCTIONS
+ * ============================================================================ */
+
 /**
- * @brief Example: Startup sequence for applications
+ * @brief Set DCC track voltage parameter
+ * @param voltage_mv Voltage in millivolts (e.g., 15000 for 15V)
+ * @return 0 on success, -1 on failure
  */
-void parameter_startup_sequence(void) {
-    printf("\n=== Parameter System Startup ===\n");
-    
-    // Step 1: Initialize
-    printf("1. Initializing parameter manager...\n");
-    int result = initialize_parameters();
-    
-    if (result != 0) {
-        printf("   ERROR: Cannot initialize parameters!\n");
-        return;
+int set_dcc_track_voltage(uint16_t voltage_mv) {
+    if (!g_initialized) {
+        return -1;
     }
     
-    // Step 2: Display current configuration
-    printf("2. Loading current configuration...\n");
-    display_current_configuration();
+    // Write directly to the parameter structure
+    g_paramData.params.dcc_track_voltage = voltage_mv;
     
-    printf("=== Startup Complete ===\n\n");
+    // Mark as modified
+    g_modified = 1;
+    
+    return 0;
 }
 
 /**
- * @brief Example: Periodic parameter check task
- * 
- * This can be called from a ThreadX task or timer callback
+ * @brief Get DCC track voltage parameter
+ * @param voltage_mv Pointer to store voltage in millivolts
+ * @return 0 on success, -1 on failure
  */
-void periodic_parameter_check(void) {
-    static uint32_t check_count = 0;
-    
-    check_count++;
-    
-    // Every 10th check, verify critical parameters
-    if ((check_count % 10) == 0) {
-        printf("Periodic check #%lu\n", check_count);
-        
-        uint16_t voltage = 0;
-        if (get_dcc_track_voltage(&voltage) == 0) {
-            // Validate voltage is in acceptable range
-            if (voltage < 10000 || voltage > 20000) {
-                printf("WARNING: Voltage out of range: %u mV\n", voltage);
-                // Could trigger alarm or reset to safe value
-            }
-        }
+int get_dcc_track_voltage(uint16_t *voltage_mv) {
+    if (voltage_mv == NULL || !g_initialized) {
+        return -1;
     }
+    
+    // Read directly from the parameter structure
+    *voltage_mv = g_paramData.params.dcc_track_voltage;
+    
+    return 0;
 }
 
-/**
- * @brief Example: Update configuration from user command
- * 
- * Simulates receiving a command to change configuration
- */
-void update_configuration_from_command(uint16_t new_voltage, uint16_t new_current_limit) {
-    printf("\n=== Updating Configuration ===\n");
-    printf("New voltage: %u mV\n", new_voltage);
-    printf("New current limit: %u mA\n", new_current_limit);
-    
-    // Validate inputs
-    if (new_voltage < 10000 || new_voltage > 20000) {
-        printf("ERROR: Voltage must be between 10V and 20V\n");
-        return;
-    }
-    
-    if (new_current_limit > 5000) {
-        printf("ERROR: Current limit must be <= 5A\n");
-        return;
-    }
-    
-    // Set new values
-    set_dcc_track_voltage(new_voltage);
-    printf("Setting current limit to %u mA\n", new_current_limit);
-    
-    // Save to flash so it persists across reboots
-    if (save_parameters_to_flash() == 0) {
-        printf("Configuration updated and saved\n");
-    }
-    
-    printf("==============================\n\n");
-}
-
-/**
- * @brief Complete example showing typical usage flow
- */
-void complete_example(void) {
-    printf("\n");
-    printf("================================================\n");
-    printf("  Parameter Manager - Pure C Interface Example  \n");
-    printf("================================================\n");
-    
-    // 1. Startup
-    parameter_startup_sequence();
-    
-    // 2. Configure system
-    configure_dcc_system();
-    
-    // 3. Display configuration
-    display_current_configuration();
-    
-    // 4. Simulate user command to change settings
-    update_configuration_from_command(16000, 3500);
-    
-    // 5. Display updated configuration
-    display_current_configuration();
-    
-    printf("================================================\n");
-    printf("  Example Complete                              \n");
-    printf("================================================\n\n");
-}
-
-/**
- * @brief Minimal example for quick reference
- */
-void minimal_example(void) {
-    // Initialize
-    parameter_manager_init(0);
-    
-    // Use parameters
-    uint16_t voltage = 15000;
-    printf("Setting voltage to %u mV\n", voltage);
-    
-    // Save
-    parameter_manager_save();
-    
-    // Later, restore
-    parameter_manager_restore();
-    
-    printf("Voltage: %u mV\n", voltage);
-}
-
-/**
- * @brief ThreadX task example using parameters
- * 
- * Copy this pattern for your own tasks
- */
-void parameter_monitor_task(unsigned long thread_input) {
-    (void)thread_input;
-    
-    printf("Parameter monitor task started\n");
-    
-    // Initialize on first run
-    static int initialized = 0;
-    if (!initialized) {
-        parameter_manager_init(0);
-        initialized = 1;
-    }
-    
-    // Main task loop
-    while (1) {
-        // Check parameters
-        periodic_parameter_check();
-        
-        // Sleep for 1 second (adjust as needed)
-        // tx_thread_sleep(100);  // 100 ticks = 1 second typically
-        
-        // For this example, break after one iteration
-        break;
-    }
-}
