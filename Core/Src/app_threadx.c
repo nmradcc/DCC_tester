@@ -100,7 +100,7 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes
   /* Create the command line task */
   cmdLineTaskHandle = osThreadNew(vCommandConsoleTask, NULL, &cmdLineTask_attributes);
-  /* Create the RPC task ... but don't start it */
+  /* Create the RPC task and start it */
   RpcServer_Init();
   /* Create the command station task ... but don't start it */
   CommandStation_Init();

@@ -2,7 +2,10 @@
 #include "stm32h5xx_nucleo.h"
 #include "stm32h5xx_hal.h"
 #include "main.h"
+#include "parameter_manager.h"
 #include "command_station.h"
+#include "decoder.h"
+#include "parameter_manager.h"
 
 #include "rpc_server.hpp"
 
@@ -85,35 +88,211 @@ std::string RpcServer::handle(const std::string& request_str) {
     return response.dump();
 }
 
-// ---------------- Example handlers ----------------
-
-static json add_handler(const json& params) {
-    if (!params.is_array() || params.size() < 2) {
-        return {
-            {"status", "error"},
-            {"message", "missing params"}
-        };
-    }
-    if (!params[0].is_number_integer() || !params[1].is_number_integer()) {
-        return {
-            {"status", "error"},
-            {"message", "params must be integers"}
-        };
-    }
-
-    int a = params[0].get<int>();
-    int b = params[1].get<int>();
-    return {
-        {"status", "ok"},
-        {"result", a + b}
-    };
-}
+// ---------------- Handlers ----------------
 
 static json echo_handler(const json& params) {
     return {
         {"status", "ok"},
         {"echo", params}
     };
+}
+
+static json command_station_start_handler(const json& params) {
+    bool loop = false;
+    
+    // Check if params contains a "loop" field
+    if (params.is_object() && params.contains("loop")) {
+        if (params["loop"].is_boolean()) {
+            loop = params["loop"].get<bool>();
+        }
+    }
+    
+    CommandStation_Start(loop);
+    
+    return {
+        {"status", "ok"},
+        {"message", "Command station started"},
+        {"loop", loop}
+    };
+}
+
+static json command_station_stop_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    CommandStation_Stop();
+    
+    return {
+        {"status", "ok"},
+        {"message", "Command station stopped"}
+    };
+}
+
+static json decoder_start_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    Decoder_Start();
+    
+    return {
+        {"status", "ok"},
+        {"message", "Decoder started"}
+    };
+}
+
+static json decoder_stop_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    Decoder_Stop();
+    
+    return {
+        {"status", "ok"},
+        {"message", "Decoder stopped"}
+    };
+}
+
+static json command_station_params_handler(const json& params) {
+    // Check if params is an object
+    if (!params.is_object()) {
+        return {
+            {"status", "error"},
+            {"message", "Params must be an object"}
+        };
+    }
+    
+    // Set preamble bits if provided
+    if (params.contains("preamble_bits")) {
+        if (!params["preamble_bits"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "preamble_bits must be a positive integer"}
+            };
+        }
+        uint8_t preamble = params["preamble_bits"].get<uint8_t>();
+        if (set_dcc_preamble_bits(preamble) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to set preamble_bits"}
+            };
+        }
+    }
+    
+    // Set bit1 duration if provided
+    if (params.contains("bit1_duration")) {
+        if (!params["bit1_duration"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "bit1_duration must be a positive integer"}
+            };
+        }
+        uint8_t bit1 = params["bit1_duration"].get<uint8_t>();
+        if (set_dcc_bit1_duration(bit1) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to set bit1_duration"}
+            };
+        }
+    }
+    
+    // Set bit0 duration if provided
+    if (params.contains("bit0_duration")) {
+        if (!params["bit0_duration"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "bit0_duration must be a positive integer"}
+            };
+        }
+        uint8_t bit0 = params["bit0_duration"].get<uint8_t>();
+        if (set_dcc_bit0_duration(bit0) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to set bit0_duration"}
+            };
+        }
+    }
+    
+    // Set BiDi enable if provided
+    if (params.contains("bidi_enable")) {
+        if (!params["bidi_enable"].is_boolean()) {
+            return {
+                {"status", "error"},
+                {"message", "bidi_enable must be a boolean"}
+            };
+        }
+        uint8_t bidi = params["bidi_enable"].get<bool>() ? 1 : 0;
+        if (set_dcc_bidi_enable(bidi) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to set bidi_enable"}
+            };
+        }
+    }
+    
+    return {
+        {"status", "ok"},
+        {"message", "Command station parameters updated"}
+    };
+}
+
+static json parameters_save_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    if (parameter_manager_save() != 0) {
+        return {
+            {"status", "error"},
+            {"message", "Failed to save parameters to flash"}
+        };
+    }
+    
+    return {
+        {"status", "ok"},
+        {"message", "Parameters saved to flash"}
+    };
+}
+
+static json parameters_restore_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    if (parameter_manager_restore() != 0) {
+        return {
+            {"status", "error"},
+            {"message", "Failed to restore parameters from flash"}
+        };
+    }
+    
+    return {
+        {"status", "ok"},
+        {"message", "Parameters restored from flash"}
+    };
+}
+
+static json parameters_factory_reset_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    parameter_manager_factory_reset();
+    
+    return {
+        {"status", "ok"},
+        {"message", "Factory reset completed - all parameters restored to defaults"}
+    };
+}
+
+static json system_reboot_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    // Return success response before rebooting
+    json response = {
+        {"status", "ok"},
+        {"message", "System rebooting..."}
+    };
+    
+    // Small delay to allow response to be sent
+    //TODO: ...probably will never send response before rebooting
+    osDelay(100);
+    
+    // Perform system reset
+    NVIC_SystemReset();
+    
+    // This line will never be reached
+    return response;
 }
 
 // ---------------- RTOS Task ----------------
@@ -128,8 +307,16 @@ void RpcServerThread(void* argument) {
     osSemaphoreAcquire(rpcServerStart_sem, osWaitForever);
     rpcServerRunning = true;
 
-    server.register_method("add",  add_handler);
     server.register_method("echo", echo_handler);
+    server.register_method("command_station_start", command_station_start_handler);
+    server.register_method("command_station_stop", command_station_stop_handler);
+    server.register_method("command_station_params", command_station_params_handler);
+    server.register_method("decoder_start", decoder_start_handler);
+    server.register_method("decoder_stop", decoder_stop_handler);
+    server.register_method("parameters_save", parameters_save_handler);
+    server.register_method("parameters_restore", parameters_restore_handler);
+    server.register_method("parameters_factory_reset", parameters_factory_reset_handler);
+    server.register_method("system_reboot", system_reboot_handler);
 
     while (rpcServerRunning) {
         std::string request;
@@ -151,7 +338,7 @@ void RpcServerThread(void* argument) {
 // ---------------- Init / Start / Stop ----------------
 
 extern "C" void RpcServer_Init(void) {
-    rpcServerStart_sem = osSemaphoreNew(1, 0, NULL);
+    rpcServerStart_sem = osSemaphoreNew(1, 1, NULL);
     rpcServerThread_id = osThreadNew(RpcServerThread, NULL, &rpcServerTask_attributes);
 }
 

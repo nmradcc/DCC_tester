@@ -23,8 +23,12 @@
 // Default parameter values
 static const uint16_t DEFAULT_DCC_TRACK_VOLTAGE = 15000;  // 15V in mV
 static const uint16_t DEFAULT_DCC_TRACK_CURRENT_LIMIT = 3000;  // 3A in mA
-static const uint8_t DEFAULT_DCC_PREAMBLE_BITS = 14;
+static const uint8_t DEFAULT_DCC_PREAMBLE_BITS = 17;  // Minimum preamble bits
 static const uint16_t DEFAULT_DCC_SHORT_CIRCUIT_THRESHOLD = 5000;  // 5A in mA
+static const uint8_t DEFAULT_DCC_BIT1_DURATION = 58;  // 58 microseconds (NMRA spec: 55-61us)
+static const uint8_t DEFAULT_DCC_BIT0_DURATION = 100; // 100 microseconds (NMRA spec: 95-9900us)
+static const uint8_t DEFAULT_DCC_BIDI_ENABLE = 0;     // BiDi disabled by default
+static const uint16_t DEFAULT_DCC_BIDI_DAC = DEFAULT_BIDIR_THRESHOLD;    // BiDi DAC threshold (12-bit: 0-4095)
 
 static const uint32_t DEFAULT_NETWORK_IP_ADDRESS = 0xC0A80164;  // 192.168.1.100
 static const uint32_t DEFAULT_NETWORK_SUBNET_MASK = 0xFFFFFF00;  // 255.255.255.0
@@ -57,8 +61,11 @@ typedef struct {
     uint16_t dcc_track_voltage;
     uint16_t dcc_track_current_limit;
     uint8_t dcc_preamble_bits;
-    uint8_t _padding1;  // Alignment padding
+    uint8_t dcc_bit1_duration;  // "1" bit duration in microseconds
+    uint8_t dcc_bit0_duration;  // "0" bit duration in microseconds
+    uint8_t dcc_bidi_enable;    // BiDi (bidirectional) enable flag
     uint16_t dcc_short_circuit_threshold;
+    uint16_t dcc_bidi_dac;      // BiDi DAC threshold value (12-bit: 0-4095)
     
     // Network parameters
     uint32_t network_ip_address;
@@ -171,7 +178,11 @@ static void load_defaults(void) {
     g_paramData.params.dcc_track_voltage = DEFAULT_DCC_TRACK_VOLTAGE;
     g_paramData.params.dcc_track_current_limit = DEFAULT_DCC_TRACK_CURRENT_LIMIT;
     g_paramData.params.dcc_preamble_bits = DEFAULT_DCC_PREAMBLE_BITS;
+    g_paramData.params.dcc_bit1_duration = DEFAULT_DCC_BIT1_DURATION;
+    g_paramData.params.dcc_bit0_duration = DEFAULT_DCC_BIT0_DURATION;
+    g_paramData.params.dcc_bidi_enable = DEFAULT_DCC_BIDI_ENABLE;
     g_paramData.params.dcc_short_circuit_threshold = DEFAULT_DCC_SHORT_CIRCUIT_THRESHOLD;
+    g_paramData.params.dcc_bidi_dac = DEFAULT_DCC_BIDI_DAC;
     
     g_paramData.params.network_ip_address = DEFAULT_NETWORK_IP_ADDRESS;
     g_paramData.params.network_subnet_mask = DEFAULT_NETWORK_SUBNET_MASK;
@@ -424,6 +435,181 @@ int get_dcc_track_voltage(uint16_t *voltage_mv) {
     
     // Read directly from the parameter structure
     *voltage_mv = g_paramData.params.dcc_track_voltage;
+    
+    return 0;
+}
+
+/**
+ * @brief Set DCC bit1 duration ("1" bit timing)
+ * @param duration_us Duration in microseconds (NMRA spec: 55-61us, typical: 58us)
+ * @return 0 on success, -1 on failure
+ */
+int set_dcc_bit1_duration(uint8_t duration_us) {
+    if (!g_initialized) {
+        return -1;
+    }
+    
+    // Write directly to the parameter structure
+    g_paramData.params.dcc_bit1_duration = duration_us;
+    
+    // Mark as modified
+    g_modified = 1;
+    
+    return 0;
+}
+
+/**
+ * @brief Get DCC bit1 duration ("1" bit timing)
+ * @param duration_us Pointer to store duration in microseconds
+ * @return 0 on success, -1 on failure
+ */
+int get_dcc_bit1_duration(uint8_t *duration_us) {
+    if (duration_us == NULL || !g_initialized) {
+        return -1;
+    }
+    
+    // Read directly from the parameter structure
+    *duration_us = g_paramData.params.dcc_bit1_duration;
+    
+    return 0;
+}
+
+/**
+ * @brief Set DCC bit0 duration ("0" bit timing)
+ * @param duration_us Duration in microseconds (NMRA spec: 95-9900us, typical: 100us)
+ * @return 0 on success, -1 on failure
+ */
+int set_dcc_bit0_duration(uint8_t duration_us) {
+    if (!g_initialized) {
+        return -1;
+    }
+    
+    // Write directly to the parameter structure
+    g_paramData.params.dcc_bit0_duration = duration_us;
+    
+    // Mark as modified
+    g_modified = 1;
+    
+    return 0;
+}
+
+/**
+ * @brief Get DCC bit0 duration ("0" bit timing)
+ * @param duration_us Pointer to store duration in microseconds
+ * @return 0 on success, -1 on failure
+ */
+int get_dcc_bit0_duration(uint8_t *duration_us) {
+    if (duration_us == NULL || !g_initialized) {
+        return -1;
+    }
+    
+    // Read directly from the parameter structure
+    *duration_us = g_paramData.params.dcc_bit0_duration;
+    
+    return 0;
+}
+
+/**
+ * @brief Set DCC BiDi (bidirectional communication) enable
+ * @param enable 0 to disable, non-zero to enable BiDi
+ * @return 0 on success, -1 on failure
+ */
+int set_dcc_bidi_enable(uint8_t enable) {
+    if (!g_initialized) {
+        return -1;
+    }
+    
+    // Write directly to the parameter structure
+    g_paramData.params.dcc_bidi_enable = enable ? 1 : 0;
+    
+    // Mark as modified
+    g_modified = 1;
+    
+    return 0;
+}
+
+/**
+ * @brief Get DCC BiDi (bidirectional communication) enable status
+ * @param enable Pointer to store enable status (0=disabled, 1=enabled)
+ * @return 0 on success, -1 on failure
+ */
+int get_dcc_bidi_enable(uint8_t *enable) {
+    if (enable == NULL || !g_initialized) {
+        return -1;
+    }
+    
+    // Read directly from the parameter structure
+    *enable = g_paramData.params.dcc_bidi_enable;
+    
+    return 0;
+}
+
+/**
+ * @brief Set DCC preamble bits
+ * @param preamble_bits Number of preamble bits (NMRA spec minimum: 14 for operations, 20 for service mode)
+ * @return 0 on success, -1 on failure
+ */
+int set_dcc_preamble_bits(uint8_t preamble_bits) {
+    if (!g_initialized) {
+        return -1;
+    }
+    
+    // Write directly to the parameter structure
+    g_paramData.params.dcc_preamble_bits = preamble_bits;
+    
+    // Mark as modified
+    g_modified = 1;
+    
+    return 0;
+}
+
+/**
+ * @brief Get DCC preamble bits
+ * @param preamble_bits Pointer to store number of preamble bits
+ * @return 0 on success, -1 on failure
+ */
+int get_dcc_preamble_bits(uint8_t *preamble_bits) {
+    if (preamble_bits == NULL || !g_initialized) {
+        return -1;
+    }
+    
+    // Read directly from the parameter structure
+    *preamble_bits = g_paramData.params.dcc_preamble_bits;
+    
+    return 0;
+}
+
+/**
+ * @brief Set DCC BiDi DAC threshold value
+ * @param dac_value DAC threshold value (12-bit: 0-4095)
+ * @return 0 on success, -1 on failure
+ */
+int set_dcc_bidi_dac(uint16_t dac_value) {
+    if (!g_initialized) {
+        return -1;
+    }
+    
+    // Write directly to the parameter structure
+    g_paramData.params.dcc_bidi_dac = dac_value;
+    
+    // Mark as modified
+    g_modified = 1;
+    
+    return 0;
+}
+
+/**
+ * @brief Get DCC BiDi DAC threshold value
+ * @param dac_value Pointer to store DAC threshold value (12-bit: 0-4095)
+ * @return 0 on success, -1 on failure
+ */
+int get_dcc_bidi_dac(uint16_t *dac_value) {
+    if (dac_value == NULL || !g_initialized) {
+        return -1;
+    }
+    
+    // Read directly from the parameter structure
+    *dac_value = g_paramData.params.dcc_bidi_dac;
     
     return 0;
 }
