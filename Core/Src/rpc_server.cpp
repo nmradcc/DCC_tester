@@ -338,7 +338,7 @@ void RpcServerThread(void* argument) {
 // ---------------- Init / Start / Stop ----------------
 
 extern "C" void RpcServer_Init(void) {
-    rpcServerStart_sem = osSemaphoreNew(1, 0, NULL);
+    rpcServerStart_sem = osSemaphoreNew(1, 1, NULL);
     rpcServerThread_id = osThreadNew(RpcServerThread, NULL, &rpcServerTask_attributes);
 }
 
