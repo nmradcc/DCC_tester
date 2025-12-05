@@ -28,7 +28,11 @@ typedef enum {
     PARAM_DCC_TRACK_VOLTAGE = 0,
     PARAM_DCC_TRACK_CURRENT_LIMIT,
     PARAM_DCC_PREAMBLE_BITS,
+    PARAM_DCC_BIT1_DURATION,
+    PARAM_DCC_BIT0_DURATION,
+    PARAM_DCC_BIDI_ENABLE,
     PARAM_DCC_SHORT_CIRCUIT_THRESHOLD,
+    PARAM_DCC_BIDI_DAC,
     
     /* Network parameters */
     PARAM_NETWORK_IP_ADDRESS,
@@ -111,9 +115,24 @@ int parameter_manager_restore(void);
  */
 void parameter_manager_factory_reset(void);
 
-/* Individual parameter accessor */
+/* Individual parameter accessors */
 int set_dcc_track_voltage(uint16_t voltage_mv);
 int get_dcc_track_voltage(uint16_t *voltage_mv);
+
+int set_dcc_bit1_duration(uint8_t duration_us);
+int get_dcc_bit1_duration(uint8_t *duration_us);
+
+int set_dcc_bit0_duration(uint8_t duration_us);
+int get_dcc_bit0_duration(uint8_t *duration_us);
+
+int set_dcc_bidi_enable(uint8_t enable);
+int get_dcc_bidi_enable(uint8_t *enable);
+
+int set_dcc_preamble_bits(uint8_t preamble_bits);
+int get_dcc_preamble_bits(uint8_t *preamble_bits);
+
+int set_dcc_bidi_dac(uint16_t dac_value);
+int get_dcc_bidi_dac(uint16_t *dac_value);
 
 /**
  * @brief Usage Notes:

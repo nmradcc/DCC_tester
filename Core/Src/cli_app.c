@@ -88,18 +88,16 @@ void susi_master_command(const char *arg1, const char *arg2) {
 void command_station_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
     if (strcasecmp(arg1,"start") == 0) {
-        if (strcasecmp(arg2, "bidi") == 0) {
-            CommandStation_Start(true, false);
-        } else if (strcasecmp(arg2, "loop") == 0) {
-            CommandStation_Start(true, true);
+        if (strcasecmp(arg2, "loop") == 0) {
+            CommandStation_Start(true);
         } else {
-            CommandStation_Start(false, false);
+            CommandStation_Start(false);
         }
         printf("Start Command Station ...\n");
     }
     else if (strcasecmp(arg1,"stop") == 0) {
         printf("Stop Command Station ...\n");
-        printf("Stop Command Station ...\n");
+
         CommandStation_Stop();
     }
     else {
@@ -214,7 +212,7 @@ Command cmd_rpcs = {
 Command cmd_cms = {
     .name = "cms", 
     .execute = command_station_command,
-    .help = "Command Station: cms <start|stop> [bidi|loop]",
+    .help = "Command Station: cms <start|stop> [loop]",
     .next = &cmd_rpcs
 };
 Command cmd_dec = {

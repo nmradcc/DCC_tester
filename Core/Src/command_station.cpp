@@ -3,6 +3,7 @@
 #include <cstdio>
 #include "cmsis_os2.h"
 #include "main.h"
+#include "parameter_manager.h"
 #include "stm32h5xx_hal_uart.h"
 #include "rpc_core.hpp"
 
@@ -11,10 +12,8 @@
 static osThreadId_t commandStationThread_id;
 static osSemaphoreId_t commandStationStart_sem;
 static bool commandStationRunning = false;
-static bool commandStationBidi = false;
 static bool commandStationLoop = false;
-
-static uint16_t dac_value =  DEFAULT_BIDIR_THRESHOLD; // DEFAULT BIDIR threshold value for 12-bit DAC
+static uint16_t dac_value = 0;
 
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
@@ -86,12 +85,23 @@ extern "C" void TIM2_IRQHandler(void)
 void CommandStationThread(void *argument) {
   (void)argument;  // Unused parameter
 
+  uint8_t preamble_bits = 0;
+  uint8_t bit1_duration = 0;
+  uint8_t bit0_duration = 0;
+  uint8_t bidi = false;
+
   while (true) {
     // Block until externally started
     osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
 
+    get_dcc_preamble_bits(&preamble_bits);
+    get_dcc_bit1_duration(&bit1_duration);
+    get_dcc_bit0_duration(&bit0_duration);
+    get_dcc_bidi_enable(&bidi);
+    get_dcc_bidi_dac(&dac_value);
+
     // Initialize DCC Command Station
-    if (commandStationBidi) {
+    if (bidi) {
 
       // Start DAC channel 2
       HAL_DAC_Start(&hdac1, DAC_CHANNEL_2);
@@ -99,20 +109,13 @@ void CommandStationThread(void *argument) {
       // Write value to DAC OUT2
       HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_value);
       printf("DAC value: %d\n", dac_value);
-    command_station.init({
-      .num_preamble = DCC_TX_MIN_PREAMBLE_BITS,
-      .bit1_duration = 58u,
-      .bit0_duration = 100u,
-        .flags = {.bidi = true},
-    });
-    } else {
-    command_station.init({
-      .num_preamble = DCC_TX_MIN_PREAMBLE_BITS,
-      .bit1_duration = 58u,
-      .bit0_duration = 100u,
-      .flags = {.bidi = false},
-    });
     }
+    command_station.init({
+      .num_preamble = preamble_bits,
+      .bit1_duration = bit1_duration,
+      .bit0_duration = bit0_duration,
+      .flags = {.bidi = bidi},
+    });
 
   // Enable update interrupt
     __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
@@ -193,14 +196,13 @@ extern "C" void CommandStation_Init(void)
 }
 
 // Can be called from anywhere
-extern "C" void CommandStation_Start(bool bidi, bool loop)
+extern "C" void CommandStation_Start(bool loop)
 {
   if (!commandStationRunning) {
-    commandStationBidi = bidi;
     commandStationLoop = loop;
     HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
     osSemaphoreRelease(commandStationStart_sem);
-    printf("Command station started (bidi=%d, loop=%d)\n", bidi, loop);
+    printf("Command station started (loop=%d)\n", loop);
   }
   else {
     printf("Command station already running\n");
