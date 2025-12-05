@@ -364,3 +364,41 @@ Available RPC Methods:
 ===============================================================================
 END OF DOCUMENT
 ===============================================================================
+TODO:
+
+Add the following:
+
+make_idle_packet
+make_reset_packet
+
+make_consist_control_packet
+make_advanced_operations_speed_direction_and_functions_packet
+make_advanced_operations_restricted_speed_packet
+make_advanced_operations_speed_packet
+
+make_speed_and_direction_packet
+
+make_function_group_f4_f0_packet
+make_function_group_f8_f5_packet
+make_function_group_f12_f9_packet
+make_feature_expansion_f20_f13_packet
+make_feature_expansion_f28_f21_packet
+
+make_binary_state_short_packet
+make_binary_state_long_packet
+make_cv_access_long_verify_service_packet
+make_cv_access_long_write_service_packet
+
+make_cv_access_short_write_packet
+make_cv_access_long_verify_packet
+make_cv_access_long_write_packet
+
+make_logon_enable_packet
+make_logon_select_packet
+make_logon_assign_packet
+
+make_basic_accessory_packet
+
+make_accessory_nop_packet
+
+make arbitary make_idle_packet
