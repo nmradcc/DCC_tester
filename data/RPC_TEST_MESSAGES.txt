@@ -1,0 +1,366 @@
+===============================================================================
+RPC Test Messages for DCC_tester
+===============================================================================
+
+This document contains JSON-RPC test messages for testing the RPC functionality
+of the DCC_tester firmware. Send these messages via the USB CDC ACM interface.
+
+===============================================================================
+1. ECHO TEST
+===============================================================================
+
+Test basic RPC connectivity by echoing back the parameters.
+
+Request:
+{"method":"echo","params":{"test":"hello","value":123}}
+
+Expected Response:
+{"status":"ok","echo":{"test":"hello","value":123}}
+
+-------------------------------------------------------------------------------
+
+Request (empty params):
+{"method":"echo","params":{}}
+
+Expected Response:
+{"status":"ok","echo":{}}
+
+===============================================================================
+2. COMMAND STATION CONTROL
+===============================================================================
+
+2.1 Start Command Station (Normal Mode)
+-----------------------------------------
+Request:
+{"method":"command_station_start","params":{}}
+
+Expected Response:
+{"status":"ok","message":"Command station started","loop":false}
+
+-------------------------------------------------------------------------------
+
+2.2 Start Command Station (Loop Mode)
+---------------------------------------
+Request:
+{"method":"command_station_start","params":{"loop":true}}
+
+Expected Response:
+{"status":"ok","message":"Command station started","loop":true}
+
+-------------------------------------------------------------------------------
+
+2.3 Stop Command Station
+--------------------------
+Request:
+{"method":"command_station_stop","params":{}}
+
+Expected Response:
+{"status":"ok","message":"Command station stopped"}
+
+===============================================================================
+3. DECODER CONTROL
+===============================================================================
+
+3.1 Start Decoder
+------------------
+Request:
+{"method":"decoder_start","params":{}}
+
+Expected Response:
+{"status":"ok","message":"Decoder started"}
+
+-------------------------------------------------------------------------------
+
+3.2 Stop Decoder
+-----------------
+Request:
+{"method":"decoder_stop","params":{}}
+
+Expected Response:
+{"status":"ok","message":"Decoder stopped"}
+
+===============================================================================
+4. COMMAND STATION PARAMETERS
+===============================================================================
+
+4.1 Set All DCC Parameters
+----------------------------
+Request:
+{"method":"command_station_params","params":{"preamble_bits":17,"bit1_duration":58,"bit0_duration":100,"bidi_enable":true}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+-------------------------------------------------------------------------------
+
+4.2 Set Single Parameter (Preamble Bits)
+------------------------------------------
+Request:
+{"method":"command_station_params","params":{"preamble_bits":14}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+-------------------------------------------------------------------------------
+
+4.3 Set Single Parameter (Bit1 Duration)
+------------------------------------------
+Request:
+{"method":"command_station_params","params":{"bit1_duration":58}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+-------------------------------------------------------------------------------
+
+4.4 Set Single Parameter (Bit0 Duration)
+------------------------------------------
+Request:
+{"method":"command_station_params","params":{"bit0_duration":100}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+-------------------------------------------------------------------------------
+
+4.5 Set Single Parameter (BiDi Enable)
+----------------------------------------
+Request:
+{"method":"command_station_params","params":{"bidi_enable":true}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+-------------------------------------------------------------------------------
+
+4.6 Set Single Parameter (BiDi Disable)
+-----------------------------------------
+Request:
+{"method":"command_station_params","params":{"bidi_enable":false}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+-------------------------------------------------------------------------------
+
+4.7 Set Multiple Parameters
+-----------------------------
+Request:
+{"method":"command_station_params","params":{"preamble_bits":20,"bit1_duration":60}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+===============================================================================
+5. PARAMETER FLASH OPERATIONS
+===============================================================================
+
+5.1 Save Parameters to Flash
+------------------------------
+Request:
+{"method":"parameters_save","params":{}}
+
+Expected Response:
+{"status":"ok","message":"Parameters saved to flash"}
+
+-------------------------------------------------------------------------------
+
+5.2 Restore Parameters from Flash
+-----------------------------------
+Request:
+{"method":"parameters_restore","params":{}}
+
+Expected Response:
+{"status":"ok","message":"Parameters restored from flash"}
+
+-------------------------------------------------------------------------------
+
+5.3 Factory Reset (Restore Default Parameters)
+------------------------------------------------
+Request:
+{"method":"parameters_factory_reset","params":{}}
+
+Expected Response:
+{"status":"ok","message":"Factory reset completed - all parameters restored to defaults"}
+
+Note: This erases the EDATA flash area and resets all parameters to defaults.
+
+===============================================================================
+6. SYSTEM CONTROL
+===============================================================================
+
+6.1 System Reboot
+------------------
+Request:
+{"method":"system_reboot","params":{}}
+
+Expected Response:
+{"status":"ok","message":"System rebooting..."}
+
+Note: After sending this command, the system will reset. The USB connection 
+will be lost briefly. Wait a few seconds and reconnect.
+
+===============================================================================
+7. ERROR CASES
+===============================================================================
+
+6.1 Invalid JSON
+-----------------
+Request:
+{invalid json}
+
+Expected Response:
+{"status":"error","message":"Invalid JSON"}
+
+-------------------------------------------------------------------------------
+
+6.2 Missing Method Field
+--------------------------
+Request:
+{"params":{}}
+
+Expected Response:
+{"status":"error","message":"Malformed request"}
+
+-------------------------------------------------------------------------------
+
+6.3 Missing Params Field
+--------------------------
+Request:
+{"method":"echo"}
+
+Expected Response:
+{"status":"error","message":"Malformed request"}
+
+-------------------------------------------------------------------------------
+
+6.4 Unknown Method
+-------------------
+Request:
+{"method":"unknown_method","params":{}}
+
+Expected Response:
+{"status":"error","message":"Unknown method"}
+
+-------------------------------------------------------------------------------
+
+6.5 Invalid Parameter Type (preamble_bits)
+--------------------------------------------
+Request:
+{"method":"command_station_params","params":{"preamble_bits":"invalid"}}
+
+Expected Response:
+{"status":"error","message":"preamble_bits must be a positive integer"}
+
+-------------------------------------------------------------------------------
+
+6.6 Invalid Parameter Type (bit1_duration)
+--------------------------------------------
+Request:
+{"method":"command_station_params","params":{"bit1_duration":"invalid"}}
+
+Expected Response:
+{"status":"error","message":"bit1_duration must be a positive integer"}
+
+-------------------------------------------------------------------------------
+
+6.7 Invalid Parameter Type (bidi_enable)
+------------------------------------------
+Request:
+{"method":"command_station_params","params":{"bidi_enable":"yes"}}
+
+Expected Response:
+{"status":"error","message":"bidi_enable must be a boolean"}
+
+-------------------------------------------------------------------------------
+
+6.8 Invalid Params Type (not an object)
+-----------------------------------------
+Request:
+{"method":"command_station_params","params":"invalid"}
+
+Expected Response:
+{"status":"error","message":"Params must be an object"}
+
+===============================================================================
+8. TYPICAL USAGE SEQUENCES
+===============================================================================
+
+8.1 Initialize and Start Command Station
+------------------------------------------
+Step 1: Set parameters
+{"method":"command_station_params","params":{"preamble_bits":17,"bit1_duration":58,"bit0_duration":100,"bidi_enable":true}}
+
+Step 2: Save to flash
+{"method":"parameters_save","params":{}}
+
+Step 3: Start command station
+{"method":"command_station_start","params":{"loop":true}}
+
+-------------------------------------------------------------------------------
+
+8.2 Quick Parameter Change Without Flash Save
+-----------------------------------------------
+Step 1: Update parameter
+{"method":"command_station_params","params":{"preamble_bits":14}}
+
+Step 2: Restart command station to apply
+{"method":"command_station_stop","params":{}}
+{"method":"command_station_start","params":{"loop":true}}
+
+-------------------------------------------------------------------------------
+
+8.3 Factory Reset and Reboot
+------------------------------
+Step 1: Stop running systems
+{"method":"command_station_stop","params":{}}
+{"method":"decoder_stop","params":{}}
+
+Step 2: Perform factory reset
+{"method":"parameters_factory_reset","params":{}}
+
+Step 3: Reboot system
+{"method":"system_reboot","params":{}}
+
+-------------------------------------------------------------------------------
+
+8.4 Save and Reboot
+--------------------
+Step 1: Save current parameters
+{"method":"parameters_save","params":{}}
+
+Step 2: Reboot to apply changes
+{"method":"system_reboot","params":{}}
+
+===============================================================================
+9. TESTING TIPS
+===============================================================================
+
+- Use a serial terminal program that supports sending raw text/JSON
+- Ensure proper line endings (typically newline/CR+LF)
+- Wait for response before sending next command
+- Check console output (printf) for additional debug information
+- command_station_params does NOT auto-save - use parameters_save explicitly
+- Use parameters_save/restore for explicit flash operations
+- system_reboot will disconnect USB - wait ~3 seconds before reconnecting
+- parameters_factory_reset performs a complete parameter reset to defaults
+
+===============================================================================
+10. COMPLETE METHOD LIST
+===============================================================================
+
+Available RPC Methods:
+1. echo                        - Echo back parameters (test connectivity)
+2. command_station_start       - Start DCC command station
+3. command_station_stop        - Stop DCC command station
+4. command_station_params      - Set DCC parameters (preamble, bit timings, bidi)
+5. decoder_start               - Start DCC decoder
+6. decoder_stop                - Stop DCC decoder
+7. parameters_save             - Save all parameters to flash
+8. parameters_restore          - Restore parameters from flash
+9. parameters_factory_reset    - Reset all parameters to factory defaults
+10. system_reboot              - Reboot the microcontroller
+
+===============================================================================
+END OF DOCUMENT
+===============================================================================
