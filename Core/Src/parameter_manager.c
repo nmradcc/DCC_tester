@@ -29,6 +29,7 @@ static const uint8_t DEFAULT_DCC_BIT1_DURATION = 58;  // 58 microseconds (NMRA s
 static const uint8_t DEFAULT_DCC_BIT0_DURATION = 100; // 100 microseconds (NMRA spec: 95-9900us)
 static const uint8_t DEFAULT_DCC_BIDI_ENABLE = 0;     // BiDi disabled by default
 static const uint16_t DEFAULT_DCC_BIDI_DAC = DEFAULT_BIDIR_THRESHOLD;    // BiDi DAC threshold (12-bit: 0-4095)
+static const uint8_t DEFAULT_DCC_TRIGGER_FIRST_BIT = 0; // Trigger on first bit disabled by default
 
 static const uint32_t DEFAULT_NETWORK_IP_ADDRESS = 0xC0A80164;  // 192.168.1.100
 static const uint32_t DEFAULT_NETWORK_SUBNET_MASK = 0xFFFFFF00;  // 255.255.255.0
@@ -64,6 +65,7 @@ typedef struct {
     uint8_t dcc_bit1_duration;  // "1" bit duration in microseconds
     uint8_t dcc_bit0_duration;  // "0" bit duration in microseconds
     uint8_t dcc_bidi_enable;    // BiDi (bidirectional) enable flag
+    uint8_t dcc_trigger_first_bit; // Trigger on first bit enable flag
     uint16_t dcc_short_circuit_threshold;
     uint16_t dcc_bidi_dac;      // BiDi DAC threshold value (12-bit: 0-4095)
     
@@ -181,6 +183,7 @@ static void load_defaults(void) {
     g_paramData.params.dcc_bit1_duration = DEFAULT_DCC_BIT1_DURATION;
     g_paramData.params.dcc_bit0_duration = DEFAULT_DCC_BIT0_DURATION;
     g_paramData.params.dcc_bidi_enable = DEFAULT_DCC_BIDI_ENABLE;
+    g_paramData.params.dcc_trigger_first_bit = DEFAULT_DCC_TRIGGER_FIRST_BIT;
     g_paramData.params.dcc_short_circuit_threshold = DEFAULT_DCC_SHORT_CIRCUIT_THRESHOLD;
     g_paramData.params.dcc_bidi_dac = DEFAULT_DCC_BIDI_DAC;
     
@@ -200,7 +203,7 @@ static void load_defaults(void) {
  * @brief Initialize the parameter manager
  */
 int parameter_manager_init(int force_defaults) {
-    if (g_initialized) {
+    if (g_initialized && !force_defaults) {
         return 0;  // Already initialized
     }
     
@@ -614,3 +617,37 @@ int get_dcc_bidi_dac(uint16_t *dac_value) {
     return 0;
 }
 
+/**
+ * @brief Set DCC trigger on first bit enable
+ * @param enable 0 to disable, non-zero to enable trigger on first bit
+ * @return 0 on success, -1 on failure
+ */
+int set_dcc_trigger_first_bit(uint8_t enable) {
+    if (!g_initialized) {
+        return -1;
+    }
+    
+    // Write directly to the parameter structure
+    g_paramData.params.dcc_trigger_first_bit = enable ? 1 : 0;
+    
+    // Mark as modified
+    g_modified = 1;
+    
+    return 0;
+}
+
+/**
+ * @brief Get DCC trigger on first bit enable status
+ * @param enable Pointer to store enable status (0=disabled, 1=enabled)
+ * @return 0 on success, -1 on failure
+ */
+int get_dcc_trigger_first_bit(uint8_t *enable) {
+    if (enable == NULL || !g_initialized) {
+        return -1;
+    }
+    
+    // Read directly from the parameter structure
+    *enable = g_paramData.params.dcc_trigger_first_bit;
+    
+    return 0;
+}

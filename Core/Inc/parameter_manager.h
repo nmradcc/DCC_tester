@@ -31,6 +31,7 @@ typedef enum {
     PARAM_DCC_BIT1_DURATION,
     PARAM_DCC_BIT0_DURATION,
     PARAM_DCC_BIDI_ENABLE,
+    PARAM_DCC_TRIGGER_FIRST_BIT,
     PARAM_DCC_SHORT_CIRCUIT_THRESHOLD,
     PARAM_DCC_BIDI_DAC,
     
@@ -133,6 +134,9 @@ int get_dcc_preamble_bits(uint8_t *preamble_bits);
 
 int set_dcc_bidi_dac(uint16_t dac_value);
 int get_dcc_bidi_dac(uint16_t *dac_value);
+
+int set_dcc_trigger_first_bit(uint8_t enable);
+int get_dcc_trigger_first_bit(uint8_t *enable);
 
 /**
  * @brief Usage Notes:

@@ -148,6 +148,28 @@ void bidi_command(const char *arg1, const char *arg2) {
     }
 }
 
+void trigger_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    if (arg1[0]) {
+        if (strcasecmp(arg1, "on") == 0 || strcasecmp(arg1, "1") == 0 || strcasecmp(arg1, "true") == 0) {
+            printf("Enabling trigger on first bit ...\n");
+            set_dcc_trigger_first_bit(1);
+        } else if (strcasecmp(arg1, "off") == 0 || strcasecmp(arg1, "0") == 0 || strcasecmp(arg1, "false") == 0) {
+            printf("Disabling trigger on first bit ...\n");
+            set_dcc_trigger_first_bit(0);
+        } else {
+            printf("Invalid argument. Use: on/off, 1/0, or true/false\n");
+        }
+    } else {
+        uint8_t trigger;
+        if (get_dcc_trigger_first_bit(&trigger) == 0) {
+            printf("Trigger on first bit: %s\n", trigger ? "enabled" : "disabled");
+        } else {
+            printf("Failed to read trigger setting\n");
+        }
+    }
+}
+
 
 
 void hello_command(const char *arg1, const char *arg2) {
@@ -203,11 +225,17 @@ Command cmd_bidi = {
     .next = &cmd_help
 
 };
+Command cmd_trigger = {
+    .name = "trigger",
+    .execute = trigger_command,
+    .help = "Trigger First Packet Bit: trigger <on|off|1|0>",
+    .next = &cmd_bidi
+};
 Command cmd_rpcs = {
     .name = "rpc_server", 
     .execute = rpc_server_command,
     .help = "RPC Server: rpc_server <start|stop>",
-    .next = &cmd_bidi
+    .next = &cmd_trigger
 };
 Command cmd_cms = {
     .name = "cms", 

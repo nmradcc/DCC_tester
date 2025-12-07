@@ -226,6 +226,23 @@ static json command_station_params_handler(const json& params) {
         }
     }
     
+    // Set trigger first bit if provided
+    if (params.contains("trigger_first_bit")) {
+        if (!params["trigger_first_bit"].is_boolean()) {
+            return {
+                {"status", "error"},
+                {"message", "trigger_first_bit must be a boolean"}
+            };
+        }
+        uint8_t trigger = params["trigger_first_bit"].get<bool>() ? 1 : 0;
+        if (set_dcc_trigger_first_bit(trigger) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to set trigger_first_bit"}
+            };
+        }
+    }
+    
     return {
         {"status", "ok"},
         {"message", "Command station parameters updated"}

@@ -14,7 +14,7 @@ struct CommandStation : dcc::tx::CrtpBase<CommandStation, dcc::tx::Timings> {
 
 public:
   // Write track outputs
-  void trackOutputs(bool N, bool P);
+  void trackOutputs(bool N, bool P, bool first_bit);
 
   // BiDi start
   void biDiStart();
