@@ -86,7 +86,7 @@ Expected Response:
 4.1 Set All DCC Parameters
 ----------------------------
 Request:
-{"method":"command_station_params","params":{"preamble_bits":17,"bit1_duration":58,"bit0_duration":100,"bidi_enable":true}}
+{"method":"command_station_params","params":{"preamble_bits":17,"bit1_duration":58,"bit0_duration":100,"bidi_enable":true,"trigger_first_bit":false}}
 
 Expected Response:
 {"status":"ok","message":"Command station parameters updated"}
@@ -147,6 +147,26 @@ Expected Response:
 -----------------------------
 Request:
 {"method":"command_station_params","params":{"preamble_bits":20,"bit1_duration":60}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+-------------------------------------------------------------------------------
+
+4.8 Set Single Parameter (Trigger First Bit Enable)
+-----------------------------------------------------
+Request:
+{"method":"command_station_params","params":{"trigger_first_bit":true}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+-------------------------------------------------------------------------------
+
+4.9 Set Single Parameter (Trigger First Bit Disable)
+------------------------------------------------------
+Request:
+{"method":"command_station_params","params":{"trigger_first_bit":false}}
 
 Expected Response:
 {"status":"ok","message":"Command station parameters updated"}
@@ -282,6 +302,16 @@ Request:
 Expected Response:
 {"status":"error","message":"Params must be an object"}
 
+-------------------------------------------------------------------------------
+
+6.9 Invalid Parameter Type (trigger_first_bit)
+------------------------------------------------
+Request:
+{"method":"command_station_params","params":{"trigger_first_bit":"yes"}}
+
+Expected Response:
+{"status":"error","message":"trigger_first_bit must be a boolean"}
+
 ===============================================================================
 8. TYPICAL USAGE SEQUENCES
 ===============================================================================
@@ -289,7 +319,7 @@ Expected Response:
 8.1 Initialize and Start Command Station
 ------------------------------------------
 Step 1: Set parameters
-{"method":"command_station_params","params":{"preamble_bits":17,"bit1_duration":58,"bit0_duration":100,"bidi_enable":true}}
+{"method":"command_station_params","params":{"preamble_bits":17,"bit1_duration":58,"bit0_duration":100,"bidi_enable":true,"trigger_first_bit":false}}
 
 Step 2: Save to flash
 {"method":"parameters_save","params":{}}
