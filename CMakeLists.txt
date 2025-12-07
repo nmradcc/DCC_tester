@@ -68,14 +68,10 @@ FetchContent_MakeAvailable(rpc_core)
 
 FetchContent_Declare(
   DCC
-  GIT_REPOSITORY "https://github.com/ZIMO-Elektronik/DCC"
-  GIT_TAG v0.44.4)
+  GIT_REPOSITORY "https://github.com/nmradcc/DCC"
+  GIT_TAG DCCTester)
 
 FetchContent_MakeAvailable(DCC)
-
-## NMRA Public Domain & Do-it-yourself manufacturer ID for experimental use
-target_compile_options(DCC INTERFACE -DDCC_MANUFACTURER_ID=13u)
-#target_compile_options(DCC INTERFACE -DDCC_TX_DEQUE_SIZE=10u)
 
 target_compile_features(DCC INTERFACE cxx_std_23)
 

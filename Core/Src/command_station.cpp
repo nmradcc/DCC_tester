@@ -1,6 +1,7 @@
 #include "command_station.hpp"
 #include <cstdint>
 #include <cstdio>
+#include <dcc/speed.hpp>
 #include "cmsis_os2.h"
 #include "main.h"
 #include "parameter_manager.h"
@@ -14,6 +15,7 @@ static osSemaphoreId_t commandStationStart_sem;
 static bool commandStationRunning = false;
 static bool commandStationLoop = false;
 static uint16_t dac_value = 0;
+static uint8_t trigger_first_bit = false;
 
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
@@ -23,12 +25,14 @@ const osThreadAttr_t cmdStationTask_attributes = {
 };
 
 
-void CommandStation::trackOutputs(bool N, bool P) 
+void CommandStation::trackOutputs(bool N, bool P, bool first_bit) 
 { 
  TR_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!N) << TR_N_BR_Pos) | (static_cast<uint32_t>(!P) << TR_P_BR_Pos) |
                            (static_cast<uint32_t>(N) << TR_N_BS_Pos) | (static_cast<uint32_t>(P) << TR_P_BS_Pos);
  TRACK_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!P) << TRACK_P_BR_Pos) |
                            (static_cast<uint32_t>(P) << TRACK_P_BS_Pos);
+ if (trigger_first_bit)
+  first_bit ? HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_SET) : HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET);
 }
 
 void CommandStation::biDiStart() {
@@ -99,6 +103,7 @@ void CommandStationThread(void *argument) {
     get_dcc_bit0_duration(&bit0_duration);
     get_dcc_bidi_enable(&bidi);
     get_dcc_bidi_dac(&dac_value);
+    get_dcc_trigger_first_bit(&trigger_first_bit);
 
     // Initialize DCC Command Station
     if (bidi) {
@@ -114,7 +119,7 @@ void CommandStationThread(void *argument) {
       .num_preamble = preamble_bits,
       .bit1_duration = bit1_duration,
       .bit0_duration = bit0_duration,
-      .flags = {.bidi = bidi},
+      .flags = {.bidi = static_cast<bool>(bidi)},
     });
 
   // Enable update interrupt
