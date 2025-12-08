@@ -34,6 +34,8 @@ typedef enum {
     PARAM_DCC_TRIGGER_FIRST_BIT,
     PARAM_DCC_SHORT_CIRCUIT_THRESHOLD,
     PARAM_DCC_BIDI_DAC,
+    PARAM_DCC_ZEROBIT_OVERRIDE_MASK,
+    PARAM_DCC_ZEROBIT_DELTA,
     
     /* Network parameters */
     PARAM_NETWORK_IP_ADDRESS,
@@ -137,6 +139,12 @@ int get_dcc_bidi_dac(uint16_t *dac_value);
 
 int set_dcc_trigger_first_bit(uint8_t enable);
 int get_dcc_trigger_first_bit(uint8_t *enable);
+
+int set_dcc_zerobit_override_mask(uint64_t mask);
+int get_dcc_zerobit_override_mask(uint64_t *mask);
+
+int set_dcc_zerobit_delta(int32_t delta);
+int get_dcc_zerobit_delta(int32_t *delta);
 
 /**
  * @brief Usage Notes:

@@ -1,5 +1,4 @@
-1. Pin mapping screwed up when changing from F4 to H533 processor
-2. DAC output pins do not map cleanly
-3. Struct alignment issue with DCC library
-4. Railcom cutout not tested
-5. 
+
+1. Railcom cutout not tested
+2. Probable need to do range checking on some RPC parameter set values
+3. May need to expand min/max timing values in DCC lib to accomadate testing invalid values 

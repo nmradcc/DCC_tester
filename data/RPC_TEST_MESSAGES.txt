@@ -171,6 +171,57 @@ Request:
 Expected Response:
 {"status":"ok","message":"Command station parameters updated"}
 
+-------------------------------------------------------------------------------
+
+4.10 Set Single Parameter (Zero Bit Override Mask)
+----------------------------------------------------
+Request:
+{"method":"command_station_params","params":{"zerobit_override_mask":9}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+Note: zerobit_override_mask is a 64-bit unsigned integer. 
+- Each bit represents a position (LSB to MSB) in the DCC packet (1-64) starting from the first
+zero bit following the preamble and progressing forward in tme. 
+i.e. 0x0000000000000002 would typically be the MSB of a decoders 8 bit address etc.  
+- Set bit = use modified zero bit timing for that position.
+- Clear bit = normal data-dependent timing
+- Example: 9 (0b1001) = override bits 1 and 4
+- Default: 0 (no override)
+
+-------------------------------------------------------------------------------
+
+4.11 Set Zero Bit Override Mask (Binary Example)
+--------------------------------------------------
+Request:
+{"method":"command_station_params","params":{"zerobit_override_mask":1152921504606846977}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+Note: Value 1152921504606846977 = 0x1000000000000001
+This overrides bit 1 and bit 61, useful for testing long packets.
+
+-------------------------------------------------------------------------------
+
+4.12 Set Single Parameter (Zero Bit Delta)
+--------------------------------------------
+Request:
+{"method":"command_station_params","params":{"zerobit_delta":20}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+Note: zerobit_delta is a signed int32_t value in microseconds.
+- Adjusts the timing when override mask bits are set
+- Can be positive or negative to increase/decrease timing
+- Must be less than +/- ~80% of programmed zero bit time to avoid overflow
+- Default: 0 microseconds (no adjustment)
+- Typical range: -70 to +70 microseconds
+/* Caution! to avoid overflow and wraparound zerobitDelta must alway be less than
+   approx +-80% of the programmed zero bit time */
+
 ===============================================================================
 5. PARAMETER FLASH OPERATIONS
 ===============================================================================
