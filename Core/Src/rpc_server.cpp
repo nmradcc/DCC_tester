@@ -243,6 +243,40 @@ static json command_station_params_handler(const json& params) {
         }
     }
     
+    // Set zero bit override mask if provided
+    if (params.contains("zerobit_override_mask")) {
+        if (!params["zerobit_override_mask"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "zerobit_override_mask must be a positive integer"}
+            };
+        }
+        uint64_t mask = params["zerobit_override_mask"].get<uint64_t>();
+        if (set_dcc_zerobit_override_mask(mask) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to set zerobit_override_mask"}
+            };
+        }
+    }
+    
+    // Set zero bit delta if provided
+    if (params.contains("zerobit_delta")) {
+        if (!params["zerobit_delta"].is_number_integer()) {
+            return {
+                {"status", "error"},
+                {"message", "zerobit_delta must be an integer"}
+            };
+        }
+        int32_t delta = params["zerobit_delta"].get<int32_t>();
+        if (set_dcc_zerobit_delta(delta) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to set zerobit_delta"}
+            };
+        }
+    }
+    
     return {
         {"status", "ok"},
         {"message", "Command station parameters updated"}

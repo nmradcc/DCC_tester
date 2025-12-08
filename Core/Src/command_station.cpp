@@ -14,8 +14,12 @@ static osThreadId_t commandStationThread_id;
 static osSemaphoreId_t commandStationStart_sem;
 static bool commandStationRunning = false;
 static bool commandStationLoop = false;
+static uint64_t bitCountMask = 0;
+
 static uint16_t dac_value = 0;
 static uint8_t trigger_first_bit = false;
+static uint64_t zerobitOverrideMask = 0;
+static int32_t zerobitDelta = 0;
 
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
@@ -27,12 +31,22 @@ const osThreadAttr_t cmdStationTask_attributes = {
 
 void CommandStation::trackOutputs(bool N, bool P, bool first_bit) 
 { 
- TR_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!N) << TR_N_BR_Pos) | (static_cast<uint32_t>(!P) << TR_P_BR_Pos) |
-                           (static_cast<uint32_t>(N) << TR_N_BS_Pos) | (static_cast<uint32_t>(P) << TR_P_BS_Pos);
- TRACK_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!P) << TRACK_P_BR_Pos) |
-                           (static_cast<uint32_t>(P) << TRACK_P_BS_Pos);
- if (trigger_first_bit)
-  first_bit ? HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_SET) : HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET);
+  TR_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!N) << TR_N_BR_Pos) | (static_cast<uint32_t>(!P) << TR_P_BR_Pos) |
+                            (static_cast<uint32_t>(N) << TR_N_BS_Pos) | (static_cast<uint32_t>(P) << TR_P_BS_Pos);
+  TRACK_P_GPIO_Port->BSRR = (static_cast<uint32_t>(!P) << TRACK_P_BR_Pos) |
+                            (static_cast<uint32_t>(P) << TRACK_P_BS_Pos);
+  if (P)
+  {
+    if (first_bit)
+      bitCountMask = 1;
+    else
+      bitCountMask <<= 1;
+  }
+
+  if (trigger_first_bit)
+  {
+    first_bit ? HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_SET) : HAL_GPIO_WritePin(SCOPE_GPIO_Port, SCOPE_Pin, GPIO_PIN_RESET);
+  }
 }
 
 void CommandStation::biDiStart() {
@@ -80,7 +94,12 @@ extern "C" void TIM2_IRQHandler(void)
     if ((itsource & (TIM_IT_UPDATE)) == (TIM_IT_UPDATE))
     {
       __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
-  auto const arr{command_station.transmit()};
+      auto arr{command_station.transmit()};
+      if ((zerobitOverrideMask & bitCountMask) != 0) {
+        if (arr >= DCC_TX_MIN_BIT_0_TIMING)   // only adjust Zero bits
+          // Adjust zero bit by delta
+          arr = arr + zerobitDelta;
+      }
       htim2.Instance->ARR = arr; // Set auto-reload register for next interrupt
     }
   }
@@ -104,6 +123,8 @@ void CommandStationThread(void *argument) {
     get_dcc_bidi_enable(&bidi);
     get_dcc_bidi_dac(&dac_value);
     get_dcc_trigger_first_bit(&trigger_first_bit);
+    get_dcc_zerobit_override_mask(&zerobitOverrideMask);
+    get_dcc_zerobit_delta(&zerobitDelta);
 
     // Initialize DCC Command Station
     if (bidi) {

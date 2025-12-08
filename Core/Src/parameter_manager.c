@@ -30,6 +30,8 @@ static const uint8_t DEFAULT_DCC_BIT0_DURATION = 100; // 100 microseconds (NMRA 
 static const uint8_t DEFAULT_DCC_BIDI_ENABLE = 0;     // BiDi disabled by default
 static const uint16_t DEFAULT_DCC_BIDI_DAC = DEFAULT_BIDIR_THRESHOLD;    // BiDi DAC threshold (12-bit: 0-4095)
 static const uint8_t DEFAULT_DCC_TRIGGER_FIRST_BIT = 0; // Trigger on first bit disabled by default
+static const uint64_t DEFAULT_DCC_ZEROBIT_OVERRIDE_MASK = 0ULL; // Zero bit override mask disabled by default
+static const int32_t DEFAULT_DCC_ZEROBIT_DELTA = 0; // Zero bit timing delta in microseconds (signed)
 
 static const uint32_t DEFAULT_NETWORK_IP_ADDRESS = 0xC0A80164;  // 192.168.1.100
 static const uint32_t DEFAULT_NETWORK_SUBNET_MASK = 0xFFFFFF00;  // 255.255.255.0
@@ -66,8 +68,12 @@ typedef struct {
     uint8_t dcc_bit0_duration;  // "0" bit duration in microseconds
     uint8_t dcc_bidi_enable;    // BiDi (bidirectional) enable flag
     uint8_t dcc_trigger_first_bit; // Trigger on first bit enable flag
+    uint8_t _padding1[1];  // Alignment padding
     uint16_t dcc_short_circuit_threshold;
     uint16_t dcc_bidi_dac;      // BiDi DAC threshold value (12-bit: 0-4095)
+    uint64_t dcc_zerobit_override_mask; // Zero bit override mask for bit timing adjustment
+    int32_t dcc_zerobit_delta; // Zero bit timing delta in microseconds (signed)
+    uint8_t _padding1b[4];  // Alignment padding
     
     // Network parameters
     uint32_t network_ip_address;
@@ -186,6 +192,8 @@ static void load_defaults(void) {
     g_paramData.params.dcc_trigger_first_bit = DEFAULT_DCC_TRIGGER_FIRST_BIT;
     g_paramData.params.dcc_short_circuit_threshold = DEFAULT_DCC_SHORT_CIRCUIT_THRESHOLD;
     g_paramData.params.dcc_bidi_dac = DEFAULT_DCC_BIDI_DAC;
+    g_paramData.params.dcc_zerobit_override_mask = DEFAULT_DCC_ZEROBIT_OVERRIDE_MASK;
+    g_paramData.params.dcc_zerobit_delta = DEFAULT_DCC_ZEROBIT_DELTA;
     
     g_paramData.params.network_ip_address = DEFAULT_NETWORK_IP_ADDRESS;
     g_paramData.params.network_subnet_mask = DEFAULT_NETWORK_SUBNET_MASK;
@@ -648,6 +656,76 @@ int get_dcc_trigger_first_bit(uint8_t *enable) {
     
     // Read directly from the parameter structure
     *enable = g_paramData.params.dcc_trigger_first_bit;
+    
+    return 0;
+}
+
+/**
+ * @brief Set DCC zero bit override mask
+ * @param mask 64-bit mask for zero bit timing override
+ * @return 0 on success, -1 on failure
+ */
+int set_dcc_zerobit_override_mask(uint64_t mask) {
+    if (!g_initialized) {
+        return -1;
+    }
+    
+    // Write directly to the parameter structure
+    g_paramData.params.dcc_zerobit_override_mask = mask;
+    
+    // Mark as modified
+    g_modified = 1;
+    
+    return 0;
+}
+
+/**
+ * @brief Get DCC zero bit override mask
+ * @param mask Pointer to store 64-bit mask
+ * @return 0 on success, -1 on failure
+ */
+int get_dcc_zerobit_override_mask(uint64_t *mask) {
+    if (mask == NULL || !g_initialized) {
+        return -1;
+    }
+    
+    // Read directly from the parameter structure
+    *mask = g_paramData.params.dcc_zerobit_override_mask;
+    
+    return 0;
+}
+
+/**
+ * @brief Set DCC zero bit timing delta
+ * @param delta Timing delta in microseconds (signed)
+ * @return 0 on success, -1 on failure
+ */
+int set_dcc_zerobit_delta(int32_t delta) {
+    if (!g_initialized) {
+        return -1;
+    }
+    
+    // Write directly to the parameter structure
+    g_paramData.params.dcc_zerobit_delta = delta;
+    
+    // Mark as modified
+    g_modified = 1;
+    
+    return 0;
+}
+
+/**
+ * @brief Get DCC zero bit timing delta
+ * @param delta Pointer to store timing delta in microseconds (signed)
+ * @return 0 on success, -1 on failure
+ */
+int get_dcc_zerobit_delta(int32_t *delta) {
+    if (delta == NULL || !g_initialized) {
+        return -1;
+    }
+    
+    // Read directly from the parameter structure
+    *delta = g_paramData.params.dcc_zerobit_delta;
     
     return 0;
 }
