@@ -34,7 +34,6 @@ extern "C" {
 
 #include "app_netxduo.h"
 #include "app_usbx_device.h"
-#include "usbpd.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
