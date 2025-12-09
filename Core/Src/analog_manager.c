@@ -275,3 +275,40 @@ int analog_manager_get_value(uint8_t adc_num, uint8_t channel, uint16_t *value)
     
     return -1;
 }
+
+
+int get_voltage_feedback_mv(uint16_t *voltage_mv)
+{
+    if (voltage_mv == NULL) {
+        return -1;
+    }
+
+    uint16_t adc_value = 0;
+    if (analog_manager_get_value(1, 6, &adc_value) != 0) {  // Assuming ADC1 Channel 6 is voltage feedback
+        return -1;
+    }
+
+    // Convert ADC value to millivolts 
+    *voltage_mv = (uint16_t)(adc_value * VOLTAGE_FEEDBACK_SCALE_FACTOR_MV);
+
+    return 0;
+}
+
+
+int get_current_feedback_ma(uint16_t *current_ma)
+{
+    if (current_ma == NULL) {
+        return -1;
+    }
+
+    uint16_t adc_value = 0;
+    if (analog_manager_get_value(2, 2, &adc_value) != 0) {  // Assuming ADC2 Channel 2 is current feedback
+        return -1;
+    }
+
+    // Convert ADC value to milliamps  (0.5ma per ADC count) 
+    *current_ma = (uint16_t)(adc_value / CURRENT_FEEDBACK_SCALE_FACTOR_MA);
+
+    return 0;
+
+}

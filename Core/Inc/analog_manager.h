@@ -21,13 +21,10 @@ extern "C" {
 /* Number of samples to average for each channel */
 #define ADC_AVG_SAMPLES 4
 
-/* Global variables containing averaged ADC readings (12-bit: 0-4095) */
-extern volatile uint16_t g_adc1_ch2_avg;  /* ADC1 Channel 2 averaged value */
-extern volatile uint16_t g_adc1_ch3_avg;  /* ADC1 Channel 3 averaged value */
-extern volatile uint16_t g_adc1_ch5_avg;  /* ADC1 Channel 5 averaged value */
-extern volatile uint16_t g_adc1_ch6_avg;  /* ADC1 Channel 6 averaged value */
-extern volatile uint16_t g_adc2_ch2_avg;  /* ADC2 Channel 2 averaged value */
-extern volatile uint16_t g_adc2_ch6_avg;  /* ADC2 Channel 6 averaged value */
+// 656mV per count (multiplier)
+#define VOLTAGE_FEEDBACK_SCALE_FACTOR_MV  (656)
+// 0.5ma per count (divider)
+#define CURRENT_FEEDBACK_SCALE_FACTOR_MA  (2)
 
 /**
  * @brief Initialize the Analog Manager
@@ -55,6 +52,9 @@ int analog_manager_stop(void);
  * @return 0 on success, -1 on invalid parameters
  */
 int analog_manager_get_value(uint8_t adc_num, uint8_t channel, uint16_t *value);
+
+int get_voltage_feedback_mv(uint16_t *voltage_mv);
+int get_current_feedback_ma(uint16_t *current_ma);
 
 #ifdef __cplusplus
 }

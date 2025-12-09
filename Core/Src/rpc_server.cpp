@@ -6,6 +6,7 @@
 #include "command_station.h"
 #include "decoder.h"
 #include "parameter_manager.h"
+#include "analog_manager.h"
 
 #include "rpc_server.hpp"
 
@@ -346,6 +347,42 @@ static json system_reboot_handler(const json& params) {
     return response;
 }
 
+static json get_voltage_feedback_mv_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    uint16_t voltage_mv = 0;
+    
+    if (get_voltage_feedback_mv(&voltage_mv) != 0) {
+        return {
+            {"status", "error"},
+            {"message", "Failed to read voltage feedback"}
+        };
+    }
+    
+    return {
+        {"status", "ok"},
+        {"voltage_mv", voltage_mv}
+    };
+}
+
+static json get_current_feedback_ma_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    uint16_t current_ma = 0;
+    
+    if (get_current_feedback_ma(&current_ma) != 0) {
+        return {
+            {"status", "error"},
+            {"message", "Failed to read current feedback"}
+        };
+    }
+    
+    return {
+        {"status", "ok"},
+        {"current_ma", current_ma}
+    };
+}
+
 // ---------------- RTOS Task ----------------
 
 RpcServer server;
@@ -368,6 +405,8 @@ void RpcServerThread(void* argument) {
     server.register_method("parameters_restore", parameters_restore_handler);
     server.register_method("parameters_factory_reset", parameters_factory_reset_handler);
     server.register_method("system_reboot", system_reboot_handler);
+    server.register_method("get_voltage_feedback_mv", get_voltage_feedback_mv_handler);
+    server.register_method("get_current_feedback_ma", get_current_feedback_ma_handler);
 
     while (rpcServerRunning) {
         std::string request;
