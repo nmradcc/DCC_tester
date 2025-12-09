@@ -278,6 +278,7 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM14_Init();
   MX_UART4_Init();
+  MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
   /* MPU Configuration--------------------------------------------------------*/
   /* By default, all the AHB memory range is cacheable. For regions where caching is not
