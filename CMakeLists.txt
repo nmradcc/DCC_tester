@@ -83,7 +83,6 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    USBPD/Target/stm32h5xx_nucleo_usbpd_pwr.c
     Core/Src/cmsis_os2.c
 #    newlib_lock_glue.c
 #    picolibc_threadx_lock.c
