@@ -13,6 +13,7 @@
 #include "cmsis_os2.h"
 #include "main.h"
 #include "stm32h5xx_hal.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -54,12 +55,13 @@ static void AnalogManagerThread(void *argument)
     printf("Analog Manager Task started\n");
     
     // Calibrate ADCs before use
-    if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK)
+    
+    if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) != HAL_OK)
     {
         printf("ADC1 calibration failed\n");
     }
     
-    if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK)
+    if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED) != HAL_OK)
     {
         printf("ADC2 calibration failed\n");
     }

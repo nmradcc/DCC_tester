@@ -92,6 +92,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
     Core/Src/parameter_manager.c
+    Core/Src/analog_manager.c
     Core/Src/SUSI_Master.c
     Core/Src/SUSI_Slave.c
 )
