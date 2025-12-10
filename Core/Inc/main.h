@@ -92,6 +92,10 @@ uint32_t GetBank_EDATA(uint32_t Address);
 #define TRACK_P_GPIO_Port GPIOA
 #define BIDIR_EN_Pin GPIO_PIN_3
 #define BIDIR_EN_GPIO_Port GPIOA
+#define DEADTRP_ADC1_INP3_Pin GPIO_PIN_6
+#define DEADTRP_ADC1_INP3_GPIO_Port GPIOA
+#define DEADTRM_ADC1_INP5_Pin GPIO_PIN_1
+#define DEADTRM_ADC1_INP5_GPIO_Port GPIOB
 #define SCOPE_Pin GPIO_PIN_7
 #define SCOPE_GPIO_Port GPIOE
 #define IN0_Pin GPIO_PIN_10

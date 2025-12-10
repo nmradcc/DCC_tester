@@ -32,6 +32,7 @@
 #include "decoder.h"
 #include "SUSI.h"
 #include "parameter_manager.h"
+#include "analog_manager.h"
 
 /* USER CODE END Includes */
 
@@ -95,6 +96,10 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   // Note: may need to bypass this on very first initial commissioning before parameter flash is setup??
   // flash setup is normally done onle once ... see cli_app.c command "reset"  
   parameter_manager_init(0);
+
+  /* Init and start the Analog Manager */
+  analog_manager_init();
+  analog_manager_start();
 
   /* Create the led task */  
   ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes

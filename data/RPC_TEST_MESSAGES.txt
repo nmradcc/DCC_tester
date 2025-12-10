@@ -29,27 +29,92 @@ Expected Response:
 2. COMMAND STATION CONTROL
 ===============================================================================
 
-2.1 Start Command Station (Normal Mode)
------------------------------------------
+2.1 Start Command Station (Normal Mode - No Loop)
+---------------------------------------------------
 Request:
 {"method":"command_station_start","params":{}}
 
 Expected Response:
-{"status":"ok","message":"Command station started","loop":false}
+{"status":"ok","message":"Command station started","loop":0}
+
+Note: With loop=0, the command station runs without any test loop.
+Use this mode when sending custom packets via RPC commands.
 
 -------------------------------------------------------------------------------
 
-2.2 Start Command Station (Loop Mode)
----------------------------------------
+2.2 Start Command Station (Test Loop 1 - Basic Function & Speed)
+------------------------------------------------------------------
+Request:
+{"method":"command_station_start","params":{"loop":1}}
+
+Expected Response:
+{"status":"ok","message":"Command station started","loop":1}
+
+Note: Loop 1 tests basic functions and speed control on address 3:
+- Set function F0
+- Accelerate to speed 42 forward
+- Stop
+- Clear function F0
+- Accelerate to speed 42 reverse
+- Stop
+- Repeats every ~12 seconds
+
+-------------------------------------------------------------------------------
+
+2.3 Start Command Station (Test Loop 2 - Emergency Stop)
+---------------------------------------------------------
+Request:
+{"method":"command_station_start","params":{"loop":2}}
+
+Expected Response:
+{"status":"ok","message":"Command station started","loop":2}
+
+Note: Loop 2 tests emergency stop broadcast on address 3:
+- Turn on headlight (F0)
+- Accelerate to speed 60 forward
+- EMERGENCY STOP (broadcast address 0 - affects all locomotives)
+- Resume speed 30 forward
+- Normal stop (address 3)
+- Turn off headlight
+- Repeats every ~15 seconds
+
+The emergency stop uses broadcast address 0, which immediately stops ALL 
+locomotives on the track regardless of their individual addresses. This 
+demonstrates the difference between a targeted stop and a system-wide 
+emergency stop.
+
+-------------------------------------------------------------------------------
+
+2.4 Start Command Station (Test Loop 3 - Speed Ramping)
+---------------------------------------------------------
+Request:
+{"method":"command_station_start","params":{"loop":3}}
+
+Expected Response:
+{"status":"ok","message":"Command station started","loop":3}
+
+Note: Loop 3 tests speed ramping on address 10:
+- Ramp up speed forward (0 to 126 in steps of 10)
+- Ramp down speed forward (126 to 0 in steps of 10)
+- Ramp up speed reverse (0 to 126 in steps of 10)
+- Ramp down speed reverse (126 to 0 in steps of 10)
+- Repeats every ~30 seconds
+
+-------------------------------------------------------------------------------
+
+2.5 Start Command Station (Backwards Compatibility - Boolean)
+---------------------------------------------------------------
 Request:
 {"method":"command_station_start","params":{"loop":true}}
 
 Expected Response:
-{"status":"ok","message":"Command station started","loop":true}
+{"status":"ok","message":"Command station started","loop":1}
+
+Note: For backwards compatibility, boolean true maps to loop 1, false to loop 0.
 
 -------------------------------------------------------------------------------
 
-2.3 Stop Command Station
+2.6 Stop Command Station
 --------------------------
 Request:
 {"method":"command_station_stop","params":{}}
@@ -272,7 +337,41 @@ Note: After sending this command, the system will reset. The USB connection
 will be lost briefly. Wait a few seconds and reconnect.
 
 ===============================================================================
-7. ERROR CASES
+7. ANALOG FEEDBACK READINGS
+===============================================================================
+
+7.1 Get Voltage Feedback
+--------------------------
+Request:
+{"method":"get_voltage_feedback_mv","params":{}}
+
+Expected Response:
+{"status":"ok","voltage_mv":15000}
+
+Note: Returns track voltage feedback in millivolts (mV).
+- ADC source: ADC1 Channel 6
+- Scale factor: 656 mV per ADC count
+- Resolution: 12-bit (0-4095 counts)
+- Typical range: 0-26,895 mV (0-26.9V)
+
+-------------------------------------------------------------------------------
+
+7.2 Get Current Feedback
+--------------------------
+Request:
+{"method":"get_current_feedback_ma","params":{}}
+
+Expected Response:
+{"status":"ok","current_ma":2500}
+
+Note: Returns track current feedback in milliamps (mA).
+- ADC source: ADC2 Channel 2
+- Scale factor: 0.5 mA per ADC count
+- Resolution: 12-bit (0-4095 counts)
+- Typical range: 0-2047 mA (0-2.047A)
+
+===============================================================================
+8. ERROR CASES
 ===============================================================================
 
 6.1 Invalid JSON
@@ -391,7 +490,22 @@ Step 2: Restart command station to apply
 
 -------------------------------------------------------------------------------
 
-8.3 Factory Reset and Reboot
+8.3 Monitor Voltage and Current
+---------------------------------
+Step 1: Start command station
+{"method":"command_station_start","params":{"loop":true}}
+
+Step 2: Read voltage feedback
+{"method":"get_voltage_feedback_mv","params":{}}
+
+Step 3: Read current feedback
+{"method":"get_current_feedback_ma","params":{}}
+
+Step 4: Repeat steps 2-3 as needed for monitoring
+
+-------------------------------------------------------------------------------
+
+8.4 Factory Reset and Reboot
 ------------------------------
 Step 1: Stop running systems
 {"method":"command_station_stop","params":{}}
@@ -405,7 +519,7 @@ Step 3: Reboot system
 
 -------------------------------------------------------------------------------
 
-8.4 Save and Reboot
+8.5 Save and Reboot
 --------------------
 Step 1: Save current parameters
 {"method":"parameters_save","params":{}}
@@ -425,6 +539,8 @@ Step 2: Reboot to apply changes
 - Use parameters_save/restore for explicit flash operations
 - system_reboot will disconnect USB - wait ~3 seconds before reconnecting
 - parameters_factory_reset performs a complete parameter reset to defaults
+- Analog feedback readings update every ~100ms from ADC scanning task
+- Voltage and current readings are averaged over 4 samples per scan
 
 ===============================================================================
 10. COMPLETE METHOD LIST
@@ -441,6 +557,8 @@ Available RPC Methods:
 8. parameters_restore          - Restore parameters from flash
 9. parameters_factory_reset    - Reset all parameters to factory defaults
 10. system_reboot              - Reboot the microcontroller
+11. get_voltage_feedback_mv    - Get track voltage feedback in millivolts
+12. get_current_feedback_ma    - Get track current feedback in milliamps
 
 ===============================================================================
 END OF DOCUMENT
