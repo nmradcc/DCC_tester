@@ -270,22 +270,57 @@ This overrides bit 1 and bit 61, useful for testing long packets.
 
 -------------------------------------------------------------------------------
 
-4.12 Set Single Parameter (Zero Bit Delta)
---------------------------------------------
+4.12 Set Single Parameter (Zero Bit Delta P Phase)
+----------------------------------------------------
 Request:
-{"method":"command_station_params","params":{"zerobit_delta":20}}
+{"method":"command_station_params","params":{"zerobit_deltaP":20}}
 
 Expected Response:
 {"status":"ok","message":"Command station parameters updated"}
 
-Note: zerobit_delta is a signed int32_t value in microseconds.
-- Adjusts the timing when override mask bits are set
+Note: zerobit_deltaP is a signed int32_t value in microseconds.
+- Adjusts the P phase timing when override mask bits are set
 - Can be positive or negative to increase/decrease timing
 - Must be less than +/- ~80% of programmed zero bit time to avoid overflow
 - Default: 0 microseconds (no adjustment)
 - Typical range: -70 to +70 microseconds
-/* Caution! to avoid overflow and wraparound zerobitDelta must alway be less than
+/* Caution! to avoid overflow and wraparound zerobitDeltaP must always be less than
    approx +-80% of the programmed zero bit time */
+
+For backwards compatibility, "zerobit_delta" is also accepted as an alias for 
+"zerobit_deltaP".
+
+-------------------------------------------------------------------------------
+
+4.13 Set Single Parameter (Zero Bit Delta N Phase)
+----------------------------------------------------
+Request:
+{"method":"command_station_params","params":{"zerobit_deltaN":-15}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+Note: zerobit_deltaN is a signed int32_t value in microseconds.
+- Adjusts the N phase timing when override mask bits are set
+- Can be positive or negative to increase/decrease timing
+- Must be less than +/- ~80% of programmed zero bit time to avoid overflow
+- Default: 0 microseconds (no adjustment)
+- Typical range: -70 to +70 microseconds
+/* Caution! to avoid overflow and wraparound zerobitDeltaN must always be less than
+   approx +-80% of the programmed zero bit time */
+
+-------------------------------------------------------------------------------
+
+4.14 Set Multiple Parameters Including Both Delta Values
+----------------------------------------------------------
+Request:
+{"method":"command_station_params","params":{"zerobit_override_mask":"0x0000000000000180","zerobit_deltaP":25,"zerobit_deltaN":-20}}
+
+Expected Response:
+{"status":"ok","message":"Command station parameters updated"}
+
+Note: This allows independent P and N phase timing adjustments for bits 
+specified in the override mask. P phase occurs first, followed by N phase.
 
 ===============================================================================
 5. PARAMETER FLASH OPERATIONS
@@ -320,6 +355,42 @@ Expected Response:
 {"status":"ok","message":"Factory reset completed - all parameters restored to defaults"}
 
 Note: This erases the EDATA flash area and resets all parameters to defaults.
+
+-------------------------------------------------------------------------------
+
+5.4 Get All Command Station Parameters
+----------------------------------------
+Request:
+{"method":"command_station_get_params","params":{}}
+
+Expected Response:
+{
+  "status": "ok",
+  "parameters": {
+    "track_voltage": 15000,
+    "preamble_bits": 17,
+    "bit1_duration": 58,
+    "bit0_duration": 100,
+    "bidi_enable": false,
+    "bidi_dac": 2048,
+    "trigger_first_bit": false,
+    "zerobit_override_mask": "0x0000000000000000",
+    "zerobit_deltaP": 0,
+    "zerobit_deltaN": 0
+  }
+}
+
+Note: This method retrieves all current command station parameter values.
+- track_voltage: In millivolts
+- preamble_bits: Number of preamble bits (14-20)
+- bit1_duration: "1" bit half-period in microseconds (55-61)
+- bit0_duration: "0" bit half-period in microseconds (95-9900)
+- bidi_enable: BiDi (bidirectional) communication enabled
+- bidi_dac: BiDi DAC threshold value (0-4095)
+- trigger_first_bit: Trigger output on first bit
+- zerobit_override_mask: 64-bit mask (hex string) for selective bit timing
+- zerobit_deltaP: P phase timing delta in microseconds (signed)
+- zerobit_deltaN: N phase timing delta in microseconds (signed)
 
 ===============================================================================
 6. SYSTEM CONTROL
@@ -547,18 +618,19 @@ Step 2: Reboot to apply changes
 ===============================================================================
 
 Available RPC Methods:
-1. echo                        - Echo back parameters (test connectivity)
-2. command_station_start       - Start DCC command station
-3. command_station_stop        - Stop DCC command station
-4. command_station_params      - Set DCC parameters (preamble, bit timings, bidi)
-5. decoder_start               - Start DCC decoder
-6. decoder_stop                - Stop DCC decoder
-7. parameters_save             - Save all parameters to flash
-8. parameters_restore          - Restore parameters from flash
-9. parameters_factory_reset    - Reset all parameters to factory defaults
-10. system_reboot              - Reboot the microcontroller
-11. get_voltage_feedback_mv    - Get track voltage feedback in millivolts
-12. get_current_feedback_ma    - Get track current feedback in milliamps
+1. echo                          - Echo back parameters (test connectivity)
+2. command_station_start         - Start DCC command station
+3. command_station_stop          - Stop DCC command station
+4. command_station_params        - Set DCC parameters (preamble, bit timings, bidi)
+5. command_station_get_params    - Get all current DCC parameters
+6. decoder_start                 - Start DCC decoder
+7. decoder_stop                  - Stop DCC decoder
+8. parameters_save               - Save all parameters to flash
+9. parameters_restore            - Restore parameters from flash
+10. parameters_factory_reset     - Reset all parameters to factory defaults
+11. system_reboot                - Reboot the microcontroller
+12. get_voltage_feedback_mv      - Get track voltage feedback in millivolts
+13. get_current_feedback_ma      - Get track current feedback in milliamps
 
 ===============================================================================
 END OF DOCUMENT
