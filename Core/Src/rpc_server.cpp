@@ -13,6 +13,7 @@
 #include "ux_device_cdc_acm.h"
 #include "ux_device_class_cdc_acm.h"
 #include <cstring>
+#include <cstdio>
 
 extern TX_QUEUE rpc_rxqueue;
 extern UX_SLAVE_CLASS_CDC_ACM  *cdc_acm;
@@ -278,19 +279,38 @@ static json command_station_params_handler(const json& params) {
         }
     }
     
-    // Set zero bit delta if provided
-    if (params.contains("zerobit_delta")) {
-        if (!params["zerobit_delta"].is_number_integer()) {
+    // Set zero bit deltaP if provided
+    if (params.contains("zerobit_deltaP") || params.contains("zerobit_delta")) {
+        // Support both old name (zerobit_delta) and new name (zerobit_deltaP) for backwards compatibility
+        const char* key = params.contains("zerobit_deltaP") ? "zerobit_deltaP" : "zerobit_delta";
+        if (!params[key].is_number_integer()) {
             return {
                 {"status", "error"},
-                {"message", "zerobit_delta must be an integer"}
+                {"message", "zerobit_deltaP must be an integer"}
             };
         }
-        int32_t delta = params["zerobit_delta"].get<int32_t>();
-        if (set_dcc_zerobit_delta(delta) != 0) {
+        int32_t delta = params[key].get<int32_t>();
+        if (set_dcc_zerobit_deltaP(delta) != 0) {
             return {
                 {"status", "error"},
-                {"message", "Failed to set zerobit_delta"}
+                {"message", "Failed to set zerobit_deltaP"}
+            };
+        }
+    }
+    
+    // Set zero bit deltaN if provided
+    if (params.contains("zerobit_deltaN")) {
+        if (!params["zerobit_deltaN"].is_number_integer()) {
+            return {
+                {"status", "error"},
+                {"message", "zerobit_deltaN must be an integer"}
+            };
+        }
+        int32_t delta = params["zerobit_deltaN"].get<int32_t>();
+        if (set_dcc_zerobit_deltaN(delta) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to set zerobit_deltaN"}
             };
         }
     }
@@ -400,6 +420,59 @@ static json get_current_feedback_ma_handler(const json& params) {
     };
 }
 
+static json command_station_get_params_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    // Retrieve all command station parameters
+    uint16_t track_voltage = 0;
+    uint8_t preamble_bits = 0;
+    uint8_t bit1_duration = 0;
+    uint8_t bit0_duration = 0;
+    uint8_t bidi_enable = 0;
+    uint16_t bidi_dac = 0;
+    uint8_t trigger_first_bit = 0;
+    uint64_t zerobit_override_mask = 0;
+    int32_t zerobit_deltaP = 0;
+    int32_t zerobit_deltaN = 0;
+    
+    // Get all parameters
+    if (get_dcc_track_voltage(&track_voltage) != 0 ||
+        get_dcc_preamble_bits(&preamble_bits) != 0 ||
+        get_dcc_bit1_duration(&bit1_duration) != 0 ||
+        get_dcc_bit0_duration(&bit0_duration) != 0 ||
+        get_dcc_bidi_enable(&bidi_enable) != 0 ||
+        get_dcc_bidi_dac(&bidi_dac) != 0 ||
+        get_dcc_trigger_first_bit(&trigger_first_bit) != 0 ||
+        get_dcc_zerobit_override_mask(&zerobit_override_mask) != 0 ||
+        get_dcc_zerobit_deltaP(&zerobit_deltaP) != 0 ||
+        get_dcc_zerobit_deltaN(&zerobit_deltaN) != 0) {
+        return {
+            {"status", "error"},
+            {"message", "Failed to retrieve one or more parameters"}
+        };
+    }
+    
+    // Convert uint64_t to hex string for JSON compatibility
+    char mask_str[19];  // "0x" + 16 hex digits + null terminator
+    snprintf(mask_str, sizeof(mask_str), "0x%016llX", (unsigned long long)zerobit_override_mask);
+    
+    return {
+        {"status", "ok"},
+        {"parameters", {
+            {"track_voltage", track_voltage},
+            {"preamble_bits", preamble_bits},
+            {"bit1_duration", bit1_duration},
+            {"bit0_duration", bit0_duration},
+            {"bidi_enable", bidi_enable != 0},
+            {"bidi_dac", bidi_dac},
+            {"trigger_first_bit", trigger_first_bit != 0},
+            {"zerobit_override_mask", mask_str},
+            {"zerobit_deltaP", zerobit_deltaP},
+            {"zerobit_deltaN", zerobit_deltaN}
+        }}
+    };
+}
+
 // ---------------- RTOS Task ----------------
 
 RpcServer server;
@@ -416,6 +489,7 @@ void RpcServerThread(void* argument) {
     server.register_method("command_station_start", command_station_start_handler);
     server.register_method("command_station_stop", command_station_stop_handler);
     server.register_method("command_station_params", command_station_params_handler);
+    server.register_method("command_station_get_params", command_station_get_params_handler);
     server.register_method("decoder_start", decoder_start_handler);
     server.register_method("decoder_stop", decoder_stop_handler);
     server.register_method("parameters_save", parameters_save_handler);
