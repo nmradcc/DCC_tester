@@ -86,18 +86,31 @@ void susi_master_command(const char *arg1, const char *arg2) {
     }
 }
 void command_station_command(const char *arg1, const char *arg2) {
-    (void)arg2; // Unused
     if (strcasecmp(arg1,"start") == 0) {
-        if (strcasecmp(arg2, "loop") == 0) {
-            CommandStation_Start(true);
-        } else {
-            CommandStation_Start(false);
+        uint8_t loop = 0;  // Default: no loop
+        
+        // Parse loop parameter
+        if (arg2 != NULL && strlen(arg2) > 0) {
+            if (strcasecmp(arg2, "loop") == 0 || strcasecmp(arg2, "loop1") == 0 || strcasecmp(arg2, "1") == 0) {
+                loop = 1;
+            } else if (strcasecmp(arg2, "loop2") == 0 || strcasecmp(arg2, "2") == 0) {
+                loop = 2;
+            } else if (strcasecmp(arg2, "loop3") == 0 || strcasecmp(arg2, "3") == 0) {
+                loop = 3;
+            } else if (strcasecmp(arg2, "0") == 0) {
+                loop = 0;
+            } else {
+                printf("Unknown loop mode: %s (use 0, 1, 2, 3, loop, loop1, loop2, or loop3)\n", arg2);
+                return;
+            }
         }
-        printf("Start Command Station ...\n");
+        
+        CommandStation_Start(loop);
+        const char* loop_names[] = {"no loop", "loop1 (basic)", "loop2 (functions)", "loop3 (speed ramp)"};
+        printf("Start Command Station with %s ...\n", loop_names[loop]);
     }
     else if (strcasecmp(arg1,"stop") == 0) {
         printf("Stop Command Station ...\n");
-
         CommandStation_Stop();
     }
     else {
@@ -240,7 +253,7 @@ Command cmd_rpcs = {
 Command cmd_cms = {
     .name = "cms", 
     .execute = command_station_command,
-    .help = "Command Station: cms <start|stop> [loop]",
+    .help = "Command Station: cms <start|stop> [0|1|2|3|loop|loop1|loop2|loop3]",
     .next = &cmd_rpcs
 };
 Command cmd_dec = {

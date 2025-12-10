@@ -22,7 +22,7 @@ extern "C" {
 #define ADC_AVG_SAMPLES 4
 
 // 656mV per count (multiplier)
-#define VOLTAGE_FEEDBACK_SCALE_FACTOR_MV  (656)
+#define VOLTAGE_FEEDBACK_SCALE_FACTOR_MV  (6.8f)
 // 0.5ma per count (divider)
 #define CURRENT_FEEDBACK_SCALE_FACTOR_MA  (2)
 

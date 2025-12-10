@@ -29,27 +29,92 @@ Expected Response:
 2. COMMAND STATION CONTROL
 ===============================================================================
 
-2.1 Start Command Station (Normal Mode)
------------------------------------------
+2.1 Start Command Station (Normal Mode - No Loop)
+---------------------------------------------------
 Request:
 {"method":"command_station_start","params":{}}
 
 Expected Response:
-{"status":"ok","message":"Command station started","loop":false}
+{"status":"ok","message":"Command station started","loop":0}
+
+Note: With loop=0, the command station runs without any test loop.
+Use this mode when sending custom packets via RPC commands.
 
 -------------------------------------------------------------------------------
 
-2.2 Start Command Station (Loop Mode)
----------------------------------------
+2.2 Start Command Station (Test Loop 1 - Basic Function & Speed)
+------------------------------------------------------------------
+Request:
+{"method":"command_station_start","params":{"loop":1}}
+
+Expected Response:
+{"status":"ok","message":"Command station started","loop":1}
+
+Note: Loop 1 tests basic functions and speed control on address 3:
+- Set function F0
+- Accelerate to speed 42 forward
+- Stop
+- Clear function F0
+- Accelerate to speed 42 reverse
+- Stop
+- Repeats every ~12 seconds
+
+-------------------------------------------------------------------------------
+
+2.3 Start Command Station (Test Loop 2 - Emergency Stop)
+---------------------------------------------------------
+Request:
+{"method":"command_station_start","params":{"loop":2}}
+
+Expected Response:
+{"status":"ok","message":"Command station started","loop":2}
+
+Note: Loop 2 tests emergency stop broadcast on address 3:
+- Turn on headlight (F0)
+- Accelerate to speed 60 forward
+- EMERGENCY STOP (broadcast address 0 - affects all locomotives)
+- Resume speed 30 forward
+- Normal stop (address 3)
+- Turn off headlight
+- Repeats every ~15 seconds
+
+The emergency stop uses broadcast address 0, which immediately stops ALL 
+locomotives on the track regardless of their individual addresses. This 
+demonstrates the difference between a targeted stop and a system-wide 
+emergency stop.
+
+-------------------------------------------------------------------------------
+
+2.4 Start Command Station (Test Loop 3 - Speed Ramping)
+---------------------------------------------------------
+Request:
+{"method":"command_station_start","params":{"loop":3}}
+
+Expected Response:
+{"status":"ok","message":"Command station started","loop":3}
+
+Note: Loop 3 tests speed ramping on address 10:
+- Ramp up speed forward (0 to 126 in steps of 10)
+- Ramp down speed forward (126 to 0 in steps of 10)
+- Ramp up speed reverse (0 to 126 in steps of 10)
+- Ramp down speed reverse (126 to 0 in steps of 10)
+- Repeats every ~30 seconds
+
+-------------------------------------------------------------------------------
+
+2.5 Start Command Station (Backwards Compatibility - Boolean)
+---------------------------------------------------------------
 Request:
 {"method":"command_station_start","params":{"loop":true}}
 
 Expected Response:
-{"status":"ok","message":"Command station started","loop":true}
+{"status":"ok","message":"Command station started","loop":1}
+
+Note: For backwards compatibility, boolean true maps to loop 1, false to loop 0.
 
 -------------------------------------------------------------------------------
 
-2.3 Stop Command Station
+2.6 Stop Command Station
 --------------------------
 Request:
 {"method":"command_station_stop","params":{}}

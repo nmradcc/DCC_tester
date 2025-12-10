@@ -99,12 +99,29 @@ static json echo_handler(const json& params) {
 }
 
 static json command_station_start_handler(const json& params) {
-    bool loop = false;
+    uint8_t loop = 0;  // 0=no loop, 1=loop1, 2=loop2, 3=loop3
     
     // Check if params contains a "loop" field
     if (params.is_object() && params.contains("loop")) {
-        if (params["loop"].is_boolean()) {
-            loop = params["loop"].get<bool>();
+        if (params["loop"].is_number_unsigned()) {
+            loop = params["loop"].get<uint8_t>();
+            // Validate loop range
+            if (loop > 3) {
+                return {
+                    {"status", "error"},
+                    {"message", "loop must be 0, 1, 2, or 3"}
+                };
+            }
+        }
+        else if (params["loop"].is_boolean()) {
+            // Backwards compatibility: true=1, false=0
+            loop = params["loop"].get<bool>() ? 1 : 0;
+        }
+        else {
+            return {
+                {"status", "error"},
+                {"message", "loop must be a number (0-3) or boolean"}
+            };
         }
     }
     

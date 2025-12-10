@@ -164,7 +164,6 @@ static uint16_t average_adc_readings(ADC_HandleTypeDef *hadc, uint32_t channel, 
  */
 int analog_manager_init(void)
 {
-    printf("Analog Manager initialized\n");
     return 0;
 }
 
@@ -192,7 +191,6 @@ int analog_manager_start(void)
         return -1;
     }
     
-    printf("Analog Manager started\n");
     return 0;
 }
 
@@ -220,7 +218,6 @@ int analog_manager_stop(void)
         analogManagerThread_id = NULL;
     }
     
-    printf("Analog Manager stopped\n");
     return 0;
 }
 
@@ -289,7 +286,7 @@ int get_voltage_feedback_mv(uint16_t *voltage_mv)
     }
 
     // Convert ADC value to millivolts 
-    *voltage_mv = (uint16_t)(adc_value * VOLTAGE_FEEDBACK_SCALE_FACTOR_MV);
+    *voltage_mv = (uint16_t)((float)adc_value * VOLTAGE_FEEDBACK_SCALE_FACTOR_MV);
 
     return 0;
 }
