@@ -2,7 +2,8 @@
 REM STM32CubeMX Code Generation Script
 REM Generates code from DCC_tester.ioc project file
 
-set CUBEMX_PATH="C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeMX\STM32CubeMX.exe"
+set CUBEMX_PATH="C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeMX\"
+set CUBEMX_PATH2="C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeMX\STM32CubeMX.exe"
 
 if not exist %CUBEMX_PATH% (
     echo Error: STM32CubeMX not found at %CUBEMX_PATH%
@@ -11,7 +12,7 @@ if not exist %CUBEMX_PATH% (
 )
 
 echo Running STM32CubeMX code generation...
-%CUBEMX_PATH% -q generatecode.txt
+%CUBEMX_PATH%\jre\bin\java -jar %CUBEMX_PATH2% -q .\generatecode.txt
 
 if %ERRORLEVEL% NEQ 0 (
     echo Error: Code generation failed with error code %ERRORLEVEL%
@@ -19,4 +20,4 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo Code generation completed successfully
-exit /b 0
+exit_mx
