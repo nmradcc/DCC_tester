@@ -65,6 +65,13 @@ GIT_TAG        master  # or specify a commit/tag
 
 FetchContent_MakeAvailable(rpc_core)
 
+FetchContent_Declare(
+    openmrn
+    GIT_REPOSITORY https://github.com/dvescovi1/openmrn.git
+    GIT_TAG arm-only  # or specific commit/tag
+)
+
+FetchContent_MakeAvailable(openmrn)
 
 FetchContent_Declare(
   DCC
@@ -119,6 +126,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
     # Add user defined libraries
     rpc_core
+    openmrn::core
     DCC::DCC
 )
 
