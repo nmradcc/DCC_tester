@@ -68,7 +68,9 @@ FetchContent_MakeAvailable(rpc_core)
 FetchContent_Declare(
     openmrn
     GIT_REPOSITORY https://github.com/dvescovi1/openmrn.git
-    GIT_TAG arm-only  # or specific commit/tag
+    GIT_TAG header-only  # or specific commit/tag
+#    SOURCE_DIR     ${CMAKE_PROJECT_NAME}/openmrn  # Optional: control location
+#    SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/openmrn-src  # Optional: control location
 )
 
 FetchContent_MakeAvailable(openmrn)
@@ -108,6 +110,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_CURRENT_SOURCE_DIR}/
     ${CMAKE_CURRENT_BINARY_DIR}/generated
+    ${openmrn_SOURCE_DIR}/src  # OpenMRN header-only include
 )
 
 # Add project symbols (macros)
