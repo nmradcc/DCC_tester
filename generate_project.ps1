@@ -1,7 +1,7 @@
-# STM32CubeMX Code Generation Script
-# Generates code from DCC_tester.ioc project file
+# STM32CubeMX ProjectCode Generation Script
+# Generates code and project files from DCC_tester.ioc file
 
-$CubeMXPath = "C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeMX\STM32CubeMX.exe"
+$CubeMXPath = "C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeMX"
 
 if (-not (Test-Path $CubeMXPath)) {
     Write-Error "STM32CubeMX not found at $CubeMXPath"
@@ -11,7 +11,7 @@ if (-not (Test-Path $CubeMXPath)) {
 
 Write-Host "Running STM32CubeMX code generation..." -ForegroundColor Cyan
 
-& $CubeMXPath -q generatecode.txt
+& $CubeMXPath\jre\bin\java -jar $CubeMXPath\STM32CubeMX.exe -q .\generate_project.txt
 
 # Check if exit code is null or non-zero
 if ($null -eq $LASTEXITCODE) {
