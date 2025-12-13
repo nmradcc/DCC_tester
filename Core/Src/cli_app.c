@@ -17,6 +17,7 @@
 #include "command_station.h"
 #include "decoder.h"
 #include "susi.h"
+#include "OpenMRN_client.h"
 
 // Declare _write prototype to avoid implicit declaration error
 int _write(int file, char *ptr, int len);
@@ -224,6 +225,21 @@ void date_time_command(const char *arg1, const char *arg2) {
            sTime.Hours, sTime.Minutes, sTime.Seconds);
 }
 
+void openmrn_client_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    if (strcasecmp(arg1,"start") == 0) {
+        printf("Start OpenMRN Client ...\n");
+        OpenMRN_Client_Start();
+    }
+    else if (strcasecmp(arg1,"stop") == 0) {
+        printf("Stop OpenMRN Client ...\n");
+        OpenMRN_Client_Stop();
+    }
+    else {
+        printf("Unknown OpenMRN command: %s\n", arg1);
+    }
+}
+
 // Statically Register commands in a linked list!
 Command cmd_help = {
     .name = "help", 
@@ -262,11 +278,17 @@ Command cmd_dec = {
     .help = "Decoder: dec <start|stop>",
     .next = &cmd_cms
 };
+Command cmd_openmrn = {
+    .name = "openmrn", 
+    .execute = openmrn_client_command,
+    .help = "OpenMRN Client: openmrn <start|stop>",
+    .next = &cmd_dec
+};
 Command cmd_susi_slave = {
     .name = "susi_slave", 
     .execute = susi_slave_command,
     .help = "SUSI Slave start/stop",
-    .next = &cmd_dec
+    .next = &cmd_openmrn
 };
 Command cmd_susi_master = {
     .name = "susi_master", 

@@ -46,7 +46,7 @@ extern DAC_HandleTypeDef hdac1;
 extern UART_HandleTypeDef huart6;
 extern SPI_HandleTypeDef hspi2;
 extern SPI_HandleTypeDef hspi5;
-
+extern FDCAN_HandleTypeDef hfdcan1;
 
 /* USER CODE END ET */
 
@@ -64,7 +64,6 @@ extern SPI_HandleTypeDef hspi5;
 void Error_Handler(void);
 void MX_SDMMC1_SD_Init(void);
 void MX_USB_PCD_Init(void);
-void MX_ADC1_Init(void);
 
 /* USER CODE BEGIN EFP */
 

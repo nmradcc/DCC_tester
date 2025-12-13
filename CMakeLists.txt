@@ -103,6 +103,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/analog_manager.c
     Core/Src/SUSI_Master.c
     Core/Src/SUSI_Slave.c
+    Core/Src/OpenMRN_client.c
 )
 
 # Add include paths
@@ -129,7 +130,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
     # Add user defined libraries
     rpc_core
-    openmrn::core
+    OpenMRN::openmrn
     DCC::DCC
 )
 
