@@ -65,6 +65,15 @@ GIT_TAG        master  # or specify a commit/tag
 
 FetchContent_MakeAvailable(rpc_core)
 
+FetchContent_Declare(
+    openmrn
+    GIT_REPOSITORY https://github.com/dvescovi1/openmrn.git
+    GIT_TAG header-only  # or specific commit/tag
+#    SOURCE_DIR     ${CMAKE_PROJECT_NAME}/openmrn  # Optional: control location
+#    SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/openmrn-src  # Optional: control location
+)
+
+FetchContent_MakeAvailable(openmrn)
 
 FetchContent_Declare(
   DCC
@@ -94,6 +103,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/analog_manager.c
     Core/Src/SUSI_Master.c
     Core/Src/SUSI_Slave.c
+    Core/Src/OpenMRN_client.c
 )
 
 # Add include paths
@@ -101,6 +111,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_CURRENT_SOURCE_DIR}/
     ${CMAKE_CURRENT_BINARY_DIR}/generated
+    ${openmrn_SOURCE_DIR}/src  # OpenMRN header-only include
 )
 
 # Add project symbols (macros)
@@ -119,6 +130,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
     # Add user defined libraries
     rpc_core
+    OpenMRN::openmrn
     DCC::DCC
 )
 

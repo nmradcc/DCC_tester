@@ -104,6 +104,7 @@ static void MX_SPI5_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_USART6_UART_Init(void);
+static void MX_ADC1_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM14_Init(void);
 static void MX_UART4_Init(void);
@@ -265,7 +266,6 @@ int main(void)
   MX_ICACHE_Init();
   MX_ETH_Init();
   MX_TIM2_Init();
-  MX_SDMMC1_SD_Init();
   MX_FDCAN1_Init();
   MX_USART2_UART_Init();
   MX_RTC_Init();
@@ -442,7 +442,7 @@ void PeriphCommonClock_Config(void)
   * @param None
   * @retval None
   */
-void MX_ADC1_Init(void)
+static void MX_ADC1_Init(void)
 {
 
   /* USER CODE BEGIN ADC1_Init 0 */
@@ -661,13 +661,13 @@ static void MX_FDCAN1_Init(void)
 
   /* USER CODE END FDCAN1_Init 1 */
   hfdcan1.Instance = FDCAN1;
-  hfdcan1.Init.ClockDivider = FDCAN_CLOCK_DIV1;
+  hfdcan1.Init.ClockDivider = FDCAN_CLOCK_DIV16;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
   hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
   hfdcan1.Init.AutoRetransmission = DISABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
   hfdcan1.Init.ProtocolException = DISABLE;
-  hfdcan1.Init.NominalPrescaler = 16;
+  hfdcan1.Init.NominalPrescaler = 42;
   hfdcan1.Init.NominalSyncJumpWidth = 1;
   hfdcan1.Init.NominalTimeSeg1 = 1;
   hfdcan1.Init.NominalTimeSeg2 = 1;
