@@ -41,21 +41,18 @@ The DCC protocol is defined by various standards published by the [National Mode
 
 ### Installation
 
-This repository uses [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) to bring in dependent components.
-
-Note: If you download the ZIP file provided by GitHub UI, you will not get the contents of the submodules. (The ZIP file is also not a valid Git repository)
-
 To clone using HTTPS:
 ```
-git clone --recursive https://github.com/nmradcc/DCC_tester.git ./DCC_tester
+git clone https://github.com/nmradcc/DCC_tester.git ./DCC_tester
 cd ./DCC_tester
 ```
-After cloning it is important to initialy generate the dependent driver code before building. (these driver directories are not archived by default!)
+After cloning it is important to initialy generate the dependent project driver code before building. (these driver directories are not archived by default!)
 Generate the code by launching the STM32CubeMX utility, open the DCC_testor.ioc file and press the GENERATE CODE button.
 
 After code generation you can launch VSC and build.
 
 NOTE: The code is NOT buildable or runable after cloning! You must do an initial GENERATE CODE with the CubeMX utility!
+You can also do the generate code step from the command line by using the Windows PowerShell generate_project.ps1 script.
 
 
 ### Build
@@ -71,6 +68,14 @@ Its worth maintaining compatability going forward.
 The debug USB interface creates a virtual serial serial uart.
 You can connect to the UART using the Visual Studio Code serial monitor or you can use an external program like Putty or Termite.
 The Command Line Interface (CLI) is available via the virtual com port.
-Through the CLI you can start/stop modules like the command station, set variables/parameters, launch scripts etc.
+Through the CLI you can start/stop modules like the command station, set variables/parameters etc.
 See the CLI help menu for available commands.
+More extensive control is offered via an RPC JSON interface implemented on the NUCLEO aux user USB interface.
+Plugging in the user USB interface to a host computer will offer up an additional virtual com port.
+Through this com port you can exicute any series of command by using simple JSON formatted instructions.
+See RPC_TEST_MESSAGES.txt file in the data directory for a complete list of presently implemented commands.
+Again you can use a simple terminal program, cut and paste commands directly from the document into the terminal send window.
+
+Have fun!
+
 
