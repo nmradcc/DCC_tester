@@ -70,9 +70,10 @@ You can connect to the UART using the Visual Studio Code serial monitor or you c
 The Command Line Interface (CLI) is available via the virtual com port.
 Through the CLI you can start/stop modules like the command station, set variables/parameters etc.
 See the CLI help menu for available commands.
+
 More extensive control is offered via an RPC JSON interface implemented on the NUCLEO aux user USB interface.
 Plugging in the user USB interface to a host computer will offer up an additional virtual com port.
-Through this com port you can exicute any series of command by using simple JSON formatted instructions.
+Through this com port you can exicute any series of commands by using simple JSON formatted instructions.
 See RPC_TEST_MESSAGES.txt file in the data directory for a complete list of presently implemented commands.
 Again you can use a simple terminal program, cut and paste commands directly from the document into the terminal send window.
 
