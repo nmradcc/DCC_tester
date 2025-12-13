@@ -103,7 +103,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/analog_manager.c
     Core/Src/SUSI_Master.c
     Core/Src/SUSI_Slave.c
-    Core/Src/OpenMRN_client.c
+    Core/Src/OpenMRN_client.cpp
 )
 
 # Add include paths
