@@ -14,13 +14,14 @@
 #include "ux_device_class_cdc_acm.h"
 #include <cstring>
 #include <cstdio>
+#include <atomic>
 
 extern TX_QUEUE rpc_rxqueue;
 extern UX_SLAVE_CLASS_CDC_ACM  *cdc_acm;
 
 static osThreadId_t rpcServerThread_id;
 static osSemaphoreId_t rpcServerStart_sem;
-static bool rpcServerRunning = false;
+static std::atomic<bool> rpcServerRunning{false};
 
 /* Definitions for rpcServerTask */
 const osThreadAttr_t rpcServerTask_attributes = {
@@ -483,7 +484,7 @@ void RpcServerThread(void* argument) {
     ULONG actual_length;
 
     osSemaphoreAcquire(rpcServerStart_sem, osWaitForever);
-    rpcServerRunning = true;
+    rpcServerRunning.store(true);
 
     server.register_method("echo", echo_handler);
     server.register_method("command_station_start", command_station_start_handler);
@@ -499,7 +500,7 @@ void RpcServerThread(void* argument) {
     server.register_method("get_voltage_feedback_mv", get_voltage_feedback_mv_handler);
     server.register_method("get_current_feedback_ma", get_current_feedback_ma_handler);
 
-    while (rpcServerRunning) {
+    while (rpcServerRunning.load()) {
         std::string request;
         // Block until a message pointer is available from RX thread
         if (tx_queue_receive(&rpc_rxqueue, &msg, MS_TO_TICK(10)) == TX_SUCCESS)
@@ -524,7 +525,7 @@ extern "C" void RpcServer_Init(void) {
 }
 
 extern "C" void RpcServer_Start(bool test_mode) {
-    if (!rpcServerRunning) {
+    if (!rpcServerRunning.load()) {
         osSemaphoreRelease(rpcServerStart_sem);
         printf("RPC Server started\n");
     } else {
@@ -533,9 +534,9 @@ extern "C" void RpcServer_Start(bool test_mode) {
 }
 
 extern "C" void RpcServer_Stop(void) {
-    if (rpcServerRunning) {
+    if (rpcServerRunning.load()) {
         printf("RPC Server stopping\n");
-        rpcServerRunning = false;
+        rpcServerRunning.store(false);
         osSemaphoreAcquire(rpcServerStart_sem, osWaitForever);
         printf("RPC Server stopped\n");
     } else {

@@ -7,10 +7,20 @@ extern "C" {
 #include "stm32h5xx_hal_fdcan.h"
 }
 
+#include "os/os.h"
+#include "openlcb/SimpleStack.hxx"
+#include "openlcb/SimpleNodeInfoMockUserFile.hxx"
+#include "openlcb/EventHandlerTemplates.hxx"
+
 static FDCAN_HandleTypeDef *hOpenMRNCAN;
 static osThreadId_t openMRNThread_id;
 static osSemaphoreId_t openMRNStart_sem;
 static std::atomic<bool> openMRNRunning{false};
+
+uint64_t node_id = 0x0501010118F000ULL; // Example Node ID  TODO: move to header
+
+static openlcb::SimpleCanStack *g_stack = nullptr;
+static openlcb::MockSNIPUserFile *g_nodeinfo = nullptr;
 
 /* Definitions for openMRNTask */
 static const osThreadAttr_t openMRNTask_attributes = {
@@ -35,10 +45,19 @@ extern "C" void OpenMRN_ClientThread(void *argument) {
   }
 }
 
+
+
 extern "C" void OpenMRN_Client_Init(FDCAN_HandleTypeDef *hfdcan) {
   hOpenMRNCAN = hfdcan;
   openMRNStart_sem = osSemaphoreNew(1, 0, NULL);  // Start locked
+  // Create persistent stack object
+  g_stack = new openlcb::SimpleCanStack(node_id);
+  g_nodeinfo = new openlcb::MockSNIPUserFile("My Node", "Description");
+
+  // Don't call stack.start() - the stack typically starts automatically
+
   openMRNThread_id = osThreadNew(OpenMRN_ClientThread, NULL, &openMRNTask_attributes);
+
 }
 
 extern "C" void OpenMRN_Client_Start(void) {

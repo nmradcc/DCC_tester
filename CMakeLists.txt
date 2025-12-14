@@ -82,6 +82,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(DCC)
 
+
 target_compile_features(DCC INTERFACE cxx_std_23)
 
 # Link directories setup
@@ -104,6 +105,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/SUSI_Master.c
     Core/Src/SUSI_Slave.c
     Core/Src/OpenMRN_client.cpp
+    ${openmrn_SOURCE_DIR}/src/openlcb/SimpleNodeInfoMockUserFile.cxx
 )
 
 # Add include paths
@@ -112,12 +114,15 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/
     ${CMAKE_CURRENT_BINARY_DIR}/generated
     ${openmrn_SOURCE_DIR}/src  # OpenMRN header-only include
+    ${openmrn_SOURCE_DIR}/inc
+    ${openmrn_SOURCE_DIR}/inc/cmsis_os2
 )
 
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
     RPC_CORE_LOG_DISABLE_ALL=1
+    __CMSIS_RTOS2
 )
 
 # Remove wrong libob.a library dependency when using cpp files
@@ -130,7 +135,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
     # Add user defined libraries
     rpc_core
-    OpenMRN::openmrn
+    OpenMRN::openmrn  # Header-only, included via target_include_directories
     DCC::DCC
 )
 
