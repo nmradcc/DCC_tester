@@ -93,6 +93,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/Src/cmsis_os2.c
+    Core/Src/tx_freertos.c
 #    newlib_lock_glue.c
 #    picolibc_threadx_lock.c
     Core/Src/cli_app.c
