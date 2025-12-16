@@ -146,6 +146,93 @@ static json command_station_stop_handler(const json& params) {
     };
 }
 
+static json command_station_load_packet_handler(const json& params) {
+    if (!params.is_object() || !params.contains("bytes")) {
+        return {
+            {"status", "error"},
+            {"message", "params must contain 'bytes' array"}
+        };
+    }
+    
+    if (!params["bytes"].is_array()) {
+        return {
+            {"status", "error"},
+            {"message", "'bytes' must be an array"}
+        };
+    }
+    
+    auto bytes_array = params["bytes"];
+    if (bytes_array.empty() || bytes_array.size() > DCC_MAX_PACKET_SIZE) {
+        return {
+            {"status", "error"},
+            {"message", "bytes array must have 1-18 elements"}
+        };
+    }
+    
+    uint8_t bytes[DCC_MAX_PACKET_SIZE];
+    uint8_t length = 0;
+    
+    for (const auto& byte : bytes_array) {
+        if (!byte.is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "all bytes must be unsigned integers"}
+            };
+        }
+        uint32_t val = byte.get<uint32_t>();
+        if (val > 0xFF) {
+            return {
+                {"status", "error"},
+                {"message", "byte values must be 0-255"}
+            };
+        }
+        bytes[length++] = static_cast<uint8_t>(val);
+    }
+    
+    if (!CommandStation_LoadCustomPacket(bytes, length)) {
+        return {
+            {"status", "error"},
+            {"message", "Failed to load packet"}
+        };
+    }
+    
+    return {
+        {"status", "ok"},
+        {"message", "Packet loaded successfully"},
+        {"length", length}
+    };
+}
+
+static json command_station_transmit_packet_handler(const json& params) {
+    uint32_t count = 1;  // Default to 1 transmission
+    uint32_t delay_ms = 100;  // Default to 100ms delay
+    
+    // Parse optional count parameter
+    if (params.contains("count")) {
+        count = params["count"].get<uint32_t>();
+        if (count == 0) {
+            return {
+                {"status", "error"},
+                {"message", "Count must be greater than 0"}
+            };
+        }
+    }
+    
+    // Parse optional delay_ms parameter
+    if (params.contains("delay_ms")) {
+        delay_ms = params["delay_ms"].get<uint32_t>();
+    }
+    
+    CommandStation_TriggerTransmit(count, delay_ms);
+    
+    return {
+        {"status", "ok"},
+        {"message", "Packet transmission triggered"},
+        {"count", count},
+        {"delay_ms", delay_ms}
+    };
+}
+
 static json decoder_start_handler(const json& params) {
     (void)params;  // Unused parameter
     
@@ -488,6 +575,8 @@ void RpcServerThread(void* argument) {
     server.register_method("echo", echo_handler);
     server.register_method("command_station_start", command_station_start_handler);
     server.register_method("command_station_stop", command_station_stop_handler);
+    server.register_method("command_station_load_packet", command_station_load_packet_handler);
+    server.register_method("command_station_transmit_packet", command_station_transmit_packet_handler);
     server.register_method("command_station_params", command_station_params_handler);
     server.register_method("command_station_get_params", command_station_get_params_handler);
     server.register_method("decoder_start", decoder_start_handler);
