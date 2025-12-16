@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "main.h"
+#include "tx_api.h"
+#include "stm32h5xx_hal_fdcan.h"
 
 #ifdef __cplusplus
 extern "C" {

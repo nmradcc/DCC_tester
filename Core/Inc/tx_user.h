@@ -76,7 +76,6 @@
 #define TX_BYTE_POOL_MIN            (1024) /* Minimum size of a byte pool block */ 
 #define RTOS2_BYTE_POOL_HEAP_SIZE   (1024 * 16) /* 16 KB for ThreadX byte pool heap */
 #define RTOS2_BYTE_POOL_STACK_SIZE  (1024 * 64) /* 64 KB for ThreadX byte pool stack */
-#define TX_THREAD_USER_EXTENSION     ULONG tx_thread_detached_joinable;
 
 /* USER CODE END 1 */
 
@@ -272,6 +271,12 @@
 /*#define TX_SAFETY_CRITICAL*/
 
 /* USER CODE BEGIN 2 */
+/* both */
+/* FreeRTOS compatibility layer */
+/* CMSIS RTOS V2 compatibility layer */
+#define TX_THREAD_USER_EXTENSION \
+    ULONG tx_thread_detached_joinable; \
+    VOID *txfr_thread_ptr;
 
 /* USER CODE END 2 */
 

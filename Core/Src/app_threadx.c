@@ -93,6 +93,12 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
 
   /* USER CODE BEGIN App_ThreadX_Init */
 
+  /* FreeRTOS adaption layer */
+  if(tx_freertos_init() != TX_SUCCESS)
+  {
+    Error_Handler();
+  }
+
   /* Init parameter manager by restoring setting from flash */
   // Note: may need to bypass this on very first initial commissioning before parameter flash is setup??
   // flash setup is normally done onle once ... see cli_app.c command "reset"  

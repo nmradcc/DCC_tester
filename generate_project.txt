@@ -1,0 +1,3 @@
+config load .\DCC_tester.ioc
+project generate .
+exit
