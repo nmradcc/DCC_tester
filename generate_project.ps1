@@ -16,11 +16,36 @@ Write-Host "Running STM32CubeMX code generation..." -ForegroundColor Cyan
 # Check if exit code is null or non-zero
 if ($null -eq $LASTEXITCODE) {
     Write-Host "Code generation completed (no error code returned)" -ForegroundColor Yellow
-    exit 0
 } elseif ($LASTEXITCODE -ne 0) {
     Write-Error "Code generation failed with error code $LASTEXITCODE"
     exit $LASTEXITCODE
+} else {
+    Write-Host "Code generation completed successfully" -ForegroundColor Green
 }
 
-Write-Host "Code generation completed successfully" -ForegroundColor Green
+# Clean up any existing build artifacts
+if (Test-Path "build") {
+    Write-Host "`nRemoving existing build directory..." -ForegroundColor Cyan
+    Remove-Item -Path "build" -Recurse -Force
+    Write-Host "Build directory cleaned" -ForegroundColor Green
+}
+
+# Run CMake configuration
+Write-Host "`nConfiguring CMake project..." -ForegroundColor Cyan
+cmake -S . -B build -G Ninja
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "CMake configuration failed with error code $LASTEXITCODE"
+    exit $LASTEXITCODE
+}
+Write-Host "CMake configuration completed successfully" -ForegroundColor Green
+
+# Build all targets with Ninja
+Write-Host "`nBuilding all targets with Ninja..." -ForegroundColor Cyan
+cmake --build build -j
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Build failed with error code $LASTEXITCODE"
+    exit $LASTEXITCODE
+}
+
+Write-Host "`nFull project generation and build completed successfully!" -ForegroundColor Green
 exit 0

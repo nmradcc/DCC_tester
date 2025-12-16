@@ -6,7 +6,7 @@
 #include "main.h"
 #include "parameter_manager.h"
 #include "stm32h5xx_hal_uart.h"
-#include "rpc_core.hpp"
+
 
 #define RX_BIDIR_MAX_SIZE 16 // Maximum size of the BiDi receive buffer
 
