@@ -23,6 +23,13 @@ static int32_t zerobitDeltaP = 0;
 static int32_t zerobitDeltaN = 0;
 static bool currentPhaseIsP = true;  // Track current phase (P or N)
 
+// Custom packet storage
+static dcc::Packet customPacket;
+static bool customPacketLoaded = false;
+static bool customPacketTrigger = false;
+static uint32_t customPacketCount = 1;
+static uint32_t customPacketDelay = 100;
+
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
   .name = "cmdStationTask",
@@ -157,7 +164,28 @@ void CommandStationThread(void *argument) {
     commandStationRunning = true;
     dcc::Packet packet{};
 
-    if (commandStationLoop == 1) {
+    // Check for custom packet trigger when not in loop mode
+    if (commandStationLoop == 0) {
+      printf("Command station started in custom packet mode\n");
+      while (commandStationRunning) {
+        if (customPacketTrigger && customPacketLoaded) {
+          for (uint32_t i = 0; i < customPacketCount; i++) {
+            command_station.packet(customPacket);
+            printf("Custom packet transmitted [%lu/%lu]: ", i + 1, customPacketCount);
+            for (size_t j = 0; j < customPacket.size(); j++) {
+              printf("0x%02X ", customPacket[j]);
+            }
+            printf("\n");
+            if (i < customPacketCount - 1 && customPacketDelay > 0) {
+              osDelay(customPacketDelay);
+            }
+          }
+          customPacketTrigger = false;
+        }
+        osDelay(100u);
+      }
+    }
+    else if (commandStationLoop == 1) {
       // Test loop1: Basic function and speed control (address 3)
       printf("Starting test loop1: Basic function and speed control\n");
       while (commandStationRunning) {
@@ -323,7 +351,7 @@ extern "C" void CommandStation_Init(void)
 }
 
 // Can be called from anywhere
-// loop: 0=no loop, 1=loop1 (basic), 2=loop2 (functions), 3=loop3 (speed ramp)
+// loop: 0=custom packet, 1=loop1 (basic), 2=loop2 (functions), 3=loop3 (speed ramp)
 extern "C" void CommandStation_Start(uint8_t loop)
 {
   if (!commandStationRunning) {
@@ -334,6 +362,29 @@ extern "C" void CommandStation_Start(uint8_t loop)
   }
   else {
     printf("Command station already running\n");
+  }
+}
+
+extern "C" bool CommandStation_LoadCustomPacket(const uint8_t* bytes, uint8_t length) {
+  if (!bytes || length == 0 || length > DCC_MAX_PACKET_SIZE) {
+    return false;
+  }
+  
+  customPacket.clear();
+  for (uint8_t i = 0; i < length; i++) {
+    customPacket.push_back(bytes[i]);
+  }
+  customPacketLoaded = true;
+  customPacketTrigger = false;
+  
+  return true;
+}
+
+extern "C" void CommandStation_TriggerTransmit(uint32_t count, uint32_t delay_ms) {
+  if (customPacketLoaded) {
+    customPacketCount = (count > 0) ? count : 1;
+    customPacketDelay = delay_ms;
+    customPacketTrigger = true;
   }
 }
 
