@@ -65,22 +65,16 @@ GIT_TAG        master  # or specify a commit/tag
 
 FetchContent_MakeAvailable(rpc_core)
 
+# Select RTOS (CMSIS_RTOS2 or FREERTOS)
+set(OPENMRN_RTOS "FREERTOS" CACHE STRING "RTOS to use")
 FetchContent_Declare(
     openmrn
     GIT_REPOSITORY https://github.com/dvescovi1/openmrn.git
-    GIT_TAG header-only  # or specific commit/tag
+    GIT_TAG static-lib  # or specific commit/tag
 #    SOURCE_DIR     ${CMAKE_PROJECT_NAME}/openmrn  # Optional: control location
 #    SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/openmrn-src  # Optional: control location
 )
 
-FetchContent_MakeAvailable(openmrn)
-FetchContent_Declare(
-    openmrn
-    GIT_REPOSITORY https://github.com/dvescovi1/openmrn.git
-    GIT_TAG header-only  # or specific commit/tag
-#    SOURCE_DIR     ${CMAKE_PROJECT_NAME}/openmrn  # Optional: control location
-#    SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/openmrn-src  # Optional: control location
-)
 
 FetchContent_MakeAvailable(openmrn)
 
@@ -89,8 +83,7 @@ FetchContent_Declare(
   GIT_REPOSITORY "https://github.com/nmradcc/DCC"
   GIT_TAG DCCTester)
 
-FetchContent_MakeAvailable(DCC)
-
+FetchContent_MakeAvailable(DCC) 
 
 target_compile_features(DCC INTERFACE cxx_std_23)
 
@@ -114,6 +107,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/analog_manager.c
     Core/Src/SUSI_Master.c
     Core/Src/SUSI_Slave.c
+    Core/Src/OpenMRN_client.cpp
 )
 
 # Add include paths
@@ -121,13 +115,14 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_CURRENT_SOURCE_DIR}/
     ${CMAKE_CURRENT_BINARY_DIR}/generated
+    ${openmrn_SOURCE_DIR}/src  # OpenMRN header-only include
+    ${openmrn_SOURCE_DIR}/inc/cmsis_os2  # OpenMRN header-only include
 )
 
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
     RPC_CORE_LOG_DISABLE_ALL=1
-    __CMSIS_RTOS2
 )
 
 # Remove wrong libob.a library dependency when using cpp files
@@ -140,6 +135,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
     # Add user defined libraries
     rpc_core
+    openmrn
     DCC::DCC
 )
 
