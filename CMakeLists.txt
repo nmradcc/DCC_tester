@@ -71,7 +71,7 @@ set(OPENMRN_RTOS "ThreadX" CACHE STRING "Select RTOS" FORCE)
 FetchContent_Declare(
     openmrn
     GIT_REPOSITORY https://github.com/nmradcc/OpenMRNLite.git
-    GIT_TAG H563  # or specific commit/tag
+    GIT_TAG ${CMAKE_PROJECT_NAME}  # or specific commit/tag
 #    SOURCE_DIR     ${CMAKE_PROJECT_NAME}/openmrn  # Optional: control location
 #    SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/openmrn-src  # Optional: control location
 )
@@ -81,7 +81,7 @@ FetchContent_MakeAvailable(openmrn)
 FetchContent_Declare(
   DCC
   GIT_REPOSITORY "https://github.com/nmradcc/DCC"
-  GIT_TAG DCCTester)
+  GIT_TAG ${CMAKE_PROJECT_NAME})
 
 FetchContent_MakeAvailable(DCC)
 
