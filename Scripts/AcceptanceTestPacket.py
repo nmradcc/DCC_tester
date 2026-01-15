@@ -151,6 +151,13 @@ def main():
         print(f"Connecting to {COM_PORT}...")
         rpc = DCCTesterRPC(COM_PORT)
         print("Connected!\n")
+        # Pre-step: Enable scope trigger on first bit
+        print("Pre-step: Enabling scope trigger on first bit...")
+        response = rpc.send_rpc("command_station_params", {"trigger_first_bit": True})
+        if response.get("status") != "ok":
+            print(f"WARNING: Failed to enable scope trigger: {response}")
+        else:
+            print("\u2713 Scope trigger enabled\n")
         
         # Step 1: Start command station in custom packet mode (loop=0)
         print("Step 1: Starting command station in custom packet mode...")
@@ -191,25 +198,25 @@ def main():
         if response.get("status") != "ok":
             print(f"ERROR: Failed to transmit packet: {response}")
             return 1
-        print(f"✓ Packet transmission triggered")
-        print(f"  Count: {response.get('count')}")
-        print(f"  Delay: {response.get('delay_ms')} ms\n")
+#        print(f"✓ Packet transmission triggered")
+#        print(f"  Count: {response.get('count')}")
+#        print(f"  Delay: {response.get('delay_ms')} ms\n")
         
         # Wait for transmissions to complete
-        wait_time = (response.get('count', 3) * response.get('delay_ms', 100)) / 1000 + 0.5
-        print(f"Waiting {wait_time:.1f} seconds for transmissions to complete...")
-        time.sleep(wait_time)
+#        wait_time = (response.get('count', 3) * response.get('delay_ms', 100)) / 1000 + 0.5
+#        print(f"Waiting {wait_time:.1f} seconds for transmissions to complete...")
+#        time.sleep(wait_time)
         
         # Step 5: Idle delay (simulating idle packets without actually sending them)
         idle_delay_ms = NUM_IDLE_PACKETS * IDLE_PACKET_TIME_MS
         idle_delay_s = idle_delay_ms / 1000
-        print(f"\nStep 5: Idle delay ({NUM_IDLE_PACKETS} idle packets @ {IDLE_PACKET_TIME_MS}ms each)...")
-        print(f"  Total delay: {idle_delay_ms:.1f} ms ({idle_delay_s:.4f} seconds)")
-        time.sleep(idle_delay_s)
-        print(f"✓ Idle delay complete\n")
+#        print(f"\nStep 5: Idle delay ({NUM_IDLE_PACKETS} idle packets @ {IDLE_PACKET_TIME_MS}ms each)...")
+#        print(f"  Total delay: {idle_delay_ms:.1f} ms ({idle_delay_s:.4f} seconds)")
+#        time.sleep(idle_delay_s)
+#        print(f"✓ Idle delay complete\n")
         
         # Step 6: Send emergency stop packet
-        print(f"Step 6: Sending emergency stop packet...")
+#        print(f"Step 6: Sending emergency stop packet...")
         estop_packet = make_emergency_stop_packet(LOCO_ADDRESS)
         print(f"Emergency stop packet for address {LOCO_ADDRESS}:")
         print(f"  Bytes: {' '.join(f'0x{b:02X}' for b in estop_packet)}")

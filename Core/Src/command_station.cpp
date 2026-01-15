@@ -5,6 +5,7 @@
 #include "cmsis_os2.h"
 #include "main.h"
 #include "parameter_manager.h"
+#include "stm32h5xx_hal_gpio.h"
 #include "stm32h5xx_hal_uart.h"
 
 
@@ -175,6 +176,7 @@ void CommandStationThread(void *argument) {
             for (size_t j = 0; j < customPacket.size(); j++) {
               printf("0x%02X ", customPacket[j]);
             }
+            printf("lastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
             printf("\n");
             if (i < customPacketCount - 1 && customPacketDelay > 0) {
               osDelay(customPacketDelay);
@@ -190,93 +192,122 @@ void CommandStationThread(void *argument) {
       printf("Starting test loop1: Basic function and speed control\n");
       while (commandStationRunning) {
         // Set function F0
-        BSP_LED_Toggle(LED_GREEN);
-        packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
-        command_station.packet(packet);
-        printf("Loop1: set function F0\n");
+//        BSP_LED_Toggle(LED_GREEN);
+//        printf("Loop1: set function F0\n");
+//        packet = dcc::make_function_group_f4_f0_packet(3u, 0b1'0000u);
+//        command_station.packet(packet);
         osDelay(2000u);
+
+        if (HAL_GPIO_ReadPin(IN0_GPIO_Port, IN0_Pin) == GPIO_PIN_RESET)
+          printf("MOTOR 1\n");
+        else
+          printf("MOTOR 0\n");
 
         // Accelerate forward
-        BSP_LED_Toggle(LED_GREEN);
+//        BSP_LED_Toggle(LED_GREEN);
+        printf("Loop1: accelerate to speed step 42 forward\n");
         packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
         command_station.packet(packet);
-        printf("Loop1: accelerate to speed step 42 forward\n");
         osDelay(2000u);
+        if (HAL_GPIO_ReadPin(IN0_GPIO_Port, IN0_Pin) == GPIO_PIN_RESET)
+          printf("MOTOR 1\n");
+        else
+          printf("MOTOR 0\n");
 
         // Stop
-        BSP_LED_Toggle(LED_GREEN);
+//        BSP_LED_Toggle(LED_GREEN);
+        printf("Loop1: stop (forward)\n");
+printf("1 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
         packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 0u);
         command_station.packet(packet);
-        printf("Loop1: stop (forward)\n");
+// note: last idle packet count is only updated after a full packet transmission
+// NOT immediately after command_station.packet() call! 
+// So it may still show the previous value here.
+printf("2 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
+        osDelay(4000u);
+// lastIdlePacketCount should have updated by now
+printf("3 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
+
+        if (HAL_GPIO_ReadPin(IN0_GPIO_Port, IN0_Pin) == GPIO_PIN_RESET)
+          printf("MOTOR 1\n");
+        else
+          printf("MOTOR 0\n");
+
+        // Clear function
+//        BSP_LED_Toggle(LED_GREEN);
+//        printf("Loop1: clear function F0\n");
+//        packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
+//        command_station.packet(packet);
+//        osDelay(2000u);
+
+        // Set function F1
+//        BSP_LED_Toggle(LED_GREEN);
+//        printf("Loop1: set function F1\n");
+//        packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
+//        command_station.packet(packet);
+//        osDelay(2000u);
+
+        // Accelerate reverse
+//        BSP_LED_Toggle(LED_GREEN);
+        printf("Loop1: accelerate to speed step 42 reverse\n");
+        packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
+        command_station.packet(packet);
+        osDelay(2000u);
+
+        if (HAL_GPIO_ReadPin(IN0_GPIO_Port, IN0_Pin) == GPIO_PIN_RESET)
+          printf("MOTOR 1\n");
+        else
+          printf("MOTOR 0\n");
+
+        // Stop
+//        BSP_LED_Toggle(LED_GREEN);
+        printf("Loop1: stop (reverse)\n");
+        packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
+        command_station.packet(packet);
         osDelay(2000u);
 
         // Clear function
-        BSP_LED_Toggle(LED_GREEN);
-        packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
-        command_station.packet(packet);
-        printf("Loop1: clear function F0\n");
-        osDelay(2000u);
-
-        // Accelerate reverse
-        BSP_LED_Toggle(LED_GREEN);
-        packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
-        command_station.packet(packet);
-        printf("Loop1: accelerate to speed step 42 reverse\n");
-        osDelay(2000u);
-
-        // Stop
-        BSP_LED_Toggle(LED_GREEN);
-        packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
-        command_station.packet(packet);
-        printf("Loop1: stop (reverse)\n");
-        osDelay(2000u);
+//        BSP_LED_Toggle(LED_GREEN);
+//        printf("Loop1: clear function F1\n");
+//        packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
+//        command_station.packet(packet);
+//        osDelay(2000u);
       }
     }
     else if (commandStationLoop == 2) {
       // Test loop2: Emergency stop test (address 3)
       printf("Starting test loop2: Emergency stop test\n");
+      bool loop2_first_iteration = true;
       while (commandStationRunning) {
-        // Turn on headlight (F0)
-        BSP_LED_Toggle(LED_GREEN);
-        packet = dcc::make_function_group_f4_f0_packet(3u, 0b1'0001u);
-        command_station.packet(packet);
-        printf("Loop2: headlight on\n");
-//        osDelay(1000u);
+        if (loop2_first_iteration) {
+          BSP_LED_Toggle(LED_GREEN);
+          packet = dcc::make_function_group_f4_f0_packet(3u, 0b1'0001u);
+          command_station.packet(packet);
+          printf("Loop2: headlight on\n");
+          osDelay(1000u);
 
-        // Accelerate to speed 60 forward
-        BSP_LED_Toggle(LED_GREEN);
-        packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 60u);
-        command_station.packet(packet);
-        printf("Loop2: accelerate to speed 60 forward\n");
-        osDelay(3000u);
+          // Accelerate to speed 60 reverse
+          BSP_LED_Toggle(LED_GREEN);
+          packet = dcc::make_advanced_operations_speed_packet(3u, 60u);
+          command_station.packet(packet);
+          printf("Loop2: accelerate to speed 60 reverse\n");
+          osDelay(3000u);
 
-        // EMERGENCY STOP - Broadcast to all locomotives (address 0)
-        BSP_LED_Toggle(LED_GREEN);
-        packet = dcc::make_advanced_operations_speed_packet(0u, 1u << 7u | 1u);  // Broadcast emergency stop
-        command_station.packet(packet);
-        printf("Loop2: EMERGENCY STOP (broadcast)\n");
-        osDelay(2000u);
+          // EMERGENCY STOP - Broadcast to all locomotives (address 0)
+          BSP_LED_Toggle(LED_GREEN);
+          packet = dcc::make_advanced_operations_speed_packet(0u, 1u << 7u | 1u);  // Broadcast emergency stop
+          command_station.packet(packet);
+          printf("Loop2: EMERGENCY STOP (broadcast)\n");
+          osDelay(2000u);
 
-        // Resume normal operation - speed 30 forward
-//        BSP_LED_Toggle(LED_GREEN);
-//        packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 30u);
-//        command_station.packet(packet);
-//        printf("Loop2: resume speed 30 forward\n");
-//        osDelay(3000u);
-
-        // Normal stop (address 3)
-//        BSP_LED_Toggle(LED_GREEN);
-//        packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 0u);
-//        command_station.packet(packet);
-//        printf("Loop2: normal stop\n");
-//        osDelay(2000u);
-
-        // Turn off headlight
-        BSP_LED_Toggle(LED_GREEN);
-        packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
-        command_station.packet(packet);
-        printf("Loop2: headlight off\n");
-        osDelay(5000u);
+          // Turn off headlight
+          BSP_LED_Toggle(LED_GREEN);
+          packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
+          command_station.packet(packet);
+          printf("Loop2: headlight off\n");
+          loop2_first_iteration = false;
+        }
+        osDelay(1000u);
       }
     }
     else if (commandStationLoop == 3) {
