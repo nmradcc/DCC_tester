@@ -154,7 +154,7 @@ def main():
         # Pre-step: Enable scope trigger on first bit
         print("Pre-step: Enabling scope trigger on first bit...")
         response = rpc.send_rpc("command_station_params", {"trigger_first_bit": True})
-        if response.get("status") != "ok":
+        if response is None or response.get("status") != "ok":
             print(f"WARNING: Failed to enable scope trigger: {response}")
         else:
             print("\u2713 Scope trigger enabled\n")
@@ -163,15 +163,26 @@ def main():
         print("Step 1: Starting command station in custom packet mode...")
         response = rpc.send_rpc("command_station_start", {"loop": 0})
         
-        if response.get("status") != "ok":
+        if response is None or response.get("status") != "ok":
             print(f"ERROR: Failed to start command station: {response}")
             return 1
         print(f"✓ Command station started (loop={response.get('loop', 0)})\n")
         
         time.sleep(0.5)
         
-        # Step 2: Create half-speed reverse packet
-        print("Step 2: Creating half-speed reverse packet...")
+        # Step 2: Read motor off current as baseline
+        print("Step 2: Reading motor off current as baseline...")
+        response = rpc.send_rpc("get_current_feedback_ma", {})
+        
+        if response is None or response.get("status") != "ok":
+            print(f"ERROR: Failed to read current: {response}")
+            return 1
+        
+        motor_off_current_ma = response.get("current_ma", 0)
+        print(f"✓ Motor off current: {motor_off_current_ma} mA (baseline)\n")
+        
+        # Step 3: Create half-speed reverse packet
+        print("Step 3: Creating half-speed reverse packet...")
         packet = make_speed_packet(LOCO_ADDRESS, HALF_SPEED, forward=False)
         print(f"Packet for address {LOCO_ADDRESS}, speed {HALF_SPEED} reverse:")
         print(f"  Bytes: {' '.join(f'0x{b:02X}' for b in packet)}")
@@ -181,42 +192,40 @@ def main():
         print(f"    Speed:       0x{packet[2]:02X} (dir=reverse, speed={HALF_SPEED})")
         print(f"    Checksum:    0x{packet[3]:02X}\n")
         
-        # Step 3: Load the packet
-        print("Step 3: Loading packet into command station...")
+        # Step 4: Load the packet
+        print("Step 4: Loading packet into command station...")
         response = rpc.send_rpc("command_station_load_packet", {"bytes": packet})
         
-        if response.get("status") != "ok":
+        if response is None or response.get("status") != "ok":
             print(f"ERROR: Failed to load packet: {response}")
             return 1
         print(f"✓ Packet loaded (length={response.get('length')} bytes)\n")
         
-        # Step 4: Transmit the packet 3 times with 100ms delay
-        print("Step 4: Transmitting packet 3 times with 100ms delay...")
+        # Step 5: Transmit the packet 3 times with 100ms delay
+        print("Step 5: Transmitting packet 3 times with 100ms delay...")
         response = rpc.send_rpc("command_station_transmit_packet", 
                                {"count": 3, "delay_ms": 100})
         
-        if response.get("status") != "ok":
+        if response is None or response.get("status") != "ok":
             print(f"ERROR: Failed to transmit packet: {response}")
             return 1
-#        print(f"✓ Packet transmission triggered")
-#        print(f"  Count: {response.get('count')}")
-#        print(f"  Delay: {response.get('delay_ms')} ms\n")
         
-        # Wait for transmissions to complete
-#        wait_time = (response.get('count', 3) * response.get('delay_ms', 100)) / 1000 + 0.5
-#        print(f"Waiting {wait_time:.1f} seconds for transmissions to complete...")
-#        time.sleep(wait_time)
+        # Step 6: motor run time
+        time.sleep(0.5)        
+
+        # Step 7: Read motor run current
+        print("Step 7: Reading motor run current...")
+        response = rpc.send_rpc("get_current_feedback_ma", {})
         
-        # Step 5: Idle delay (simulating idle packets without actually sending them)
-        idle_delay_ms = NUM_IDLE_PACKETS * IDLE_PACKET_TIME_MS
-        idle_delay_s = idle_delay_ms / 1000
-#        print(f"\nStep 5: Idle delay ({NUM_IDLE_PACKETS} idle packets @ {IDLE_PACKET_TIME_MS}ms each)...")
-#        print(f"  Total delay: {idle_delay_ms:.1f} ms ({idle_delay_s:.4f} seconds)")
-#        time.sleep(idle_delay_s)
-#        print(f"✓ Idle delay complete\n")
+        if response is None or response.get("status") != "ok":
+            print(f"ERROR: Failed to read current: {response}")
+            return 1
         
-        # Step 6: Send emergency stop packet
-#        print(f"Step 6: Sending emergency stop packet...")
+        motor_on_current_ma = response.get("current_ma", 0)
+        print(f"✓ Motor run current: {motor_on_current_ma} mA\n")
+
+        # Step 8: Send emergency stop packet
+        print(f"Step 8: Sending one emergency stop packet...")
         estop_packet = make_emergency_stop_packet(LOCO_ADDRESS)
         print(f"Emergency stop packet for address {LOCO_ADDRESS}:")
         print(f"  Bytes: {' '.join(f'0x{b:02X}' for b in estop_packet)}")
@@ -227,32 +236,68 @@ def main():
         print(f"    Checksum:    0x{estop_packet[3]:02X}\n")
         
         response = rpc.send_rpc("command_station_load_packet", {"bytes": estop_packet})
-        if response.get("status") != "ok":
+        if response is None or response.get("status") != "ok":
             print(f"ERROR: Failed to load emergency stop packet: {response}")
             return 1
         print(f"✓ Emergency stop packet loaded (length={response.get('length')} bytes)\n")
         
         response = rpc.send_rpc("command_station_transmit_packet",
                                {"count": 1, "delay_ms": 100})
-        if response.get("status") != "ok":
+        if response is None or response.get("status") != "ok":
             print(f"ERROR: Failed to transmit emergency stop packet: {response}")
             return 1
         print(f"✓ Emergency stop packet transmission triggered")
         print(f"  Count: {response.get('count')}\n")
         
-        wait_time = 0.5  # Brief wait for final transmission
-        print(f"Waiting {wait_time:.1f} seconds for transmission to complete...")
-        time.sleep(wait_time)
+        print(f"Waiting 1 second for motor stop")
+        time.sleep(1.0)
+        
+        # Step 9: Read motor stopped current
+        print("\nStep 9: Reading motor stopped current...")
+        response = rpc.send_rpc("get_current_feedback_ma", {})
+        
+        if response is None or response.get("status") != "ok":
+            print(f"ERROR: Failed to read current: {response}")
+            return 1
+        
+        motor_stopped_current_ma = response.get("current_ma", 0)
+        print(f"✓ Motor stopped current: {motor_stopped_current_ma} mA\n")
+        
+        # Step 10: Stop command station
+        print("Step 10: Stopping command station...")
+        response = rpc.send_rpc("command_station_stop", {})
+        
+        if response is None or response.get("status") != "ok":
+            print(f"WARNING: Failed to stop command station: {response}")
+        else:
+            print(f"✓ Command station stopped\n")
         
         print("\n" + "=" * 70)
         print("✓ TEST COMPLETE")
         print("=" * 70)
-        print(f"\nSent {response.get('count')} half-speed reverse packets to address {LOCO_ADDRESS}")
+        if (motor_on_current_ma > motor_off_current_ma and
+            motor_stopped_current_ma < motor_on_current_ma):
+            print("✓ TEST PASS")
+        else:
+            print("✗ TEST FAIL")
+        print("=" * 70)
+        print(f"\nSent half-speed reverse packets to address {LOCO_ADDRESS}")
         print(f"Speed value: {HALF_SPEED} (approximately half of max speed 127)")
         print(f"\nTest sequence completed:")
-        print(f"  1. Sent 3 half-speed reverse packets to address {LOCO_ADDRESS}")
-        print(f"  2. Idle delay of {idle_delay_ms:.1f} ms ({NUM_IDLE_PACKETS} idle packet equivalents)")
-        print(f"  3. Sent 1 emergency stop packet to address {LOCO_ADDRESS}")
+        print(f"  1. Started command station in custom packet mode")
+        print(f"  2. Read motor off current: {motor_off_current_ma} mA (baseline)")
+        print(f"  3. Created half-speed reverse packet")
+        print(f"  4. Loaded packet into command station")
+        print(f"  5. Transmitted 3 half-speed reverse packets to address {LOCO_ADDRESS}")
+        print(f"  6. Motor run time: 0.5 seconds")
+        print(f"  7. Read motor run current: {motor_on_current_ma} mA")
+        print(f"  8. Sent 1 emergency stop packet to address {LOCO_ADDRESS}")
+        print(f"  9. Read motor stopped current: {motor_stopped_current_ma} mA")
+        print(f" 10. Stopped command station")
+        print(f"\nCurrent measurements:")
+        print(f"  Motor off:     {motor_off_current_ma} mA (baseline)")
+        print(f"  Motor running: {motor_on_current_ma} mA (delta: {motor_on_current_ma - motor_off_current_ma} mA)")
+        print(f"  Motor stopped: {motor_stopped_current_ma} mA (delta: {motor_stopped_current_ma - motor_off_current_ma} mA)")
         print()
         
         # Close connection

@@ -5,8 +5,10 @@
 #include "cmsis_os2.h"
 #include "main.h"
 #include "parameter_manager.h"
+#include "analog_manager.h"
 #include "stm32h5xx_hal_gpio.h"
 #include "stm32h5xx_hal_uart.h"
+#include "stm32h5xx_nucleo.h"
 
 
 #define RX_BIDIR_MAX_SIZE 16 // Maximum size of the BiDi receive buffer
@@ -188,6 +190,7 @@ void CommandStationThread(void *argument) {
       }
     }
     else if (commandStationLoop == 1) {
+      uint16_t current_ma = 0;
       // Test loop1: Basic function and speed control (address 3)
       printf("Starting test loop1: Basic function and speed control\n");
       while (commandStationRunning) {
@@ -197,41 +200,28 @@ void CommandStationThread(void *argument) {
 //        packet = dcc::make_function_group_f4_f0_packet(3u, 0b1'0000u);
 //        command_station.packet(packet);
         osDelay(2000u);
-
-        if (HAL_GPIO_ReadPin(IN0_GPIO_Port, IN0_Pin) == GPIO_PIN_RESET)
-          printf("MOTOR 1\n");
-        else
-          printf("MOTOR 0\n");
-
         // Accelerate forward
-//        BSP_LED_Toggle(LED_GREEN);
+        BSP_LED_Toggle(LED_GREEN);
         printf("Loop1: accelerate to speed step 42 forward\n");
         packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
         command_station.packet(packet);
         osDelay(2000u);
-        if (HAL_GPIO_ReadPin(IN0_GPIO_Port, IN0_Pin) == GPIO_PIN_RESET)
-          printf("MOTOR 1\n");
-        else
-          printf("MOTOR 0\n");
 
         // Stop
-//        BSP_LED_Toggle(LED_GREEN);
+        BSP_LED_Toggle(LED_GREEN);
         printf("Loop1: stop (forward)\n");
-printf("1 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
+//printf("1 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
         packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 0u);
         command_station.packet(packet);
 // note: last idle packet count is only updated after a full packet transmission
 // NOT immediately after command_station.packet() call! 
 // So it may still show the previous value here.
-printf("2 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
-        osDelay(4000u);
+//printf("2 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
+//        osDelay(4000u);
 // lastIdlePacketCount should have updated by now
-printf("3 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
+//printf("3 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
 
-        if (HAL_GPIO_ReadPin(IN0_GPIO_Port, IN0_Pin) == GPIO_PIN_RESET)
-          printf("MOTOR 1\n");
-        else
-          printf("MOTOR 0\n");
+        osDelay(2000u);
 
         // Clear function
 //        BSP_LED_Toggle(LED_GREEN);
@@ -248,19 +238,15 @@ printf("3 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
 //        osDelay(2000u);
 
         // Accelerate reverse
-//        BSP_LED_Toggle(LED_GREEN);
+        BSP_LED_Toggle(LED_GREEN);
         printf("Loop1: accelerate to speed step 42 reverse\n");
         packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
         command_station.packet(packet);
         osDelay(2000u);
 
-        if (HAL_GPIO_ReadPin(IN0_GPIO_Port, IN0_Pin) == GPIO_PIN_RESET)
-          printf("MOTOR 1\n");
-        else
-          printf("MOTOR 0\n");
 
         // Stop
-//        BSP_LED_Toggle(LED_GREEN);
+        BSP_LED_Toggle(LED_GREEN);
         printf("Loop1: stop (reverse)\n");
         packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
         command_station.packet(packet);
@@ -276,39 +262,27 @@ printf("3 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
     }
     else if (commandStationLoop == 2) {
       // Test loop2: Emergency stop test (address 3)
-      printf("Starting test loop2: Emergency stop test\n");
-      bool loop2_first_iteration = true;
-      while (commandStationRunning) {
-        if (loop2_first_iteration) {
-          BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_function_group_f4_f0_packet(3u, 0b1'0001u);
-          command_station.packet(packet);
-          printf("Loop2: headlight on\n");
-          osDelay(1000u);
-
-          // Accelerate to speed 60 reverse
-          BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_advanced_operations_speed_packet(3u, 60u);
-          command_station.packet(packet);
-          printf("Loop2: accelerate to speed 60 reverse\n");
-          osDelay(3000u);
-
-          // EMERGENCY STOP - Broadcast to all locomotives (address 0)
-          BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_advanced_operations_speed_packet(0u, 1u << 7u | 1u);  // Broadcast emergency stop
-          command_station.packet(packet);
-          printf("Loop2: EMERGENCY STOP (broadcast)\n");
-          osDelay(2000u);
-
-          // Turn off headlight
-          BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
-          command_station.packet(packet);
-          printf("Loop2: headlight off\n");
-          loop2_first_iteration = false;
-        }
-        osDelay(1000u);
+      printf("Starting test loop2: Packet Acceptance Test\n");
+      BSP_LED_On(LED_GREEN);
+      // Accelerate to speed 60 reverse
+      printf("Loop2: accelerate to speed 60 reverse\n");
+      for (uint8_t loop2_count = 0; loop2_count < 5; loop2_count++) {
+        packet = dcc::make_advanced_operations_speed_packet(3u, 60u);
+        command_station.packet(packet);
+        osDelay(100u);
       }
+
+      // EMERGENCY STOP - Broadcast to all locomotives (address 0)
+      packet = dcc::make_advanced_operations_speed_packet(0u, 1u << 7u | 1u);  // Broadcast emergency stop
+      command_station.packet(packet);
+      printf("Loop2: EMERGENCY STOP (broadcast)\n");
+      osDelay(1000u);
+      
+      // Stop command station after test sequence
+      printf("Loop2: Test complete, stopping command station\n");
+      BSP_LED_Off(LED_GREEN);
+      commandStationRunning = false;
+      
     }
     else if (commandStationLoop == 3) {
       // Test loop3: Speed ramping test (address 10)
@@ -368,8 +342,13 @@ printf("3 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
     }
     HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_1);
     __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
-    osSemaphoreRelease(commandStationStart_sem);
-    osDelay(5u); // Give some time for the semaphore to be released
+    
+    // Keep semaphore acquired to prevent auto-restart
+    // Explicit CommandStation_Start() call is required to run again
+    osSemaphoreAcquire(commandStationStart_sem, 0); // Non-blocking acquire
+    HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));
+    printf("Command station stopped\n");
+    osDelay(5u);
   }
 
 }
@@ -383,16 +362,19 @@ extern "C" void CommandStation_Init(void)
 
 // Can be called from anywhere
 // loop: 0=custom packet, 1=loop1 (basic), 2=loop2 (functions), 3=loop3 (speed ramp)
-extern "C" void CommandStation_Start(uint8_t loop)
+// Returns true if started, false if already running
+extern "C" bool CommandStation_Start(uint8_t loop)
 {
   if (!commandStationRunning) {
     commandStationLoop = loop;
     HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
     osSemaphoreRelease(commandStationStart_sem);
     printf("Command station started (loop=%d)\n", loop);
+    return true;
   }
   else {
     printf("Command station already running\n");
+    return false;
   }
 }
 
@@ -420,17 +402,25 @@ extern "C" void CommandStation_TriggerTransmit(uint32_t count, uint32_t delay_ms
 }
 
 // Can be called from anywhere
-extern "C" void CommandStation_Stop(void)
+// Returns true if stopped, false if not running
+extern "C" bool CommandStation_Stop(void)
 {
   if (commandStationRunning) {
     printf("Command station stopping\n");
     commandStationRunning = false;
-    osSemaphoreAcquire(commandStationStart_sem, osWaitForever);
-    HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_RESET));   // Set BR_ENABLE low
-    printf("Command station stopped\n");
+    // Brief delay to allow any pending responses to be sent
+    osDelay(10);
+    // Wait for thread to finish cleanup (it acquires the semaphore when done)
+    // Use timeout to avoid blocking forever
+    osStatus_t status = osSemaphoreAcquire(commandStationStart_sem, 1000);
+    if (status != osOK) {
+      printf("WARNING: Command station stop semaphore timeout\n");
+    }
+    return true;
   }
   else {
-    printf("Command station not running\n");
+    printf("Command station already stopped\n");
+    return false;
   }
 }
 

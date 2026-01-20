@@ -126,7 +126,12 @@ static json command_station_start_handler(const json& params) {
         }
     }
     
-    CommandStation_Start(loop);
+    if (!CommandStation_Start(loop)) {
+        return {
+            {"status", "error"},
+            {"message", "Command station is already running"}
+        };
+    }
     
     return {
         {"status", "ok"},
@@ -138,7 +143,12 @@ static json command_station_start_handler(const json& params) {
 static json command_station_stop_handler(const json& params) {
     (void)params;  // Unused parameter
     
-    CommandStation_Stop();
+    if (!CommandStation_Stop()) {
+        return {
+            {"status", "error"},
+            {"message", "Command station is not running"}
+        };
+    }
     
     return {
         {"status", "ok"},

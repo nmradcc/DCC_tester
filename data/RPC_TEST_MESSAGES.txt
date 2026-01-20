@@ -34,8 +34,11 @@ Expected Response:
 Request:
 {"method":"command_station_start","params":{}}
 
-Expected Response:
+Expected Response (on success):
 {"status":"ok","message":"Command station started","loop":0}
+
+Expected Response (if already running):
+{"status":"error","message":"Command station is already running"}
 
 Note: With loop=0, the command station runs without any test loop.
 Use this mode when sending custom packets via RPC commands.
@@ -47,8 +50,11 @@ Use this mode when sending custom packets via RPC commands.
 Request:
 {"method":"command_station_start","params":{"loop":1}}
 
-Expected Response:
+Expected Response (on success):
 {"status":"ok","message":"Command station started","loop":1}
+
+Expected Response (if already running):
+{"status":"error","message":"Command station is already running"}
 
 Note: Loop 1 tests basic functions and speed control on address 3:
 - Set function F0
@@ -66,17 +72,17 @@ Note: Loop 1 tests basic functions and speed control on address 3:
 Request:
 {"method":"command_station_start","params":{"loop":2}}
 
-Expected Response:
+Expected Response (on success):
 {"status":"ok","message":"Command station started","loop":2}
 
-Note: Loop 2 tests emergency stop broadcast on address 3:
-- Turn on headlight (F0)
-- Accelerate to speed 60 forward
+Expected Response (if already running):
+{"status":"error","message":"Command station is already running"}
+
+Note: Loop 2 runs a single test sequence then automatically stops:
+- Accelerate to speed 60 reverse on address 3
 - EMERGENCY STOP (broadcast address 0 - affects all locomotives)
-- Resume speed 30 forward
-- Normal stop (address 3)
-- Turn off headlight
-- Repeats every ~15 seconds
+- Turn off headlight (F0)
+- Command station automatically stops
 
 The emergency stop uses broadcast address 0, which immediately stops ALL 
 locomotives on the track regardless of their individual addresses. This 
@@ -90,8 +96,11 @@ emergency stop.
 Request:
 {"method":"command_station_start","params":{"loop":3}}
 
-Expected Response:
+Expected Response (on success):
 {"status":"ok","message":"Command station started","loop":3}
+
+Expected Response (if already running):
+{"status":"error","message":"Command station is already running"}
 
 Note: Loop 3 tests speed ramping on address 10:
 - Ramp up speed forward (0 to 126 in steps of 10)
@@ -119,8 +128,11 @@ Note: For backwards compatibility, boolean true maps to loop 1, false to loop 0.
 Request:
 {"method":"command_station_stop","params":{}}
 
-Expected Response:
+Expected Response (on success):
 {"status":"ok","message":"Command station stopped"}
+
+Expected Response (if not running):
+{"status":"error","message":"Command station is not running"}
 
 ===============================================================================
 3. DECODER CONTROL
