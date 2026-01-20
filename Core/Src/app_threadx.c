@@ -106,7 +106,6 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
 
   /* Init and start the Analog Manager */
   analog_manager_init();
-  analog_manager_start();
 
   /* Create the led task */  
   ledThreadHandle = osThreadNew(LedThreadTask, NULL, &LED_thread_attr);  // Create thread with attributes

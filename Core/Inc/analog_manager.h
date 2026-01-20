@@ -1,12 +1,12 @@
 /**
  * @file analog_manager.h
- * @brief Analog Manager - ADC scanning and averaging
+ * @brief Analog Manager - On-demand ADC reading and averaging
  * @author Auto-generated
  * @date 2025-12-08
  * 
- * This module manages periodic ADC scanning with averaging for all allocated channels.
- * Scans ADC1 (channels 2,3,5,6) and ADC2 (channels 2,6) approximately every 100ms.
- * Results are averaged and stored in global variables for later scaling.
+ * This module manages on-demand ADC readings with averaging for all allocated channels.
+ * Supports ADC1 (channels 2,3,5,6) and ADC2 (channels 2,6).
+ * All readings are performed on-demand with mutex protection for thread safety.
  */
 
 #ifndef ANALOG_MANAGER_H
@@ -31,18 +31,6 @@ extern "C" {
  * @return 0 on success, -1 on failure
  */
 int analog_manager_init(void);
-
-/**
- * @brief Start the ADC scanning task
- * @return 0 on success, -1 on failure
- */
-int analog_manager_start(void);
-
-/**
- * @brief Stop the ADC scanning task
- * @return 0 on success, -1 on failure
- */
-int analog_manager_stop(void);
 
 /**
  * @brief Get the current averaged value for a specific ADC channel
