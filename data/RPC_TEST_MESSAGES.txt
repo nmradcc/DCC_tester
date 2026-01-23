@@ -158,6 +158,8 @@ Expected Response:
 
 ===============================================================================
 4. COMMAND STATION PARAMETERS
+Note: command station bit timing values apply to all packets while the command
+station is running.
 ===============================================================================
 
 4.1 Set All DCC Parameters
@@ -248,20 +250,37 @@ Request:
 Expected Response:
 {"status":"ok","message":"Command station parameters updated"}
 
--------------------------------------------------------------------------------
+===============================================================================
+5. COMMAND STATION PACKET OVERRIDE CONTROL
+===============================================================================
 
-4.10 Set Single Parameter (Zero Bit Override Mask)
-----------------------------------------------------
+5.1 Set Packet Override Parameters (All at Once)
+--------------------------------------------------
 Request:
-{"method":"command_station_params","params":{"zerobit_override_mask":9}}
+{"method":"command_station_packet_override","params":{"zerobit_override_mask":9,"zerobit_deltaP":20,"zerobit_deltaN":-15}}
 
 Expected Response:
-{"status":"ok","message":"Command station parameters updated"}
+{"status":"ok","message":"Packet override parameters updated"}
+
+Note: These parameters control per-bit timing adjustments for DCC packets.
+- zerobit_override_mask: 64-bit mask selecting which zero bits to adjust
+- zerobit_deltaP: P phase timing adjustment in microseconds (signed)
+- zerobit_deltaN: N phase timing adjustment in microseconds (signed)
+
+-------------------------------------------------------------------------------
+
+5.2 Set Single Parameter (Zero Bit Override Mask)
+---------------------------------------------------
+Request:
+{"method":"command_station_packet_override","params":{"zerobit_override_mask":9}}
+
+Expected Response:
+{"status":"ok","message":"Packet override parameters updated"}
 
 Note: zerobit_override_mask is a 64-bit unsigned integer. 
 - Each bit represents a position (LSB to MSB) in the DCC packet (1-64) starting from the first
-zero bit following the preamble and progressing forward in tme. 
-i.e. 0x0000000000000002 would typically be the MSB of a decoders 8 bit address etc.  
+zero bit following the preamble and progressing forward in time. 
+i.e. 0x0000000000000002 would typically be the MSB of a decoder's 8 bit address etc.  
 - Set bit = use modified zero bit timing for that position.
 - Clear bit = normal data-dependent timing
 - Example: 9 (0b1001) = override bits 1 and 4
@@ -269,26 +288,26 @@ i.e. 0x0000000000000002 would typically be the MSB of a decoders 8 bit address e
 
 -------------------------------------------------------------------------------
 
-4.11 Set Zero Bit Override Mask (Binary Example)
---------------------------------------------------
+5.3 Set Zero Bit Override Mask (Binary Example)
+-------------------------------------------------
 Request:
-{"method":"command_station_params","params":{"zerobit_override_mask":1152921504606846977}}
+{"method":"command_station_packet_override","params":{"zerobit_override_mask":1152921504606846977}}
 
 Expected Response:
-{"status":"ok","message":"Command station parameters updated"}
+{"status":"ok","message":"Packet override parameters updated"}
 
 Note: Value 1152921504606846977 = 0x1000000000000001
 This overrides bit 1 and bit 61, useful for testing long packets.
 
 -------------------------------------------------------------------------------
 
-4.12 Set Single Parameter (Zero Bit Delta P Phase)
-----------------------------------------------------
+5.4 Set Single Parameter (Zero Bit Delta P Phase)
+---------------------------------------------------
 Request:
-{"method":"command_station_params","params":{"zerobit_deltaP":20}}
+{"method":"command_station_packet_override","params":{"zerobit_deltaP":20}}
 
 Expected Response:
-{"status":"ok","message":"Command station parameters updated"}
+{"status":"ok","message":"Packet override parameters updated"}
 
 Note: zerobit_deltaP is a signed int32_t value in microseconds.
 - Adjusts the P phase timing when override mask bits are set
@@ -299,18 +318,15 @@ Note: zerobit_deltaP is a signed int32_t value in microseconds.
 /* Caution! to avoid overflow and wraparound zerobitDeltaP must always be less than
    approx +-80% of the programmed zero bit time */
 
-For backwards compatibility, "zerobit_delta" is also accepted as an alias for 
-"zerobit_deltaP".
-
 -------------------------------------------------------------------------------
 
-4.13 Set Single Parameter (Zero Bit Delta N Phase)
-----------------------------------------------------
+5.5 Set Single Parameter (Zero Bit Delta N Phase)
+---------------------------------------------------
 Request:
-{"method":"command_station_params","params":{"zerobit_deltaN":-15}}
+{"method":"command_station_packet_override","params":{"zerobit_deltaN":-15}}
 
 Expected Response:
-{"status":"ok","message":"Command station parameters updated"}
+{"status":"ok","message":"Packet override parameters updated"}
 
 Note: zerobit_deltaN is a signed int32_t value in microseconds.
 - Adjusts the N phase timing when override mask bits are set
@@ -323,22 +339,22 @@ Note: zerobit_deltaN is a signed int32_t value in microseconds.
 
 -------------------------------------------------------------------------------
 
-4.14 Set Multiple Parameters Including Both Delta Values
-----------------------------------------------------------
+5.6 Set Multiple Parameters Including Both Delta Values
+---------------------------------------------------------
 Request:
-{"method":"command_station_params","params":{"zerobit_override_mask":"0x0000000000000180","zerobit_deltaP":25,"zerobit_deltaN":-20}}
+{"method":"command_station_packet_override","params":{"zerobit_override_mask":"0x0000000000000180","zerobit_deltaP":25,"zerobit_deltaN":-20}}
 
 Expected Response:
-{"status":"ok","message":"Command station parameters updated"}
+{"status":"ok","message":"Packet override parameters updated"}
 
 Note: This allows independent P and N phase timing adjustments for bits 
 specified in the override mask. P phase occurs first, followed by N phase.
 
 ===============================================================================
-5. PARAMETER FLASH OPERATIONS
+6. PARAMETER FLASH OPERATIONS
 ===============================================================================
 
-5.1 Save Parameters to Flash
+6.1 Save Parameters to Flash
 ------------------------------
 Request:
 {"method":"parameters_save","params":{}}
@@ -405,7 +421,7 @@ Note: This method retrieves all current command station parameter values.
 - zerobit_deltaN: N phase timing delta in microseconds (signed)
 
 ===============================================================================
-6. SYSTEM CONTROL
+7. SYSTEM CONTROL
 ===============================================================================
 
 6.1 System Reboot
@@ -420,7 +436,7 @@ Note: After sending this command, the system will reset. The USB connection
 will be lost briefly. Wait a few seconds and reconnect.
 
 ===============================================================================
-7. ANALOG FEEDBACK READINGS
+8. ANALOG FEEDBACK READINGS
 ===============================================================================
 
 7.1 Get Voltage Feedback
@@ -454,7 +470,7 @@ Note: Returns track current feedback in milliamps (mA).
 - Typical range: 0-2047 mA (0-2.047A)
 
 ===============================================================================
-8. ERROR CASES
+9. ERROR CASES
 ===============================================================================
 
 6.1 Invalid JSON
@@ -546,7 +562,7 @@ Expected Response:
 {"status":"error","message":"trigger_first_bit must be a boolean"}
 
 ===============================================================================
-8. TYPICAL USAGE SEQUENCES
+10. TYPICAL USAGE SEQUENCES
 ===============================================================================
 
 8.1 Initialize and Start Command Station
@@ -611,7 +627,7 @@ Step 2: Reboot to apply changes
 {"method":"system_reboot","params":{}}
 
 ===============================================================================
-9. TESTING TIPS
+11. TESTING TIPS
 ===============================================================================
 
 - Use a serial terminal program that supports sending raw text/JSON
@@ -626,7 +642,7 @@ Step 2: Reboot to apply changes
 - Voltage and current readings are averaged over 4 samples per scan
 
 ===============================================================================
-10. CUSTOM PACKET INJECTION
+12. CUSTOM PACKET INJECTION
 ===============================================================================
 
 The command station supports loading and transmitting arbitrary DCC packets
@@ -722,25 +738,26 @@ Custom packet transmitted [2/3]: 0xFF 0x00 0xFF
 Custom packet transmitted [3/3]: 0xFF 0x00 0xFF
 
 ===============================================================================
-11. COMPLETE METHOD LIST
+13. COMPLETE METHOD LIST
 ===============================================================================
 
 Available RPC Methods:
-1. echo                          - Echo back parameters (test connectivity)
-2. command_station_start         - Start DCC command station
-3. command_station_stop          - Stop DCC command station
-4. command_station_params        - Set DCC parameters (preamble, bit timings, bidi)
-5. command_station_get_params    - Get all current DCC parameters
-6. command_station_load_packet   - Load arbitrary byte array into custom packet
-7. command_station_transmit_packet - Trigger transmission of loaded custom packet
-8. decoder_start                 - Start DCC decoder
-9. decoder_stop                  - Stop DCC decoder
-10. parameters_save              - Save all parameters to flash
-11. parameters_restore           - Restore parameters from flash
-12. parameters_factory_reset     - Reset all parameters to factory defaults
-13. system_reboot                - Reboot the microcontroller
-14. get_voltage_feedback_mv      - Get track voltage feedback in millivolts
-15. get_current_feedback_ma      - Get track current feedback in milliamps
+1. echo                                  - Echo back parameters (test connectivity)
+2. command_station_start                 - Start DCC command station
+3. command_station_stop                  - Stop DCC command station
+4. command_station_params                - Set DCC parameters (preamble, bit timings, bidi, trigger)
+5. command_station_packet_override       - Set packet override parameters (zero bit mask and deltas)
+6. command_station_get_params            - Get all current DCC parameters
+7. command_station_load_packet           - Load arbitrary byte array into custom packet
+8. command_station_transmit_packet       - Trigger transmission of loaded custom packet
+9. decoder_start                         - Start DCC decoder
+10. decoder_stop                         - Stop DCC decoder
+11. parameters_save                      - Save all parameters to flash
+12. parameters_restore                   - Restore parameters from flash
+13. parameters_factory_reset             - Reset all parameters to factory defaults
+14. system_reboot                        - Reboot the microcontroller
+15. get_voltage_feedback_mv              - Get track voltage feedback in millivolts
+16. get_current_feedback_ma              - Get track current feedback in milliamps
 
 ===============================================================================
 END OF DOCUMENT

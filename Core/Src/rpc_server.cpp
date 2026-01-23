@@ -359,6 +359,21 @@ static json command_station_params_handler(const json& params) {
         }
     }
     
+    return {
+        {"status", "ok"},
+        {"message", "Command station parameters updated"}
+    };
+}
+
+static json command_station_packet_override_handler(const json& params) {
+    // Check if params is an object
+    if (!params.is_object()) {
+        return {
+            {"status", "error"},
+            {"message", "Params must be an object"}
+        };
+    }
+    
     // Set zero bit override mask if provided
     if (params.contains("zerobit_override_mask")) {
         if (!params["zerobit_override_mask"].is_number_unsigned()) {
@@ -414,7 +429,7 @@ static json command_station_params_handler(const json& params) {
     
     return {
         {"status", "ok"},
-        {"message", "Command station parameters updated"}
+        {"message", "Packet override parameters updated"}
     };
 }
 
@@ -588,6 +603,7 @@ void RpcServerThread(void* argument) {
     server.register_method("command_station_load_packet", command_station_load_packet_handler);
     server.register_method("command_station_transmit_packet", command_station_transmit_packet_handler);
     server.register_method("command_station_params", command_station_params_handler);
+    server.register_method("command_station_packet_override", command_station_packet_override_handler);
     server.register_method("command_station_get_params", command_station_get_params_handler);
     server.register_method("decoder_start", decoder_start_handler);
     server.register_method("decoder_stop", decoder_stop_handler);
