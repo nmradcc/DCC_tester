@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-AcceptanceTestPacket Script
-===========================
+AcceptanceTestPacketAllStop Script
+===================================
 
 This script tests custom packet injection via RPC calls to send
 DCC speed command packets using the DCC_tester command station.
 
 Test: Send 3 half-speed reverse packets with 100ms delay between them
+      Then send BROADCAST emergency stop (address 0) to all locomotives
 """
 
 import json
@@ -140,7 +141,7 @@ def main():
     
     print("=" * 70)
     print("DCC_tester Acceptance Test")
-    print("Half-Speed Reverse -> Emergency Stop")
+    print("Half-Speed Reverse -> Broadcast Emergency Stop")
     print("=" * 70)
     print()
     
@@ -222,13 +223,13 @@ def main():
         motor_on_current_ma = response.get("current_ma", 0)
         print(f"✓ Motor run current: {motor_on_current_ma} mA\n")
 
-        # Step 8: Send emergency stop packet
-        print(f"Step 8: Sending one emergency stop packet...")
-        estop_packet = make_emergency_stop_packet(LOCO_ADDRESS)
-        print(f"Emergency stop packet for address {LOCO_ADDRESS}:")
+        # Step 8: Send BROADCAST emergency stop packet (address 0)
+        print(f"Step 8: Sending one BROADCAST emergency stop packet...")
+        estop_packet = make_emergency_stop_packet(0)  # Address 0 = broadcast
+        print(f"Broadcast emergency stop packet (address 0x00):")
         print(f"  Bytes: {' '.join(f'0x{b:02X}' for b in estop_packet)}")
         print(f"  Binary breakdown:")
-        print(f"    Address:     0x{estop_packet[0]:02X} ({estop_packet[0]})")
+        print(f"    Address:     0x{estop_packet[0]:02X} (0 = BROADCAST)")
         print(f"    Instruction: 0x{estop_packet[1]:02X} (advanced operations speed)")
         print(f"    Speed:       0x{estop_packet[2]:02X} (emergency stop)")
         print(f"    Checksum:    0x{estop_packet[3]:02X}\n")
@@ -289,7 +290,7 @@ def main():
         print(f"  5. Transmitted 3 half-speed reverse packets to address {LOCO_ADDRESS}")
         print(f"  6. Motor run time: 0.5 seconds")
         print(f"  7. Read motor run current: {motor_on_current_ma} mA")
-        print(f"  8. Sent 1 emergency stop packet to address {LOCO_ADDRESS}")
+        print(f"  8. Sent 1 BROADCAST emergency stop packet (address 0x00 = ALL LOCOS)")
         print(f"  9. Read motor stopped current: {motor_stopped_current_ma} mA")
         print(f" 10. Stopped command station")
         print(f"\nCurrent measurements:")
