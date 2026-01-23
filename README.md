@@ -53,6 +53,7 @@ After code generation you can launch VSC and build.
 
 NOTE: The code is NOT buildable or runable after cloning! You must do an initial GENERATE CODE with the CubeMX utility!
 You can also do the generate code step from the command line by using the Windows PowerShell generate_project.ps1 script.
+In addition to generating code the PowerShell script also builds the entire project!
 
 
 ### Build
@@ -62,6 +63,8 @@ If the VSC STM32Cube extension is installed correctly it should pickup the top l
 **Caution:** STM32CubeMX is a great tool for code generation. With it you can add/delete drivers and it will automatically generate driver initialization code, which can get quite complicated, if done manually.
 Its worth maintaining compatability going forward.  
 **DO NOT MODIFY** generated files unless you add code only in the "USER" specified code blocks. If you do not adhear to this rule, the next time you regenerate the code your changes will be lost!
+
+Command line builds can be accomplished via the generate_project.ps1 PowerShell script.
 
 ### Run
 
