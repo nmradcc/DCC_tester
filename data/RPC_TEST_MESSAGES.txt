@@ -251,8 +251,12 @@ Expected Response:
 {"status":"ok","message":"Command station parameters updated"}
 
 ===============================================================================
-5. COMMAND STATION PACKET OVERRIDE CONTROL
+5. PACKET OVERRIDE PARAMETERS (RAM-ONLY)
 ===============================================================================
+
+Note: Override parameters are RAM-only and NOT saved to flash. They reset to 0
+when the command station is stopped or the system is rebooted. Use these 
+parameters to temporarily adjust individual zero bit timings for testing.
 
 5.1 Set Packet Override Parameters (All at Once)
 --------------------------------------------------
@@ -349,10 +353,51 @@ Expected Response:
 
 Note: This allows independent P and N phase timing adjustments for bits 
 specified in the override mask. P phase occurs first, followed by N phase.
+These are RAM-only parameters and will NOT be saved by parameters_save.
+
+-------------------------------------------------------------------------------
+
+5.7 Reset Override Parameters to Zero
+--------------------------------------
+Request:
+{"method":"command_station_packet_reset_override","params":{}}
+
+Expected Response:
+{"status":"ok","message":"Packet override parameters reset to 0"}
+
+Note: This is a convenience method to reset all override parameters (mask and
+both deltas) to 0. Equivalent to calling command_station_packet_override with
+all three parameters set to 0.
+
+-------------------------------------------------------------------------------
+
+5.8 Get Current Override Parameters
+------------------------------------
+Request:
+{"method":"command_station_packet_get_override","params":{}}
+
+Expected Response:
+{
+  "status": "ok",
+  "zerobit_override_mask": "0x0000000000000002",
+  "zerobit_override_mask_decimal": 2,
+  "zerobit_deltaP": 20,
+  "zerobit_deltaN": 0
+}
+
+Note: Returns the current RAM values of all override parameters.
+- zerobit_override_mask: 64-bit mask as hex string
+- zerobit_override_mask_decimal: Same mask as decimal number
+- zerobit_deltaP: P phase timing delta in microseconds (signed)
+- zerobit_deltaN: N phase timing delta in microseconds (signed)
 
 ===============================================================================
 6. PARAMETER FLASH OPERATIONS
 ===============================================================================
+
+Note: Override parameters (zerobit_override_mask, zerobit_deltaP, zerobit_deltaN)
+are RAM-only and are NOT affected by save/restore/factory_reset operations.
+They must be set each time the command station starts if non-zero values are needed.
 
 6.1 Save Parameters to Flash
 ------------------------------
@@ -364,7 +409,7 @@ Expected Response:
 
 -------------------------------------------------------------------------------
 
-5.2 Restore Parameters from Flash
+6.2 Restore Parameters from Flash
 -----------------------------------
 Request:
 {"method":"parameters_restore","params":{}}
@@ -374,7 +419,7 @@ Expected Response:
 
 -------------------------------------------------------------------------------
 
-5.3 Factory Reset (Restore Default Parameters)
+6.3 Factory Reset (Restore Default Parameters)
 ------------------------------------------------
 Request:
 {"method":"parameters_factory_reset","params":{}}
@@ -383,10 +428,11 @@ Expected Response:
 {"status":"ok","message":"Factory reset completed - all parameters restored to defaults"}
 
 Note: This erases the EDATA flash area and resets all parameters to defaults.
+Override parameters are NOT affected and remain at their current RAM values.
 
 -------------------------------------------------------------------------------
 
-5.4 Get All Command Station Parameters
+6.4 Get All Command Station Parameters
 ----------------------------------------
 Request:
 {"method":"command_station_get_params","params":{}}
@@ -416,9 +462,11 @@ Note: This method retrieves all current command station parameter values.
 - bidi_enable: BiDi (bidirectional) communication enabled
 - bidi_dac: BiDi DAC threshold value (0-4095)
 - trigger_first_bit: Trigger output on first bit
-- zerobit_override_mask: 64-bit mask (hex string) for selective bit timing
-- zerobit_deltaP: P phase timing delta in microseconds (signed)
-- zerobit_deltaN: N phase timing delta in microseconds (signed)
+- zerobit_override_mask: 64-bit mask (hex string) - RAM-only, not saved to flash
+- zerobit_deltaP: P phase timing delta in microseconds (signed) - RAM-only
+- zerobit_deltaN: N phase timing delta in microseconds (signed) - RAM-only
+
+Override parameters are read from RAM, not from flash storage.
 
 ===============================================================================
 7. SYSTEM CONTROL
@@ -473,7 +521,7 @@ Note: Returns track current feedback in milliamps (mA).
 9. ERROR CASES
 ===============================================================================
 
-6.1 Invalid JSON
+9.1 Invalid JSON
 -----------------
 Request:
 {invalid json}
@@ -483,7 +531,7 @@ Expected Response:
 
 -------------------------------------------------------------------------------
 
-6.2 Missing Method Field
+9.2 Missing Method Field
 --------------------------
 Request:
 {"params":{}}
@@ -493,7 +541,7 @@ Expected Response:
 
 -------------------------------------------------------------------------------
 
-6.3 Missing Params Field
+9.3 Missing Params Field
 --------------------------
 Request:
 {"method":"echo"}
@@ -747,17 +795,19 @@ Available RPC Methods:
 3. command_station_stop                  - Stop DCC command station
 4. command_station_params                - Set DCC parameters (preamble, bit timings, bidi, trigger)
 5. command_station_packet_override       - Set packet override parameters (zero bit mask and deltas)
-6. command_station_get_params            - Get all current DCC parameters
-7. command_station_load_packet           - Load arbitrary byte array into custom packet
-8. command_station_transmit_packet       - Trigger transmission of loaded custom packet
-9. decoder_start                         - Start DCC decoder
-10. decoder_stop                         - Stop DCC decoder
-11. parameters_save                      - Save all parameters to flash
-12. parameters_restore                   - Restore parameters from flash
-13. parameters_factory_reset             - Reset all parameters to factory defaults
-14. system_reboot                        - Reboot the microcontroller
-15. get_voltage_feedback_mv              - Get track voltage feedback in millivolts
-16. get_current_feedback_ma              - Get track current feedback in milliamps
+6. command_station_packet_reset_override - Reset override parameters to 0 (RAM-only)
+7. command_station_packet_get_override   - Get current override parameters (RAM-only)
+8. command_station_get_params            - Get all current DCC parameters
+9. command_station_load_packet           - Load arbitrary byte array into custom packet
+10. command_station_transmit_packet      - Trigger transmission of loaded custom packet
+11. decoder_start                        - Start DCC decoder
+12. decoder_stop                         - Stop DCC decoder
+13. parameters_save                      - Save all parameters to flash (excludes override params)
+14. parameters_restore                   - Restore parameters from flash (excludes override params)
+15. parameters_factory_reset             - Reset all parameters to factory defaults (excludes override params)
+16. system_reboot                        - Reboot the microcontroller
+17. get_voltage_feedback_mv              - Get track voltage feedback in millivolts
+18. get_current_feedback_ma              - Get track current feedback in milliamps
 
 ===============================================================================
 END OF DOCUMENT

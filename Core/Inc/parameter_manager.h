@@ -141,14 +141,6 @@ int get_dcc_bidi_dac(uint16_t *dac_value);
 int set_dcc_trigger_first_bit(uint8_t enable);
 int get_dcc_trigger_first_bit(uint8_t *enable);
 
-int set_dcc_zerobit_override_mask(uint64_t mask);
-int get_dcc_zerobit_override_mask(uint64_t *mask);
-
-int set_dcc_zerobit_deltaP(int32_t delta);
-int get_dcc_zerobit_deltaP(int32_t *delta);
-int set_dcc_zerobit_deltaN(int32_t delta);
-int get_dcc_zerobit_deltaN(int32_t *delta);
-
 /**
  * @brief Usage Notes:
  * 

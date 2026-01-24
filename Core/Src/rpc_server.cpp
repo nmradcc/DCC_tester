@@ -383,12 +383,7 @@ static json command_station_packet_override_handler(const json& params) {
             };
         }
         uint64_t mask = params["zerobit_override_mask"].get<uint64_t>();
-        if (set_dcc_zerobit_override_mask(mask) != 0) {
-            return {
-                {"status", "error"},
-                {"message", "Failed to set zerobit_override_mask"}
-            };
-        }
+        CommandStation_SetZerobitOverrideMask(mask);
     }
     
     // Set zero bit deltaP if provided
@@ -402,12 +397,7 @@ static json command_station_packet_override_handler(const json& params) {
             };
         }
         int32_t delta = params[key].get<int32_t>();
-        if (set_dcc_zerobit_deltaP(delta) != 0) {
-            return {
-                {"status", "error"},
-                {"message", "Failed to set zerobit_deltaP"}
-            };
-        }
+        CommandStation_SetZerobitDeltaP(delta);
     }
     
     // Set zero bit deltaN if provided
@@ -419,17 +409,47 @@ static json command_station_packet_override_handler(const json& params) {
             };
         }
         int32_t delta = params["zerobit_deltaN"].get<int32_t>();
-        if (set_dcc_zerobit_deltaN(delta) != 0) {
-            return {
-                {"status", "error"},
-                {"message", "Failed to set zerobit_deltaN"}
-            };
-        }
+        CommandStation_SetZerobitDeltaN(delta);
     }
     
     return {
         {"status", "ok"},
         {"message", "Packet override parameters updated"}
+    };
+}
+
+static json command_station_packet_reset_override_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    // Reset all override parameters to 0
+    CommandStation_SetZerobitOverrideMask(0);
+    CommandStation_SetZerobitDeltaP(0);
+    CommandStation_SetZerobitDeltaN(0);
+    
+    return {
+        {"status", "ok"},
+        {"message", "Packet override parameters reset to 0"}
+    };
+}
+
+static json command_station_packet_get_override_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    // Get current override parameters
+    uint64_t mask = CommandStation_GetZerobitOverrideMask();
+    int32_t deltaP = CommandStation_GetZerobitDeltaP();
+    int32_t deltaN = CommandStation_GetZerobitDeltaN();
+    
+    // Format mask as hex string for readability
+    char mask_str[20];
+    snprintf(mask_str, sizeof(mask_str), "0x%016llX", (unsigned long long)mask);
+    
+    return {
+        {"status", "ok"},
+        {"zerobit_override_mask", mask_str},
+        {"zerobit_override_mask_decimal", mask},
+        {"zerobit_deltaP", deltaP},
+        {"zerobit_deltaN", deltaN}
     };
 }
 
@@ -543,26 +563,25 @@ static json command_station_get_params_handler(const json& params) {
     uint8_t bidi_enable = 0;
     uint16_t bidi_dac = 0;
     uint8_t trigger_first_bit = 0;
-    uint64_t zerobit_override_mask = 0;
-    int32_t zerobit_deltaP = 0;
-    int32_t zerobit_deltaN = 0;
     
-    // Get all parameters
+    // Get persistent parameters from parameter manager
     if (get_dcc_track_voltage(&track_voltage) != 0 ||
         get_dcc_preamble_bits(&preamble_bits) != 0 ||
         get_dcc_bit1_duration(&bit1_duration) != 0 ||
         get_dcc_bit0_duration(&bit0_duration) != 0 ||
         get_dcc_bidi_enable(&bidi_enable) != 0 ||
         get_dcc_bidi_dac(&bidi_dac) != 0 ||
-        get_dcc_trigger_first_bit(&trigger_first_bit) != 0 ||
-        get_dcc_zerobit_override_mask(&zerobit_override_mask) != 0 ||
-        get_dcc_zerobit_deltaP(&zerobit_deltaP) != 0 ||
-        get_dcc_zerobit_deltaN(&zerobit_deltaN) != 0) {
+        get_dcc_trigger_first_bit(&trigger_first_bit) != 0) {
         return {
             {"status", "error"},
             {"message", "Failed to retrieve one or more parameters"}
         };
     }
+    
+    // Get RAM-only override parameters from command station
+    uint64_t zerobit_override_mask = CommandStation_GetZerobitOverrideMask();
+    int32_t zerobit_deltaP = CommandStation_GetZerobitDeltaP();
+    int32_t zerobit_deltaN = CommandStation_GetZerobitDeltaN();
     
     // Convert uint64_t to hex string for JSON compatibility
     char mask_str[19];  // "0x" + 16 hex digits + null terminator
@@ -604,6 +623,8 @@ void RpcServerThread(void* argument) {
     server.register_method("command_station_transmit_packet", command_station_transmit_packet_handler);
     server.register_method("command_station_params", command_station_params_handler);
     server.register_method("command_station_packet_override", command_station_packet_override_handler);
+    server.register_method("command_station_packet_reset_override", command_station_packet_reset_override_handler);
+    server.register_method("command_station_packet_get_override", command_station_packet_get_override_handler);
     server.register_method("command_station_get_params", command_station_get_params_handler);
     server.register_method("decoder_start", decoder_start_handler);
     server.register_method("decoder_stop", decoder_stop_handler);

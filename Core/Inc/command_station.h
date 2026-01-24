@@ -12,6 +12,14 @@ bool CommandStation_bidi_Threshold(uint16_t threshold);
 bool CommandStation_LoadCustomPacket(const uint8_t* bytes, uint8_t length);
 void CommandStation_TriggerTransmit(uint32_t count, uint32_t delay_ms);
 
+// RAM-only override parameter getters/setters
+void CommandStation_SetZerobitOverrideMask(uint64_t mask);
+uint64_t CommandStation_GetZerobitOverrideMask(void);
+void CommandStation_SetZerobitDeltaP(int32_t delta);
+int32_t CommandStation_GetZerobitDeltaP(void);
+void CommandStation_SetZerobitDeltaN(int32_t delta);
+int32_t CommandStation_GetZerobitDeltaN(void);
+
 
 #ifdef __cplusplus
 }

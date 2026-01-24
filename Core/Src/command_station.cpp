@@ -140,9 +140,6 @@ void CommandStationThread(void *argument) {
     get_dcc_bidi_enable(&bidi);
     get_dcc_bidi_dac(&dac_value);
     get_dcc_trigger_first_bit(&trigger_first_bit);
-    get_dcc_zerobit_override_mask(&zerobitOverrideMask);
-    get_dcc_zerobit_deltaP(&zerobitDeltaP);
-    get_dcc_zerobit_deltaN(&zerobitDeltaN);
 
     // Initialize DCC Command Station
     if (bidi) {
@@ -367,6 +364,12 @@ extern "C" bool CommandStation_Start(uint8_t loop)
 {
   if (!commandStationRunning) {
     commandStationLoop = loop;
+    
+    // Reset override parameters to 0 on each start
+    zerobitOverrideMask = 0;
+    zerobitDeltaP = 0;
+    zerobitDeltaN = 0;
+    
     HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
     osSemaphoreRelease(commandStationStart_sem);
     printf("Command station started (loop=%d)\n", loop);
@@ -439,3 +442,33 @@ extern "C" bool CommandStation_bidi_Threshold(uint16_t threshold)
   return false;
 }
 
+// Getter/Setter functions for RAM-only override parameters
+extern "C" void CommandStation_SetZerobitOverrideMask(uint64_t mask)
+{
+  zerobitOverrideMask = mask;
+}
+
+extern "C" uint64_t CommandStation_GetZerobitOverrideMask(void)
+{
+  return zerobitOverrideMask;
+}
+
+extern "C" void CommandStation_SetZerobitDeltaP(int32_t delta)
+{
+  zerobitDeltaP = delta;
+}
+
+extern "C" int32_t CommandStation_GetZerobitDeltaP(void)
+{
+  return zerobitDeltaP;
+}
+
+extern "C" void CommandStation_SetZerobitDeltaN(int32_t delta)
+{
+  zerobitDeltaN = delta;
+}
+
+extern "C" int32_t CommandStation_GetZerobitDeltaN(void)
+{
+  return zerobitDeltaN;
+}

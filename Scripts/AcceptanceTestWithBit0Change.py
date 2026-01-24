@@ -159,14 +159,7 @@ def run_test_with_bit0_change(com_port, loco_address, half_speed, override_delta
         rpc = DCCTesterRPC(com_port)
         print("Connected!\n")
         
-        # Initial cleanup: Reset packet override and stop command station
-        print("Initial setup: Resetting packet override parameters...")
-        response = rpc.send_rpc("command_station_packet_override_reset", {})
-        if response is None or response.get("status") != "ok":
-            print(f"WARNING: Failed to reset packet override: {response}")
-        else:
-            print("✓ Packet override reset to defaults\n")
-        
+        # Initial cleanup: Stop command station
         print("Initial setup: Stopping command station (if running)...")
         response = rpc.send_rpc("command_station_stop", {})
         if response is None or response.get("status") != "ok":
@@ -252,22 +245,6 @@ def run_test_with_bit0_change(com_port, loco_address, half_speed, override_delta
         motor_on_current_ma = response.get("current_ma", 0)
         print(f"✓ Motor run current: {motor_on_current_ma} mA\n")
 
-        # Step 7.5: Set packet override if specified
-        if override_delta is not None:
-            print(f"Step 7.5: Setting packet override for second zero bit (mask=0x02, deltaP=+{override_delta}μs)...")
-            # Bit position 2 (0-indexed as bit 1) is the second zero bit after preamble
-            # Binary: 0b10 = 0x02
-            response = rpc.send_rpc("command_station_packet_override", {
-                "zerobit_override_mask": 2,
-                "zerobit_deltaP": override_delta,
-                "zerobit_deltaN": 0
-            })
-            if response is None or response.get("status") != "ok":
-                print(f"ERROR: Failed to set packet override: {response}")
-                rpc.close()
-                return 1
-            print(f"✓ Packet override set: second zero bit will have P-phase increased by {override_delta}μs\n")
-
         # Step 8: Create and load BROADCAST emergency stop packet (address 0)
         print(f"Step 8: Creating and loading BROADCAST emergency stop packet...")
         estop_packet = make_emergency_stop_packet(0)  # Address 0 = broadcast
@@ -286,6 +263,22 @@ def run_test_with_bit0_change(com_port, loco_address, half_speed, override_delta
             return 1
         print(f"✓ Emergency stop packet loaded (length={response.get('length')} bytes)\n")
 
+        # Step 8.5: Set packet override if specified (just before transmission)
+        if override_delta is not None:
+            print(f"Step 8.5: Setting packet override for second zero bit (mask=0x02, deltaP=+{override_delta}μs, deltaN=-{override_delta}μs)...")
+            # Bit position 2 (0-indexed as bit 1) is the second zero bit after preamble
+            # Binary: 0b10 = 0x02
+            response = rpc.send_rpc("command_station_packet_override", {
+                "zerobit_override_mask": 4,
+                "zerobit_deltaP": override_delta,
+                "zerobit_deltaN": -override_delta
+            })
+            if response is None or response.get("status") != "ok":
+                print(f"ERROR: Failed to set packet override: {response}")
+                rpc.close()
+                return 1
+            print(f"✓ Packet override set: second zero bit will have P-phase +{override_delta}μs, N-phase -{override_delta}μs\n")
+
         # Step 9: Transmit the emergency stop packet
         print(f"Step 9: Transmitting emergency stop packet...")
         response = rpc.send_rpc("command_station_transmit_packet",
@@ -299,6 +292,16 @@ def run_test_with_bit0_change(com_port, loco_address, half_speed, override_delta
         
         print(f"Waiting 1 second for motor stop")
         time.sleep(1.0)
+        
+        # Step 9.5: Reset packet override if it was set
+        if override_delta is not None:
+            print("\nStep 9.5: Resetting packet override parameters to zero...")
+            response = rpc.send_rpc("command_station_packet_reset_override", {})
+            if response is None or response.get("status") != "ok":
+                print(f"ERROR: Failed to reset packet override: {response}")
+                rpc.close()
+                return 1
+            print("✓ Packet override reset to zero\n")
         
         # Step 10: Read motor stopped current
         print("\nStep 10: Reading motor stopped current...")
@@ -346,10 +349,12 @@ def run_test_with_bit0_change(com_port, loco_address, half_speed, override_delta
         print(f"  5. Transmitted 3 half-speed reverse packets to address {loco_address}")
         print(f"  6. Motor run time: 0.5 seconds")
         print(f"  7. Read motor run current: {motor_on_current_ma} mA")
-        if override_delta is not None:
-            print(f"  7.5 Set packet override for second zero bit (mask=0x02, deltaP=+{override_delta}μs)")
         print(f"  8. Created and loaded BROADCAST emergency stop packet (address 0x00)")
+        if override_delta is not None:
+            print(f"  8.5 Set packet override for second zero bit (mask=0x02, deltaP=+{override_delta}μs)")
         print(f"  9. Transmitted emergency stop packet")
+        if override_delta is not None:
+            print(f"  9.5 Reset packet override parameters to zero")
         print(f" 10. Read motor stopped current: {motor_stopped_current_ma} mA")
         print(f" 11. Stopped command station")
         print(f"\nCurrent measurements:")
@@ -420,7 +425,7 @@ def main():
     print("# TEST 2: PACKET OVERRIDE (Second Zero Bit P-phase +20μs)")
     print("#" * 70 + "\n")
     
-    result2 = run_test_with_bit0_change(COM_PORT, LOCO_ADDRESS, HALF_SPEED, 20)
+    result2 = run_test_with_bit0_change(COM_PORT, LOCO_ADDRESS, HALF_SPEED, +20)
     
     # Final summary
     print("\n\n" + "=" * 70)

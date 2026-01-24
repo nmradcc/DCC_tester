@@ -30,9 +30,6 @@ static const uint8_t DEFAULT_DCC_BIT0_DURATION = 100; // 100 microseconds (NMRA 
 static const uint8_t DEFAULT_DCC_BIDI_ENABLE = 0;     // BiDi disabled by default
 static const uint16_t DEFAULT_DCC_BIDI_DAC = DEFAULT_BIDIR_THRESHOLD;    // BiDi DAC threshold (12-bit: 0-4095)
 static const uint8_t DEFAULT_DCC_TRIGGER_FIRST_BIT = 0; // Trigger on first bit disabled by default
-static const uint64_t DEFAULT_DCC_ZEROBIT_OVERRIDE_MASK = 0ULL; // Zero bit override mask disabled by default
-static const int32_t DEFAULT_DCC_ZEROBIT_DELTAP = 0; // Zero bit P phase timing delta in microseconds (signed)
-static const int32_t DEFAULT_DCC_ZEROBIT_DELTAN = 0; // Zero bit N phase timing delta in microseconds (signed)
 
 static const uint32_t DEFAULT_NETWORK_IP_ADDRESS = 0xC0A80164;  // 192.168.1.100
 static const uint32_t DEFAULT_NETWORK_SUBNET_MASK = 0xFFFFFF00;  // 255.255.255.0
@@ -72,9 +69,6 @@ typedef struct {
     uint8_t _padding1[1];  // Alignment padding
     uint16_t dcc_short_circuit_threshold;
     uint16_t dcc_bidi_dac;      // BiDi DAC threshold value (12-bit: 0-4095)
-    uint64_t dcc_zerobit_override_mask; // Zero bit override mask for bit timing adjustment
-    int32_t dcc_zerobit_deltaP; // Zero bit P phase timing delta in microseconds (signed)
-    int32_t dcc_zerobit_deltaN; // Zero bit N phase timing delta in microseconds (signed)
     uint8_t _padding1b[0];  // Alignment padding
     
     // Network parameters
@@ -194,9 +188,6 @@ static void load_defaults(void) {
     g_paramData.params.dcc_trigger_first_bit = DEFAULT_DCC_TRIGGER_FIRST_BIT;
     g_paramData.params.dcc_short_circuit_threshold = DEFAULT_DCC_SHORT_CIRCUIT_THRESHOLD;
     g_paramData.params.dcc_bidi_dac = DEFAULT_DCC_BIDI_DAC;
-    g_paramData.params.dcc_zerobit_override_mask = DEFAULT_DCC_ZEROBIT_OVERRIDE_MASK;
-    g_paramData.params.dcc_zerobit_deltaP = DEFAULT_DCC_ZEROBIT_DELTAP;
-    g_paramData.params.dcc_zerobit_deltaN = DEFAULT_DCC_ZEROBIT_DELTAN;
     
     g_paramData.params.network_ip_address = DEFAULT_NETWORK_IP_ADDRESS;
     g_paramData.params.network_subnet_mask = DEFAULT_NETWORK_SUBNET_MASK;
@@ -659,111 +650,6 @@ int get_dcc_trigger_first_bit(uint8_t *enable) {
     
     // Read directly from the parameter structure
     *enable = g_paramData.params.dcc_trigger_first_bit;
-    
-    return 0;
-}
-
-/**
- * @brief Set DCC zero bit override mask
- * @param mask 64-bit mask for zero bit timing override
- * @return 0 on success, -1 on failure
- */
-int set_dcc_zerobit_override_mask(uint64_t mask) {
-    if (!g_initialized) {
-        return -1;
-    }
-    
-    // Write directly to the parameter structure
-    g_paramData.params.dcc_zerobit_override_mask = mask;
-    
-    // Mark as modified
-    g_modified = 1;
-    
-    return 0;
-}
-
-/**
- * @brief Get DCC zero bit override mask
- * @param mask Pointer to store 64-bit mask
- * @return 0 on success, -1 on failure
- */
-int get_dcc_zerobit_override_mask(uint64_t *mask) {
-    if (mask == NULL || !g_initialized) {
-        return -1;
-    }
-    
-    // Read directly from the parameter structure
-    *mask = g_paramData.params.dcc_zerobit_override_mask;
-    
-    return 0;
-}
-
-/**
- * @brief Set DCC zero bit P phase timing delta
- * @param delta Timing delta in microseconds (signed)
- * @return 0 on success, -1 on failure
- */
-int set_dcc_zerobit_deltaP(int32_t delta) {
-    if (!g_initialized) {
-        return -1;
-    }
-    
-    // Write directly to the parameter structure
-    g_paramData.params.dcc_zerobit_deltaP = delta;
-    
-    // Mark as modified
-    g_modified = 1;
-    
-    return 0;
-}
-
-/**
- * @brief Get DCC zero bit P phase timing delta
- * @param delta Pointer to store timing delta in microseconds (signed)
- * @return 0 on success, -1 on failure
- */
-int get_dcc_zerobit_deltaP(int32_t *delta) {
-    if (delta == NULL || !g_initialized) {
-        return -1;
-    }
-    
-    // Read directly from the parameter structure
-    *delta = g_paramData.params.dcc_zerobit_deltaP;
-    
-    return 0;
-}
-
-/**
- * @brief Set DCC zero bit N phase timing delta
- * @param delta Timing delta in microseconds (signed)
- * @return 0 on success, -1 on failure
- */
-int set_dcc_zerobit_deltaN(int32_t delta) {
-    if (!g_initialized) {
-        return -1;
-    }
-    
-    // Write directly to the parameter structure
-    g_paramData.params.dcc_zerobit_deltaN = delta;
-    
-    // Mark as modified
-    g_modified = 1;
-    
-    return 0;
-}
-
-/**
- * @brief Get DCC zero bit N phase timing delta
- * @param delta Pointer to store timing delta in microseconds (signed)
- * @return 0 on success, -1 on failure
- */
-int get_dcc_zerobit_deltaN(int32_t *delta) {
-    if (delta == NULL || !g_initialized) {
-        return -1;
-    }
-    
-    // Read directly from the parameter structure
-    *delta = g_paramData.params.dcc_zerobit_deltaN;
     
     return 0;
 }

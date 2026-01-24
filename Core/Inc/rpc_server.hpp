@@ -38,7 +38,7 @@ public:
     std::string handle(const std::string& request_str);
 
 private:
-    static constexpr int kMaxMethods = 16;
+    static constexpr int kMaxMethods = 30;
     RpcEntry table[kMaxMethods];
     int count;
 
