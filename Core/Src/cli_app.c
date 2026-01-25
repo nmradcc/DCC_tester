@@ -106,13 +106,15 @@ void command_station_command(const char *arg1, const char *arg2) {
             }
         }
         
-        CommandStation_Start(loop);
-        const char* loop_names[] = {"no loop", "loop1 (basic)", "loop2 (functions)", "loop3 (speed ramp)"};
-        printf("Start Command Station with %s ...\n", loop_names[loop]);
+        if (CommandStation_Start(loop)) {
+            const char* loop_names[] = {"no loop", "loop1 (basic)", "loop2 (functions)", "loop3 (speed ramp)"};
+            printf("Start Command Station with %s ...\n", loop_names[loop]);
+        }
     }
     else if (strcasecmp(arg1,"stop") == 0) {
-        printf("Stop Command Station ...\n");
-        CommandStation_Stop();
+        if (CommandStation_Stop()) {
+            printf("Command station stopped\n");
+        }
     }
     else {
         printf("Unknown command station command: %s\n", arg1);

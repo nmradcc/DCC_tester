@@ -6,9 +6,9 @@
     "cmake.preferredGenerators": [
         "Ninja"
     ],
-    "cmake.configureOnOpen": false,
     "cmake.useCMakePresets": "always",
-    "cmake.ignoreCMakeListsMissing": false,
+    "cmake.configurePreset": "Debug",
+    "cmake.buildPreset": "Debug",
     "stm32cube-ide-clangd.path": "cube",
     "stm32cube-ide-clangd.arguments": [
         "starm-clangd",

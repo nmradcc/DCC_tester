@@ -1,12 +1,12 @@
 /**
  * @file analog_manager.c
- * @brief Analog Manager - ADC scanning and averaging implementation
+ * @brief Analog Manager - On-demand ADC reading and averaging implementation
  * @author Auto-generated
  * @date 2025-12-08
  * 
- * This module manages periodic ADC scanning with averaging for all allocated channels.
- * Scans ADC1 (channels 2,3,5,6) and ADC2 (channels 2,6) approximately every 100ms.
- * Results are averaged and stored in global variables for later scaling.
+ * This module manages on-demand ADC readings with averaging for all allocated channels.
+ * Supports ADC1 (channels 2,3,5,6) and ADC2 (channels 2,6).
+ * All readings are performed on-demand with mutex protection for thread safety.
  */
 
 #include "analog_manager.h"
@@ -21,69 +21,12 @@
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 
-/* Global averaged ADC values (12-bit: 0-4095) */
-volatile uint16_t g_adc1_ch2_avg = 0;
-volatile uint16_t g_adc1_ch3_avg = 0;
-volatile uint16_t g_adc1_ch5_avg = 0;
-volatile uint16_t g_adc1_ch6_avg = 0;
-volatile uint16_t g_adc2_ch2_avg = 0;
-volatile uint16_t g_adc2_ch6_avg = 0;
-
 /* Private variables */
-static osThreadId_t analogManagerThread_id;
-static bool analogManagerRunning = false;
-
-/* Thread attributes */
-const osThreadAttr_t analogManagerTask_attributes = {
-    .name = "analogManagerTask",
-    .stack_size = 512 * 4,
-    .priority = (osPriority_t) osPriorityNormal
-};
+static osMutexId_t adc_mutex = NULL;
 
 /* Private function prototypes */
-static void AnalogManagerThread(void *argument);
 static uint16_t read_adc_channel(ADC_HandleTypeDef *hadc, uint32_t channel);
 static uint16_t average_adc_readings(ADC_HandleTypeDef *hadc, uint32_t channel, uint8_t samples);
-
-/**
- * @brief ADC scanning thread function
- */
-static void AnalogManagerThread(void *argument)
-{
-    (void)argument;
-    
-    printf("Analog Manager Task started\n");
-    
-    // Calibrate ADCs before use
-    
-    if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) != HAL_OK)
-    {
-        printf("ADC1 calibration failed\n");
-    }
-    
-    if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED) != HAL_OK)
-    {
-        printf("ADC2 calibration failed\n");
-    }
-    
-    while (analogManagerRunning)
-    {
-        // Scan ADC1 channels: 2, 3, 5, 6
-        g_adc1_ch2_avg = average_adc_readings(&hadc1, ADC_CHANNEL_2, ADC_AVG_SAMPLES);
-        g_adc1_ch3_avg = average_adc_readings(&hadc1, ADC_CHANNEL_3, ADC_AVG_SAMPLES);
-        g_adc1_ch5_avg = average_adc_readings(&hadc1, ADC_CHANNEL_5, ADC_AVG_SAMPLES);
-        g_adc1_ch6_avg = average_adc_readings(&hadc1, ADC_CHANNEL_6, ADC_AVG_SAMPLES);
-        
-        // Scan ADC2 channels: 2, 6
-        g_adc2_ch2_avg = average_adc_readings(&hadc2, ADC_CHANNEL_2, ADC_AVG_SAMPLES);
-        g_adc2_ch6_avg = average_adc_readings(&hadc2, ADC_CHANNEL_6, ADC_AVG_SAMPLES);
-        
-        // Wait approximately 100ms before next scan
-        osDelay(100);
-    }
-    
-    printf("Analog Manager Task stopped\n");
-}
 
 /**
  * @brief Read a single ADC channel value
@@ -164,69 +107,38 @@ static uint16_t average_adc_readings(ADC_HandleTypeDef *hadc, uint32_t channel, 
  */
 int analog_manager_init(void)
 {
+    // Create mutex for ADC protection
+    if (adc_mutex == NULL)
+    {
+        adc_mutex = osMutexNew(NULL);
+        if (adc_mutex == NULL)
+        {
+            printf("Failed to create ADC mutex\n");
+            return -1;
+        }
+    }
+    
+    // Calibrate ADCs
+    if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) != HAL_OK)
+    {
+        printf("ADC1 calibration failed\n");
+    }
+    
+    if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED) != HAL_OK)
+    {
+        printf("ADC2 calibration failed\n");
+    }
+    
+    printf("Analog Manager initialized (on-demand mode)\n");
     return 0;
 }
 
 /**
- * @brief Start the ADC scanning task
- * @return 0 on success, -1 on failure
- */
-int analog_manager_start(void)
-{
-    if (analogManagerRunning)
-    {
-        printf("Analog Manager already running\n");
-        return -1;
-    }
-    
-    analogManagerRunning = true;
-    
-    // Create the thread
-    analogManagerThread_id = osThreadNew(AnalogManagerThread, NULL, &analogManagerTask_attributes);
-    
-    if (analogManagerThread_id == NULL)
-    {
-        printf("Failed to create Analog Manager thread\n");
-        analogManagerRunning = false;
-        return -1;
-    }
-    
-    return 0;
-}
-
-/**
- * @brief Stop the ADC scanning task
- * @return 0 on success, -1 on failure
- */
-int analog_manager_stop(void)
-{
-    if (!analogManagerRunning)
-    {
-        printf("Analog Manager not running\n");
-        return -1;
-    }
-    
-    analogManagerRunning = false;
-    
-    // Wait a bit for thread to finish
-    osDelay(200);
-    
-    // Terminate the thread
-    if (analogManagerThread_id != NULL)
-    {
-        osThreadTerminate(analogManagerThread_id);
-        analogManagerThread_id = NULL;
-    }
-    
-    return 0;
-}
-
-/**
- * @brief Get the current averaged value for a specific ADC channel
+ * @brief Get the current averaged value for a specific ADC channel (on-demand)
  * @param adc_num ADC number (1 or 2)
  * @param channel Channel number (2, 3, 5, or 6)
  * @param value Pointer to store the averaged value
- * @return 0 on success, -1 on invalid parameters
+ * @return 0 on success, -1 on invalid parameters or mutex timeout
  */
 int analog_manager_get_value(uint8_t adc_num, uint8_t channel, uint16_t *value)
 {
@@ -235,39 +147,57 @@ int analog_manager_get_value(uint8_t adc_num, uint8_t channel, uint16_t *value)
         return -1;
     }
     
+    ADC_HandleTypeDef *hadc = NULL;
+    uint32_t adc_channel = 0;
+    
+    // Validate and map ADC/channel combination
     if (adc_num == 1)
     {
+        hadc = &hadc1;
         switch (channel)
         {
             case 2:
-                *value = g_adc1_ch2_avg;
-                return 0;
+                adc_channel = ADC_CHANNEL_2;
+                break;
             case 3:
-                *value = g_adc1_ch3_avg;
-                return 0;
+                adc_channel = ADC_CHANNEL_3;
+                break;
             case 5:
-                *value = g_adc1_ch5_avg;
-                return 0;
+                adc_channel = ADC_CHANNEL_5;
+                break;
             case 6:
-                *value = g_adc1_ch6_avg;
-                return 0;
+                adc_channel = ADC_CHANNEL_6;
+                break;
             default:
                 return -1;
         }
     }
     else if (adc_num == 2)
     {
+        hadc = &hadc2;
         switch (channel)
         {
             case 2:
-                *value = g_adc2_ch2_avg;
-                return 0;
+                adc_channel = ADC_CHANNEL_2;
+                break;
             case 6:
-                *value = g_adc2_ch6_avg;
-                return 0;
+                adc_channel = ADC_CHANNEL_6;
+                break;
             default:
                 return -1;
         }
+    }
+    else
+    {
+        return -1;
+    }
+    
+    // Perform on-demand ADC reading with mutex protection
+    if (adc_mutex != NULL && osMutexAcquire(adc_mutex, 100) == osOK)
+    {
+        *value = average_adc_readings(hadc, adc_channel, ADC_AVG_SAMPLES);
+        osMutexRelease(adc_mutex);
+        return 0;
     }
     
     return -1;
@@ -281,7 +211,7 @@ int get_voltage_feedback_mv(uint16_t *voltage_mv)
     }
 
     uint16_t adc_value = 0;
-    if (analog_manager_get_value(1, 6, &adc_value) != 0) {  // Assuming ADC1 Channel 6 is voltage feedback
+    if (analog_manager_get_value(1, 6, &adc_value) != 0) {
         return -1;
     }
 
@@ -299,7 +229,7 @@ int get_current_feedback_ma(uint16_t *current_ma)
     }
 
     uint16_t adc_value = 0;
-    if (analog_manager_get_value(2, 2, &adc_value) != 0) {  // Assuming ADC2 Channel 2 is current feedback
+    if (analog_manager_get_value(2, 2, &adc_value) != 0) {
         return -1;
     }
 
@@ -307,5 +237,4 @@ int get_current_feedback_ma(uint16_t *current_ma)
     *current_ma = (uint16_t)(adc_value / CURRENT_FEEDBACK_SCALE_FACTOR_MA);
 
     return 0;
-
 }
