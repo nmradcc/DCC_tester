@@ -1,0 +1,7 @@
+- **NORMAL_IDLE**: Standard DCC idle packets (58/100 μs)
+- **TIMING_TEST_MIN**: Minimum boundary testing (55/100 μs)
+- **TIMING_TEST_MAX**: Maximum boundary testing (61/9900 μs)
+- **TIMING_TEST_NOMINAL**: Nominal center values (58/100 μs)
+- **ALTERNATING_PATTERN**: 0xAA/0x55 data patterns
+- **ALL_ONES**: Maximum "1" bit testing (0xFF)
+- **ALL_ZEROS**: Maximum "0" bit testing (0x00)

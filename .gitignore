@@ -11,3 +11,9 @@ cmake
 stm32_lock.h
 newlib_lock_glue.c
 startup_stm32h563xx.s
+
+# Python
+**/__pycache__/
+*.pyc
+
+# Scripts

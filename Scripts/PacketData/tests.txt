@@ -1,0 +1,3 @@
+need to modify InterPacketDlayTest to use some other feedback mechanism as reading current this
+can not be done in the 5ms window.
+... could be done by remembering off current from previous known good test etc.
