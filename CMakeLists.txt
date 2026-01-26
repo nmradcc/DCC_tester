@@ -65,19 +65,6 @@ GIT_TAG        master  # or specify a commit/tag
 
 FetchContent_MakeAvailable(rpc_core)
 
-# Add OpenMRNLite library
-set(OPENMRN_RTOS "ThreadX" CACHE STRING "Select RTOS" FORCE)
-
-FetchContent_Declare(
-    openmrn
-    GIT_REPOSITORY https://github.com/nmradcc/OpenMRNLite.git
-    GIT_TAG ${CMAKE_PROJECT_NAME}  # or specific commit/tag
-#    SOURCE_DIR     ${CMAKE_PROJECT_NAME}/openmrn  # Optional: control location
-#    SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/openmrn-src  # Optional: control location
-)
-
-FetchContent_MakeAvailable(openmrn)
-
 FetchContent_Declare(
   DCC
   GIT_REPOSITORY "https://github.com/nmradcc/DCC"
@@ -107,7 +94,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/analog_manager.c
     Core/Src/SUSI_Master.c
     Core/Src/SUSI_Slave.c
-    Core/Src/OpenMRN_client.c
 )
 
 # Add include paths
@@ -133,7 +119,6 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
     # Add user defined libraries
     rpc_core
-#    OpenMRNLite
     DCC::DCC
 )
 
