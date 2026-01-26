@@ -33,7 +33,6 @@
 #include "SUSI.h"
 #include "parameter_manager.h"
 #include "analog_manager.h"
-#include "OpenMRN_client.h"
 
 /* USER CODE END Includes */
 
@@ -121,8 +120,6 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   SUSI_Master_Init(&hspi5);
   /* Create the SUSI Slave task ... but don't start it */
   SUSI_Slave_Init(&hspi2);
-  /* Create the OpenMRN task ... but don't start it */
-  OpenMRN_Client_Init(&hfdcan1);
 
   /* USER CODE END App_ThreadX_Init */
 
