@@ -308,6 +308,9 @@ int main(void)
   BSP_LED_Init(LED_YELLOW);
   BSP_LED_Init(LED_RED);
 
+  /* Initialize User push-button without interrupt mode. */
+  BSP_PB_Init(BUTTON_USER, BUTTON_MODE_GPIO);
+
   MX_ThreadX_Init();
 
   /* We should never get here as control is now taken by the scheduler */
@@ -1375,6 +1378,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : IO13_Pin IO14_Pin IO15_Pin */
+  GPIO_InitStruct.Pin = IO13_Pin|IO14_Pin|IO15_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
   /*Configure GPIO pins : TRACK_P_Pin BIDIR_EN_Pin */
   GPIO_InitStruct.Pin = TRACK_P_Pin|BIDIR_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -1382,17 +1391,33 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : REF_OSC_Pin */
-  GPIO_InitStruct.Pin = REF_OSC_Pin;
+  /*Configure GPIO pins : IO10_Pin IO3_Pin IO2_Pin IO1_Pin
+                           HL_Pin HL_EXT_Pin */
+  GPIO_InitStruct.Pin = IO10_Pin|IO3_Pin|IO2_Pin|IO1_Pin
+                          |HL_Pin|HL_EXT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(REF_OSC_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : REF_OSC_Pin IO4_Pin IO5_Pin IO9_Pin */
+  GPIO_InitStruct.Pin = REF_OSC_Pin|IO4_Pin|IO5_Pin|IO9_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pin : SD_DETECT_Pin */
   GPIO_InitStruct.Pin = SD_DETECT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(SD_DETECT_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : IO8_Pin IO6_Pin IO7_Pin IO8G9_Pin
+                           IO10G10_Pin IO11_Pin IO11G14_Pin IO12_Pin */
+  GPIO_InitStruct.Pin = IO8_Pin|IO6_Pin|IO7_Pin|IO8G9_Pin
+                          |IO10G10_Pin|IO11_Pin|IO11G14_Pin|IO12_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
   /*Configure GPIO pin : BR_ENABLE_Pin */
   GPIO_InitStruct.Pin = BR_ENABLE_Pin;

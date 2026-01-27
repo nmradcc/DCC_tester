@@ -786,7 +786,188 @@ Custom packet transmitted [2/3]: 0xFF 0x00 0xFF
 Custom packet transmitted [3/3]: 0xFF 0x00 0xFF
 
 ===============================================================================
-13. COMPLETE METHOD LIST
+13. GPIO INPUT READING
+===============================================================================
+
+13.1 Read Individual GPIO Input
+---------------------------------
+Read the state of a single GPIO input pin (IO1-IO16).
+
+Request:
+{"method":"get_gpio_input","params":{"pin":1}}
+
+Expected Response:
+{"status":"ok","pin":1,"value":0}
+
+Note: 
+- pin: GPIO pin number (1-16)
+- value: 0 = low, 1 = high
+- IO16 is mapped to BUTTON_USER (blue push button on Nucleo board)
+  - For IO16: 0 = button not pressed, 1 = button pressed
+  - IO16 is read-only and cannot be configured as output
+
+Error Response (invalid pin):
+{"status":"error","message":"Pin number must be between 1 and 16"}
+
+-------------------------------------------------------------------------------
+
+13.2 Read All GPIO Inputs as 16-bit Word
+-----------------------------------------
+Read all GPIO inputs (IO1-IO16) at once as a 16-bit word.
+
+Request:
+{"method":"get_gpio_inputs","params":{}}
+
+Expected Response:
+{"status":"ok","value":32768,"hex":"0x8000"}
+
+Note: 
+- value: 16-bit unsigned integer (0-65535)
+- hex: Hexadecimal representation
+- Bit 0 = IO1, Bit 1 = IO2, ..., Bit 15 = IO16
+- Each bit: 0 = low, 1 = high
+- IO16 (Bit 15) is mapped to BUTTON_USER: 0 = not pressed, 1 = pressed
+
+Example:
+- If IO1 and IO16 (button pressed) are high: value=32769, hex="0x8001"
+- If all inputs are low: value=0, hex="0x0000"
+- If all inputs are high: value=65535, hex="0xFFFF"
+- If only button (IO16) is pressed: value=32768, hex="0x8000"
+
+===============================================================================
+14. GPIO OUTPUT CONFIGURATION AND CONTROL
+===============================================================================
+
+14.1 Configure GPIO Pin as Output
+-----------------------------------
+Configure a GPIO pin (IO1-IO15) as an output with an initial state.
+
+Request:
+{"method":"configure_gpio_output","params":{"pin":5,"state":1}}
+
+Expected Response:
+{"status":"ok","message":"GPIO configured as output","pin":5,"state":1}
+
+Note:
+- pin: GPIO pin number (1-15 only, IO16 is reserved for BUTTON_USER)
+- state: Initial output state - 0 = low, 1 = high
+- This reconfigures the pin from input to output mode
+- The pin is configured as push-pull output with no pull resistor
+- IO16 cannot be configured as output (it is mapped to BUTTON_USER)
+
+Error Response (invalid pin):
+{"status":"error","message":"Pin number must be between 1 and 16"}
+
+Error Response (IO16 attempt):
+{"status":"error","message":"IO16 is mapped to BUTTON_USER and is read-only"}
+
+Error Response (invalid state):
+{"status":"error","message":"State must be 0 (low) or 1 (high)"}
+
+-------------------------------------------------------------------------------
+
+14.2 Set GPIO Output State
+----------------------------
+Set or clear the output state of a GPIO pin configured as output.
+
+Request:
+{"method":"set_gpio_output","params":{"pin":5,"state":0}}
+
+Expected Response:
+{"status":"ok","message":"GPIO output state set","pin":5,"state":0}
+
+Note:
+- pin: GPIO pin number (1-15 only, IO16 is reserved for BUTTON_USER)
+- state: Desired output state - 0 = low, 1 = high
+- The pin should be configured as output first using configure_gpio_output
+- If the pin is still configured as input, this will set the ODR register
+  but may not affect the physical pin state
+- IO16 cannot be set as output (it is mapped to BUTTON_USER)
+
+Error Response (IO16 attempt):
+{"status":"error","message":"IO16 is mapped to BUTTON_USER and is read-only"}
+
+Example Usage Sequence:
+1. Configure IO5 as output with initial high state:
+   {"method":"configure_gpio_output","params":{"pin":5,"state":1}}
+
+2. Set IO5 to low:
+   {"method":"set_gpio_output","params":{"pin":5,"state":0}}
+
+3. Set IO5 back to high:
+   {"method":"set_gpio_output","params":{"pin":5,"state":1}}
+
+===============================================================================
+15. RTC DATE AND TIME
+===============================================================================
+
+15.1 Get RTC Date and Time
+---------------------------
+Read the current date and time from the Real-Time Clock (RTC).
+
+Request:
+{"method":"get_rtc_datetime","params":{}}
+
+Expected Response:
+{"status":"ok","date":"2026-01-27","time":"14:35:22","year":2026,"month":1,"day":27,"weekday":2,"hours":14,"minutes":35,"seconds":22}
+
+Note:
+- date: Formatted date string (YYYY-MM-DD)
+- time: Formatted time string (HH:MM:SS)
+- year: Full year (2000-2099)
+- month: Month (1-12)
+- day: Day of month (1-31)
+- weekday: Day of week (1=Monday, 2=Tuesday, ..., 7=Sunday)
+- hours: Hours (0-23)
+- minutes: Minutes (0-59)
+- seconds: Seconds (0-59)
+
+-------------------------------------------------------------------------------
+
+15.2 Set RTC Date and Time
+----------------------------
+Set the date and/or time on the Real-Time Clock (RTC).
+
+Request (set both date and time):
+{"method":"set_rtc_datetime","params":{"year":2026,"month":1,"day":27,"hours":14,"minutes":30,"seconds":0}}
+
+Expected Response:
+{"status":"ok","message":"RTC updated successfully","date_set":true,"time_set":true}
+
+Request (set only date):
+{"method":"set_rtc_datetime","params":{"year":2026,"month":1,"day":27}}
+
+Expected Response:
+{"status":"ok","message":"RTC updated successfully","date_set":true}
+
+Request (set only time):
+{"method":"set_rtc_datetime","params":{"hours":14,"minutes":30,"seconds":0}}
+
+Expected Response:
+{"status":"ok","message":"RTC updated successfully","time_set":true}
+
+Request (with optional weekday):
+{"method":"set_rtc_datetime","params":{"year":2026,"month":1,"day":27,"weekday":2,"hours":14,"minutes":30,"seconds":0}}
+
+Note:
+- year: Full year (2000-2099)
+- month: Month (1-12)
+- day: Day of month (1-31)
+- weekday: Optional day of week (1=Monday, 2=Tuesday, ..., 7=Sunday)
+- hours: Hours (0-23)
+- minutes: Minutes (0-59)
+- seconds: Seconds (0-59)
+- You can set date only, time only, or both together
+- If weekday is not provided, it defaults to Monday
+
+Error Response (invalid range):
+{"status":"error","message":"Year must be between 2000 and 2099"}
+
+Error Response (missing parameters):
+{"status":"error","message":"Must provide date (year, month, day) and/or time (hours, minutes, seconds)"}
+
+===============================================================================
+16. COMPLETE METHOD LIST
 ===============================================================================
 
 Available RPC Methods:
@@ -808,6 +989,12 @@ Available RPC Methods:
 16. system_reboot                        - Reboot the microcontroller
 17. get_voltage_feedback_mv              - Get track voltage feedback in millivolts
 18. get_current_feedback_ma              - Get track current feedback in milliamps
+19. get_gpio_input                       - Read individual GPIO input pin (IO1-IO16)
+20. get_gpio_inputs                      - Read all GPIO inputs as 16-bit word
+21. configure_gpio_output                - Configure GPIO pin as output with initial state
+22. set_gpio_output                      - Set or clear GPIO output pin state
+23. get_rtc_datetime                     - Read current RTC date and time
+24. set_rtc_datetime                     - Set RTC date and/or time
 
 ===============================================================================
 END OF DOCUMENT
