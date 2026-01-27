@@ -571,37 +571,48 @@ static json get_gpio_input_handler(const json& params) {
         };
     }
     
-    GPIO_PinState state = GPIO_PIN_RESET;
+    int value = 0;
     
-    // Read the appropriate GPIO pin based on pin number
-    switch (pin_num) {
-        case 1:  state = HAL_GPIO_ReadPin(IO1_GPIO_Port, IO1_Pin); break;
-        case 2:  state = HAL_GPIO_ReadPin(IO2_GPIO_Port, IO2_Pin); break;
-        case 3:  state = HAL_GPIO_ReadPin(IO3_GPIO_Port, IO3_Pin); break;
-        case 4:  state = HAL_GPIO_ReadPin(IO4_GPIO_Port, IO4_Pin); break;
-        case 5:  state = HAL_GPIO_ReadPin(IO5_GPIO_Port, IO5_Pin); break;
-        case 6:  state = HAL_GPIO_ReadPin(IO6_GPIO_Port, IO6_Pin); break;
-        case 7:  state = HAL_GPIO_ReadPin(IO7_GPIO_Port, IO7_Pin); break;
-        case 8:  state = HAL_GPIO_ReadPin(IO8_GPIO_Port, IO8_Pin); break;
-        case 9:  state = HAL_GPIO_ReadPin(IO9_GPIO_Port, IO9_Pin); break;
-        case 10: state = HAL_GPIO_ReadPin(IO10_GPIO_Port, IO10_Pin); break;
-        case 11: state = HAL_GPIO_ReadPin(IO11_GPIO_Port, IO11_Pin); break;
-        case 12: state = HAL_GPIO_ReadPin(IO12_GPIO_Port, IO12_Pin); break;
-        case 13: state = HAL_GPIO_ReadPin(IO13_GPIO_Port, IO13_Pin); break;
-        case 14: state = HAL_GPIO_ReadPin(IO14_GPIO_Port, IO14_Pin); break;
-        case 15: state = HAL_GPIO_ReadPin(IO15_GPIO_Port, IO15_Pin); break;
-        case 16: state = HAL_GPIO_ReadPin(IO16_GPIO_Port, IO16_Pin); break;
-        default:
-            return {
-                {"status", "error"},
-                {"message", "Invalid pin number"}
-            };
+    // IO16 is mapped to BUTTON_USER (read-only)
+    // Button is active low: pressed=0, released=1
+    // We return: 0=not pushed, 1=pushed (inverted)
+    if (pin_num == 16) {
+        // Read button state and invert (pressed=0 becomes 1, released=1 becomes 0)
+        value = (BSP_PB_GetState(BUTTON_USER) == 0) ? 1 : 0;
+    } else {
+        GPIO_PinState state = GPIO_PIN_RESET;
+        
+        // Read the appropriate GPIO pin based on pin number
+        switch (pin_num) {
+            case 1:  state = HAL_GPIO_ReadPin(IO1_GPIO_Port, IO1_Pin); break;
+            case 2:  state = HAL_GPIO_ReadPin(IO2_GPIO_Port, IO2_Pin); break;
+            case 3:  state = HAL_GPIO_ReadPin(IO3_GPIO_Port, IO3_Pin); break;
+            case 4:  state = HAL_GPIO_ReadPin(IO4_GPIO_Port, IO4_Pin); break;
+            case 5:  state = HAL_GPIO_ReadPin(IO5_GPIO_Port, IO5_Pin); break;
+            case 6:  state = HAL_GPIO_ReadPin(IO6_GPIO_Port, IO6_Pin); break;
+            case 7:  state = HAL_GPIO_ReadPin(IO7_GPIO_Port, IO7_Pin); break;
+            case 8:  state = HAL_GPIO_ReadPin(IO8_GPIO_Port, IO8_Pin); break;
+            case 9:  state = HAL_GPIO_ReadPin(IO9_GPIO_Port, IO9_Pin); break;
+            case 10: state = HAL_GPIO_ReadPin(IO10_GPIO_Port, IO10_Pin); break;
+            case 11: state = HAL_GPIO_ReadPin(IO11_GPIO_Port, IO11_Pin); break;
+            case 12: state = HAL_GPIO_ReadPin(IO12_GPIO_Port, IO12_Pin); break;
+            case 13: state = HAL_GPIO_ReadPin(IO13_GPIO_Port, IO13_Pin); break;
+            case 14: state = HAL_GPIO_ReadPin(IO14_GPIO_Port, IO14_Pin); break;
+            case 15: state = HAL_GPIO_ReadPin(IO15_GPIO_Port, IO15_Pin); break;
+            default:
+                return {
+                    {"status", "error"},
+                    {"message", "Invalid pin number"}
+                };
+        }
+        
+        value = (state == GPIO_PIN_SET) ? 1 : 0;
     }
     
     return {
         {"status", "ok"},
         {"pin", pin_num},
-        {"value", state == GPIO_PIN_SET ? 1 : 0}
+        {"value", value}
     };
 }
 
@@ -627,7 +638,8 @@ static json get_gpio_inputs_handler(const json& params) {
     if (HAL_GPIO_ReadPin(IO13_GPIO_Port, IO13_Pin) == GPIO_PIN_SET) gpio_word |= (1 << 12);
     if (HAL_GPIO_ReadPin(IO14_GPIO_Port, IO14_Pin) == GPIO_PIN_SET) gpio_word |= (1 << 13);
     if (HAL_GPIO_ReadPin(IO15_GPIO_Port, IO15_Pin) == GPIO_PIN_SET) gpio_word |= (1 << 14);
-    if (HAL_GPIO_ReadPin(IO16_GPIO_Port, IO16_Pin) == GPIO_PIN_SET) gpio_word |= (1 << 15);
+    // IO16 is mapped to BUTTON_USER (inverted: pressed=1, not pressed=0)
+    if (BSP_PB_GetState(BUTTON_USER) == 0) gpio_word |= (1 << 15);
     
     // Format as hex string for easy reading
     char hex_str[7];  // "0x" + 4 hex digits + null terminator
@@ -665,6 +677,14 @@ static json configure_gpio_output_handler(const json& params) {
         return {
             {"status", "error"},
             {"message", "Pin number must be between 1 and 16"}
+        };
+    }
+    
+    // IO16 is mapped to BUTTON_USER and cannot be configured as output
+    if (pin_num == 16) {
+        return {
+            {"status", "error"},
+            {"message", "IO16 is mapped to BUTTON_USER and is read-only"}
         };
     }
     
@@ -805,6 +825,14 @@ static json set_gpio_output_handler(const json& params) {
         return {
             {"status", "error"},
             {"message", "Pin number must be between 1 and 16"}
+        };
+    }
+    
+    // IO16 is mapped to BUTTON_USER and cannot be set as output
+    if (pin_num == 16) {
+        return {
+            {"status", "error"},
+            {"message", "IO16 is mapped to BUTTON_USER and is read-only"}
         };
     }
     

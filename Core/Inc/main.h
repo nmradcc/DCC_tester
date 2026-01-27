@@ -87,8 +87,6 @@ uint32_t GetBank_EDATA(uint32_t Address);
 #define IO14_GPIO_Port GPIOF
 #define IO15_Pin GPIO_PIN_2
 #define IO15_GPIO_Port GPIOF
-#define IO16_Pin GPIO_PIN_3
-#define IO16_GPIO_Port GPIOF
 #define SUSI_M_CLK_Pin GPIO_PIN_7
 #define SUSI_M_CLK_GPIO_Port GPIOF
 #define SUSI_M_DAT_Pin GPIO_PIN_9

@@ -802,6 +802,9 @@ Expected Response:
 Note: 
 - pin: GPIO pin number (1-16)
 - value: 0 = low, 1 = high
+- IO16 is mapped to BUTTON_USER (blue push button on Nucleo board)
+  - For IO16: 0 = button not pressed, 1 = button pressed
+  - IO16 is read-only and cannot be configured as output
 
 Error Response (invalid pin):
 {"status":"error","message":"Pin number must be between 1 and 16"}
@@ -823,11 +826,13 @@ Note:
 - hex: Hexadecimal representation
 - Bit 0 = IO1, Bit 1 = IO2, ..., Bit 15 = IO16
 - Each bit: 0 = low, 1 = high
+- IO16 (Bit 15) is mapped to BUTTON_USER: 0 = not pressed, 1 = pressed
 
 Example:
-- If IO1 and IO16 are high: value=32769, hex="0x8001"
+- If IO1 and IO16 (button pressed) are high: value=32769, hex="0x8001"
 - If all inputs are low: value=0, hex="0x0000"
 - If all inputs are high: value=65535, hex="0xFFFF"
+- If only button (IO16) is pressed: value=32768, hex="0x8000"
 
 ===============================================================================
 14. GPIO OUTPUT CONFIGURATION AND CONTROL
@@ -835,7 +840,7 @@ Example:
 
 14.1 Configure GPIO Pin as Output
 -----------------------------------
-Configure a GPIO pin (IO1-IO16) as an output with an initial state.
+Configure a GPIO pin (IO1-IO15) as an output with an initial state.
 
 Request:
 {"method":"configure_gpio_output","params":{"pin":5,"state":1}}
@@ -844,13 +849,17 @@ Expected Response:
 {"status":"ok","message":"GPIO configured as output","pin":5,"state":1}
 
 Note:
-- pin: GPIO pin number (1-16)
+- pin: GPIO pin number (1-15 only, IO16 is reserved for BUTTON_USER)
 - state: Initial output state - 0 = low, 1 = high
 - This reconfigures the pin from input to output mode
 - The pin is configured as push-pull output with no pull resistor
+- IO16 cannot be configured as output (it is mapped to BUTTON_USER)
 
 Error Response (invalid pin):
 {"status":"error","message":"Pin number must be between 1 and 16"}
+
+Error Response (IO16 attempt):
+{"status":"error","message":"IO16 is mapped to BUTTON_USER and is read-only"}
 
 Error Response (invalid state):
 {"status":"error","message":"State must be 0 (low) or 1 (high)"}
@@ -868,11 +877,15 @@ Expected Response:
 {"status":"ok","message":"GPIO output state set","pin":5,"state":0}
 
 Note:
-- pin: GPIO pin number (1-16)
+- pin: GPIO pin number (1-15 only, IO16 is reserved for BUTTON_USER)
 - state: Desired output state - 0 = low, 1 = high
 - The pin should be configured as output first using configure_gpio_output
 - If the pin is still configured as input, this will set the ODR register
   but may not affect the physical pin state
+- IO16 cannot be set as output (it is mapped to BUTTON_USER)
+
+Error Response (IO16 attempt):
+{"status":"error","message":"IO16 is mapped to BUTTON_USER and is read-only"}
 
 Example Usage Sequence:
 1. Configure IO5 as output with initial high state:

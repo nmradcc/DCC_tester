@@ -308,6 +308,9 @@ int main(void)
   BSP_LED_Init(LED_YELLOW);
   BSP_LED_Init(LED_RED);
 
+  /* Initialize User push-button without interrupt mode. */
+  BSP_PB_Init(BUTTON_USER, BUTTON_MODE_GPIO);
+
   MX_ThreadX_Init();
 
   /* We should never get here as control is now taken by the scheduler */
@@ -1375,8 +1378,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : IO13_Pin IO14_Pin IO15_Pin IO16_Pin */
-  GPIO_InitStruct.Pin = IO13_Pin|IO14_Pin|IO15_Pin|IO16_Pin;
+  /*Configure GPIO pins : IO13_Pin IO14_Pin IO15_Pin */
+  GPIO_InitStruct.Pin = IO13_Pin|IO14_Pin|IO15_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
