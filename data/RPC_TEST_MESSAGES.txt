@@ -786,7 +786,106 @@ Custom packet transmitted [2/3]: 0xFF 0x00 0xFF
 Custom packet transmitted [3/3]: 0xFF 0x00 0xFF
 
 ===============================================================================
-13. COMPLETE METHOD LIST
+13. GPIO INPUT READING
+===============================================================================
+
+13.1 Read Individual GPIO Input
+---------------------------------
+Read the state of a single GPIO input pin (IO1-IO16).
+
+Request:
+{"method":"get_gpio_input","params":{"pin":1}}
+
+Expected Response:
+{"status":"ok","pin":1,"value":0}
+
+Note: 
+- pin: GPIO pin number (1-16)
+- value: 0 = low, 1 = high
+
+Error Response (invalid pin):
+{"status":"error","message":"Pin number must be between 1 and 16"}
+
+-------------------------------------------------------------------------------
+
+13.2 Read All GPIO Inputs as 16-bit Word
+-----------------------------------------
+Read all GPIO inputs (IO1-IO16) at once as a 16-bit word.
+
+Request:
+{"method":"get_gpio_inputs","params":{}}
+
+Expected Response:
+{"status":"ok","value":32768,"hex":"0x8000"}
+
+Note: 
+- value: 16-bit unsigned integer (0-65535)
+- hex: Hexadecimal representation
+- Bit 0 = IO1, Bit 1 = IO2, ..., Bit 15 = IO16
+- Each bit: 0 = low, 1 = high
+
+Example:
+- If IO1 and IO16 are high: value=32769, hex="0x8001"
+- If all inputs are low: value=0, hex="0x0000"
+- If all inputs are high: value=65535, hex="0xFFFF"
+
+===============================================================================
+14. GPIO OUTPUT CONFIGURATION AND CONTROL
+===============================================================================
+
+14.1 Configure GPIO Pin as Output
+-----------------------------------
+Configure a GPIO pin (IO1-IO16) as an output with an initial state.
+
+Request:
+{"method":"configure_gpio_output","params":{"pin":5,"state":1}}
+
+Expected Response:
+{"status":"ok","message":"GPIO configured as output","pin":5,"state":1}
+
+Note:
+- pin: GPIO pin number (1-16)
+- state: Initial output state - 0 = low, 1 = high
+- This reconfigures the pin from input to output mode
+- The pin is configured as push-pull output with no pull resistor
+
+Error Response (invalid pin):
+{"status":"error","message":"Pin number must be between 1 and 16"}
+
+Error Response (invalid state):
+{"status":"error","message":"State must be 0 (low) or 1 (high)"}
+
+-------------------------------------------------------------------------------
+
+14.2 Set GPIO Output State
+----------------------------
+Set or clear the output state of a GPIO pin configured as output.
+
+Request:
+{"method":"set_gpio_output","params":{"pin":5,"state":0}}
+
+Expected Response:
+{"status":"ok","message":"GPIO output state set","pin":5,"state":0}
+
+Note:
+- pin: GPIO pin number (1-16)
+- state: Desired output state - 0 = low, 1 = high
+- The pin should be configured as output first using configure_gpio_output
+- If the pin is still configured as input, this will set the ODR register
+  but may not affect the physical pin state
+
+Example Usage Sequence:
+1. Configure IO5 as output with initial high state:
+   {"method":"configure_gpio_output","params":{"pin":5,"state":1}}
+
+2. Set IO5 to low:
+   {"method":"set_gpio_output","params":{"pin":5,"state":0}}
+
+3. Set IO5 back to high:
+   {"method":"set_gpio_output","params":{"pin":5,"state":1}}
+
+===============================================================================
+15. COMPLETE METHOD LIST
 ===============================================================================
 
 Available RPC Methods:
@@ -808,6 +907,10 @@ Available RPC Methods:
 16. system_reboot                        - Reboot the microcontroller
 17. get_voltage_feedback_mv              - Get track voltage feedback in millivolts
 18. get_current_feedback_ma              - Get track current feedback in milliamps
+19. get_gpio_input                       - Read individual GPIO input pin (IO1-IO16)
+20. get_gpio_inputs                      - Read all GPIO inputs as 16-bit word
+21. configure_gpio_output                - Configure GPIO pin as output with initial state
+22. set_gpio_output                      - Set or clear GPIO output pin state
 
 ===============================================================================
 END OF DOCUMENT
