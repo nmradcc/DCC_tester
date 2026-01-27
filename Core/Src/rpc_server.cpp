@@ -574,11 +574,11 @@ static json get_gpio_input_handler(const json& params) {
     int value = 0;
     
     // IO16 is mapped to BUTTON_USER (read-only)
-    // Button is active low: pressed=0, released=1
-    // We return: 0=not pushed, 1=pushed (inverted)
+    // BSP_PB_GetState returns: 0=not pressed, 1=pressed
+    // We return: 0=not pushed, 1=pushed (no inversion needed)
     if (pin_num == 16) {
-        // Read button state and invert (pressed=0 becomes 1, released=1 becomes 0)
-        value = (BSP_PB_GetState(BUTTON_USER) == 0) ? 1 : 0;
+        // Read button state directly
+        value = BSP_PB_GetState(BUTTON_USER);
     } else {
         GPIO_PinState state = GPIO_PIN_RESET;
         
@@ -638,8 +638,9 @@ static json get_gpio_inputs_handler(const json& params) {
     if (HAL_GPIO_ReadPin(IO13_GPIO_Port, IO13_Pin) == GPIO_PIN_SET) gpio_word |= (1 << 12);
     if (HAL_GPIO_ReadPin(IO14_GPIO_Port, IO14_Pin) == GPIO_PIN_SET) gpio_word |= (1 << 13);
     if (HAL_GPIO_ReadPin(IO15_GPIO_Port, IO15_Pin) == GPIO_PIN_SET) gpio_word |= (1 << 14);
-    // IO16 is mapped to BUTTON_USER (inverted: pressed=1, not pressed=0)
-    if (BSP_PB_GetState(BUTTON_USER) == 0) gpio_word |= (1 << 15);
+    // IO16 is mapped to BUTTON_USER (BSP_PB_GetState: 0=not pressed, 1=pressed)
+    // We set bit when pressed
+    if (BSP_PB_GetState(BUTTON_USER) == 1) gpio_word |= (1 << 15);
     
     // Format as hex string for easy reading
     char hex_str[7];  // "0x" + 4 hex digits + null terminator
