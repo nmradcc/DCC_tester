@@ -780,11 +780,6 @@ static json configure_gpio_output_handler(const json& params) {
             GPIO_InitStruct.Pin = IO15_Pin;
             HAL_GPIO_Init(IO15_GPIO_Port, &GPIO_InitStruct);
             break;
-        case 16:
-            HAL_GPIO_WritePin(IO16_GPIO_Port, IO16_Pin, initial_state);
-            GPIO_InitStruct.Pin = IO16_Pin;
-            HAL_GPIO_Init(IO16_GPIO_Port, &GPIO_InitStruct);
-            break;
         default:
             return {
                 {"status", "error"},
@@ -863,7 +858,6 @@ static json set_gpio_output_handler(const json& params) {
         case 13: HAL_GPIO_WritePin(IO13_GPIO_Port, IO13_Pin, new_state); break;
         case 14: HAL_GPIO_WritePin(IO14_GPIO_Port, IO14_Pin, new_state); break;
         case 15: HAL_GPIO_WritePin(IO15_GPIO_Port, IO15_Pin, new_state); break;
-        case 16: HAL_GPIO_WritePin(IO16_GPIO_Port, IO16_Pin, new_state); break;
         default:
             return {
                 {"status", "error"},
