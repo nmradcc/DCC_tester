@@ -885,7 +885,76 @@ Example Usage Sequence:
    {"method":"set_gpio_output","params":{"pin":5,"state":1}}
 
 ===============================================================================
-15. COMPLETE METHOD LIST
+15. RTC DATE AND TIME
+===============================================================================
+
+15.1 Get RTC Date and Time
+---------------------------
+Read the current date and time from the Real-Time Clock (RTC).
+
+Request:
+{"method":"get_rtc_datetime","params":{}}
+
+Expected Response:
+{"status":"ok","date":"2026-01-27","time":"14:35:22","year":2026,"month":1,"day":27,"weekday":2,"hours":14,"minutes":35,"seconds":22}
+
+Note:
+- date: Formatted date string (YYYY-MM-DD)
+- time: Formatted time string (HH:MM:SS)
+- year: Full year (2000-2099)
+- month: Month (1-12)
+- day: Day of month (1-31)
+- weekday: Day of week (1=Monday, 2=Tuesday, ..., 7=Sunday)
+- hours: Hours (0-23)
+- minutes: Minutes (0-59)
+- seconds: Seconds (0-59)
+
+-------------------------------------------------------------------------------
+
+15.2 Set RTC Date and Time
+----------------------------
+Set the date and/or time on the Real-Time Clock (RTC).
+
+Request (set both date and time):
+{"method":"set_rtc_datetime","params":{"year":2026,"month":1,"day":27,"hours":14,"minutes":30,"seconds":0}}
+
+Expected Response:
+{"status":"ok","message":"RTC updated successfully","date_set":true,"time_set":true}
+
+Request (set only date):
+{"method":"set_rtc_datetime","params":{"year":2026,"month":1,"day":27}}
+
+Expected Response:
+{"status":"ok","message":"RTC updated successfully","date_set":true}
+
+Request (set only time):
+{"method":"set_rtc_datetime","params":{"hours":14,"minutes":30,"seconds":0}}
+
+Expected Response:
+{"status":"ok","message":"RTC updated successfully","time_set":true}
+
+Request (with optional weekday):
+{"method":"set_rtc_datetime","params":{"year":2026,"month":1,"day":27,"weekday":2,"hours":14,"minutes":30,"seconds":0}}
+
+Note:
+- year: Full year (2000-2099)
+- month: Month (1-12)
+- day: Day of month (1-31)
+- weekday: Optional day of week (1=Monday, 2=Tuesday, ..., 7=Sunday)
+- hours: Hours (0-23)
+- minutes: Minutes (0-59)
+- seconds: Seconds (0-59)
+- You can set date only, time only, or both together
+- If weekday is not provided, it defaults to Monday
+
+Error Response (invalid range):
+{"status":"error","message":"Year must be between 2000 and 2099"}
+
+Error Response (missing parameters):
+{"status":"error","message":"Must provide date (year, month, day) and/or time (hours, minutes, seconds)"}
+
+===============================================================================
+16. COMPLETE METHOD LIST
 ===============================================================================
 
 Available RPC Methods:
@@ -911,6 +980,8 @@ Available RPC Methods:
 20. get_gpio_inputs                      - Read all GPIO inputs as 16-bit word
 21. configure_gpio_output                - Configure GPIO pin as output with initial state
 22. set_gpio_output                      - Set or clear GPIO output pin state
+23. get_rtc_datetime                     - Read current RTC date and time
+24. set_rtc_datetime                     - Set RTC date and/or time
 
 ===============================================================================
 END OF DOCUMENT

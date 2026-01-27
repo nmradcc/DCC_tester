@@ -851,6 +851,198 @@ static json set_gpio_output_handler(const json& params) {
     };
 }
 
+static json get_rtc_datetime_handler(const json& params) {
+    (void)params;  // Unused parameter
+    
+    RTC_TimeTypeDef sTime = {0};
+    RTC_DateTypeDef sDate = {0};
+    
+    // Read time and date from RTC
+    if (HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK) {
+        return {
+            {"status", "error"},
+            {"message", "Failed to read RTC time"}
+        };
+    }
+    
+    if (HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK) {
+        return {
+            {"status", "error"},
+            {"message", "Failed to read RTC date"}
+        };
+    }
+    
+    // Format date and time strings
+    char date_str[16];
+    char time_str[16];
+    snprintf(date_str, sizeof(date_str), "20%02d-%02d-%02d", 
+             sDate.Year, sDate.Month, sDate.Date);
+    snprintf(time_str, sizeof(time_str), "%02d:%02d:%02d", 
+             sTime.Hours, sTime.Minutes, sTime.Seconds);
+    
+    return {
+        {"status", "ok"},
+        {"date", date_str},
+        {"time", time_str},
+        {"year", sDate.Year + 2000},
+        {"month", sDate.Month},
+        {"day", sDate.Date},
+        {"weekday", sDate.WeekDay},
+        {"hours", sTime.Hours},
+        {"minutes", sTime.Minutes},
+        {"seconds", sTime.Seconds}
+    };
+}
+
+static json set_rtc_datetime_handler(const json& params) {
+    RTC_TimeTypeDef sTime = {0};
+    RTC_DateTypeDef sDate = {0};
+    bool set_date = false;
+    bool set_time = false;
+    
+    // Check for date parameters
+    if (params.contains("year") && params.contains("month") && params.contains("day")) {
+        if (!params["year"].is_number_integer() || 
+            !params["month"].is_number_integer() || 
+            !params["day"].is_number_integer()) {
+            return {
+                {"status", "error"},
+                {"message", "Date parameters must be integers"}
+            };
+        }
+        
+        int year = params["year"].get<int>();
+        int month = params["month"].get<int>();
+        int day = params["day"].get<int>();
+        
+        // Validate date ranges
+        if (year < 2000 || year > 2099) {
+            return {
+                {"status", "error"},
+                {"message", "Year must be between 2000 and 2099"}
+            };
+        }
+        if (month < 1 || month > 12) {
+            return {
+                {"status", "error"},
+                {"message", "Month must be between 1 and 12"}
+            };
+        }
+        if (day < 1 || day > 31) {
+            return {
+                {"status", "error"},
+                {"message", "Day must be between 1 and 31"}
+            };
+        }
+        
+        sDate.Year = year - 2000;
+        sDate.Month = month;
+        sDate.Date = day;
+        
+        // Optional weekday parameter (1-7, Monday=1)
+        if (params.contains("weekday") && params["weekday"].is_number_integer()) {
+            int weekday = params["weekday"].get<int>();
+            if (weekday < 1 || weekday > 7) {
+                return {
+                    {"status", "error"},
+                    {"message", "Weekday must be between 1 (Monday) and 7 (Sunday)"}
+                };
+            }
+            sDate.WeekDay = weekday;
+        } else {
+            sDate.WeekDay = RTC_WEEKDAY_MONDAY;  // Default
+        }
+        
+        set_date = true;
+    }
+    
+    // Check for time parameters
+    if (params.contains("hours") && params.contains("minutes") && params.contains("seconds")) {
+        if (!params["hours"].is_number_integer() || 
+            !params["minutes"].is_number_integer() || 
+            !params["seconds"].is_number_integer()) {
+            return {
+                {"status", "error"},
+                {"message", "Time parameters must be integers"}
+            };
+        }
+        
+        int hours = params["hours"].get<int>();
+        int minutes = params["minutes"].get<int>();
+        int seconds = params["seconds"].get<int>();
+        
+        // Validate time ranges
+        if (hours < 0 || hours > 23) {
+            return {
+                {"status", "error"},
+                {"message", "Hours must be between 0 and 23"}
+            };
+        }
+        if (minutes < 0 || minutes > 59) {
+            return {
+                {"status", "error"},
+                {"message", "Minutes must be between 0 and 59"}
+            };
+        }
+        if (seconds < 0 || seconds > 59) {
+            return {
+                {"status", "error"},
+                {"message", "Seconds must be between 0 and 59"}
+            };
+        }
+        
+        sTime.Hours = hours;
+        sTime.Minutes = minutes;
+        sTime.Seconds = seconds;
+        sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+        sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+        
+        set_time = true;
+    }
+    
+    // Check if at least date or time was provided
+    if (!set_date && !set_time) {
+        return {
+            {"status", "error"},
+            {"message", "Must provide date (year, month, day) and/or time (hours, minutes, seconds)"}
+        };
+    }
+    
+    // Set date if provided
+    if (set_date) {
+        if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to set RTC date"}
+            };
+        }
+    }
+    
+    // Set time if provided
+    if (set_time) {
+        if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to set RTC time"}
+            };
+        }
+    }
+    
+    json response = {
+        {"status", "ok"},
+        {"message", "RTC updated successfully"}
+    };
+    
+    if (set_date) {
+        response["date_set"] = true;
+    }
+    if (set_time) {
+        response["time_set"] = true;
+    }
+    
+    return response;
+}
+
 static json command_station_get_params_handler(const json& params) {
     (void)params;  // Unused parameter
     
@@ -937,6 +1129,8 @@ void RpcServerThread(void* argument) {
     server.register_method("get_gpio_inputs", get_gpio_inputs_handler);
     server.register_method("configure_gpio_output", configure_gpio_output_handler);
     server.register_method("set_gpio_output", set_gpio_output_handler);
+    server.register_method("get_rtc_datetime", get_rtc_datetime_handler);
+    server.register_method("set_rtc_datetime", set_rtc_datetime_handler);
 
     while (rpcServerRunning) {
         std::string request;
