@@ -257,6 +257,8 @@ Expected Response:
 Note: Override parameters are RAM-only and NOT saved to flash. They reset to 0
 when the command station is stopped or the system is rebooted. Use these 
 parameters to temporarily adjust individual zero bit timings for testing.
+Note:Packet timing override can only apply to the first 64bits (8 bytes) 
+of a packet.
 
 5.1 Set Packet Override Parameters (All at Once)
 --------------------------------------------------
@@ -700,7 +702,7 @@ DCC packet generation for testing and debugging.
 10.1 Load Custom Packet
 ------------------------
 Load an arbitrary byte array into the custom packet buffer. Bytes must be
-in the range 0-255, and packet length is limited to DCC_MAX_PACKET_SIZE (18).
+in the range 0-255, and packet length is limited to DCC_MAX_PACKET_SIZE (64).
 
 Request:
 {"method":"command_station_load_packet","params":{"bytes":[0xFF,0x00,0xFF]}}
