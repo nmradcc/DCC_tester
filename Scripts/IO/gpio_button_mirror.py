@@ -38,13 +38,14 @@ class DCCTesterRPC:
         # Flush any initial output
         self.ser.reset_input_buffer()
         
-    def send_rpc(self, method, params):
+    def send_rpc(self, method, params, verbose=True):
         """
         Send an RPC request and return the response.
         
         Args:
             method: RPC method name
             params: Dictionary of parameters
+            verbose: Print request/response (default: True)
             
         Returns:
             Response dictionary or None on error
@@ -55,13 +56,15 @@ class DCCTesterRPC:
         }
         
         request_json = json.dumps(request) + '\r\n'
-        print(f"→ {request_json.strip()}")
+        if verbose:
+            print(f"→ {request_json.strip()}")
         
         self.ser.write(request_json.encode('utf-8'))
         
         # Read response
         response_line = self.ser.readline().decode('utf-8').strip()
-        print(f"← {response_line}")
+        if verbose:
+            print(f"← {response_line}")
         
         if response_line:
             try:
@@ -114,12 +117,13 @@ def main():
         print("Step 2: Monitoring push button (IO16)...")
         print("Press the button to copy IO13 state to IO14")
         print("Press Ctrl+C to exit\n")
+        print("Waiting for button press...\n")
         
         button_was_pressed = False
         
         while True:
             # Read button state (IO16)
-            response = rpc.send_rpc("get_gpio_input", {"pin": 16})
+            response = rpc.send_rpc("get_gpio_input", {"pin": 16}, verbose=False)
             
             if response is None or response.get("status") != "ok":
                 print(f"WARNING: Failed to read button state: {response}")
@@ -130,10 +134,10 @@ def main():
             
             # Detect button press (rising edge)
             if button_pressed and not button_was_pressed:
-                print("\n→ Button PRESSED!")
+                print("→ Button PRESSED!")
                 
                 # Read IO13 input state
-                response = rpc.send_rpc("get_gpio_input", {"pin": 13})
+                response = rpc.send_rpc("get_gpio_input", {"pin": 13}, verbose=True)
                 
                 if response is None or response.get("status") != "ok":
                     print(f"ERROR: Failed to read IO13: {response}")
@@ -142,7 +146,7 @@ def main():
                     print(f"  IO13 state: {io13_state}")
                     
                     # Set IO14 to match IO13
-                    response = rpc.send_rpc("set_gpio_output", {"pin": 14, "state": io13_state})
+                    response = rpc.send_rpc("set_gpio_output", {"pin": 14, "state": io13_state}, verbose=True)
                     
                     if response is None or response.get("status") != "ok":
                         print(f"ERROR: Failed to set IO14: {response}")
@@ -151,7 +155,8 @@ def main():
             
             # Detect button release
             if not button_pressed and button_was_pressed:
-                print("→ Button RELEASED\n")
+                print("→ Button RELEASED")
+                print("\nWaiting for button press...\n")
             
             button_was_pressed = button_pressed
             
