@@ -36,8 +36,40 @@ if (-not $CMakeCommand) {
     $CMakeCommand = Get-Command cmake -ErrorAction SilentlyContinue
 }
 if (-not $CMakeCommand) {
+    $cubeCmakeCandidates = @(
+        Join-Path $env:USERPROFILE ".vscode/extensions/stmicroelectronics.stm32cube-ide-build-cmake-*/resources/cube-cmake/win32/cube-cmake.exe"
+    )
+    $cubeCmakePath = Get-ChildItem -Path $cubeCmakeCandidates -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+    if ($cubeCmakePath) {
+        $CMakeCommand = [PSCustomObject]@{
+            Name = "cube-cmake"
+            Source = $cubeCmakePath
+        }
+    }
+}
+if (-not $CMakeCommand) {
     Write-Error "Neither cube-cmake nor cmake is available in PATH"
     exit 1
+}
+
+# Ensure cube CLI is on PATH when using cube-cmake
+if ($CMakeCommand.Name -eq "cube-cmake") {
+    $cubePath = $null
+    $cubeCommand = Get-Command cube -ErrorAction SilentlyContinue
+    if ($cubeCommand) {
+        $cubePath = $cubeCommand.Source
+    }
+    if (-not $cubePath) {
+        $cubeCandidates = @(
+            "$env:USERPROFILE\.vscode\extensions\stmicroelectronics.stm32cube-ide-core-*\resources\binaries\win32\x86_64\cube.exe",
+            "$env:USERPROFILE\.vscode\extensions\stmicroelectronics.stm32cube-ide-build-cmake-*\resources\cube\win32\cube.exe"
+        )
+        $cubePath = Get-ChildItem -Path $cubeCandidates -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+    }
+    if ($cubePath) {
+        $cubeDir = Split-Path -Parent $cubePath
+        $env:PATH = "$cubeDir;$env:PATH"
+    }
 }
 
 $BuildDir = Join-Path (Get-Location) "build"
