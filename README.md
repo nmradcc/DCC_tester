@@ -38,6 +38,7 @@ The DCC protocol is defined by various standards published by the [National Mode
 - [STM32Cube for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=stmicroelectronics.stm32-vscode-extension) Can be installed from the VS Code Marketplace
 - [Serial Monitor for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-serial-monitor) Can be installed from the VS Code Marketplace
 - [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html)
+NOTE: Please install the STM32CubeMX program with the "Install for all users" option. NOT the "for only me". The for "all user option" insures the STM32CubeMX is available in the correct location to allow the auto build script to work correctly.
 
 ### Installation
 
@@ -58,7 +59,7 @@ In addition to generating code the PowerShell script also builds the entire proj
 
 ### Build
 
-If the VSC STM32Cube extension is installed correctly it should pickup the top level CMakeLists.txt file when VSC is launched (or the projevt folder is opened) and automatically configure the project. You can build and debug by clicking the appropriate icon.
+If the VSC STM32Cube extensions are installed correctly it should pickup the top level CMakeLists.txt file when VSC is launched (or the project folder is opened) and automatically configure the project. You can build and debug by clicking the appropriate icon.
 
 **Caution:** STM32CubeMX is a great tool for code generation. With it you can add/delete drivers and it will automatically generate driver initialization code, which can get quite complicated, if done manually.
 Its worth maintaining compatability going forward.  

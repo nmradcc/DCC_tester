@@ -150,6 +150,10 @@
       "selected_by": [
         {
           "name": "st-arm-clang",
+          "version": "19.1.6+st.9"
+        },
+        {
+          "name": "st-arm-clang",
           "version": ">=19.1.6+st.1 <19.1.6+st.99999"
         }
       ]
@@ -159,6 +163,10 @@
       "version": "19.1.6+st.9",
       "platform": "x86_64-darwin",
       "selected_by": [
+        {
+          "name": "st-arm-clang",
+          "version": "19.1.6+st.9"
+        },
         {
           "name": "st-arm-clang",
           "version": ">=19.1.6+st.1 <19.1.6+st.99999"
@@ -172,6 +180,10 @@
       "selected_by": [
         {
           "name": "st-arm-clang",
+          "version": "19.1.6+st.9"
+        },
+        {
+          "name": "st-arm-clang",
           "version": ">=19.1.6+st.1 <19.1.6+st.99999"
         }
       ]
@@ -181,6 +193,10 @@
       "version": "19.1.6+st.9",
       "platform": "x86_64-windows",
       "selected_by": [
+        {
+          "name": "st-arm-clang",
+          "version": "19.1.6+st.9"
+        },
         {
           "name": "st-arm-clang",
           "version": ">=19.1.6+st.1 <19.1.6+st.99999"
