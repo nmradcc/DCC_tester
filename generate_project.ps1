@@ -30,9 +30,21 @@ if (Test-Path "build") {
     Write-Host "Build directory cleaned" -ForegroundColor Green
 }
 
+# Select CMake command (prefer cube-cmake if available)
+$CMakeCommand = Get-Command cube-cmake -ErrorAction SilentlyContinue
+if (-not $CMakeCommand) {
+    $CMakeCommand = Get-Command cmake -ErrorAction SilentlyContinue
+}
+if (-not $CMakeCommand) {
+    Write-Error "Neither cube-cmake nor cmake is available in PATH"
+    exit 1
+}
+
+$BuildDir = Join-Path (Get-Location) "build"
+
 # Run CMake configuration
-Write-Host "`nConfiguring CMake project..." -ForegroundColor Cyan
-cmake -S . -B build -G Ninja
+Write-Host "`nConfiguring CMake project with $($CMakeCommand.Name)..." -ForegroundColor Cyan
+& $CMakeCommand.Source -S . -B $BuildDir -G Ninja
 if ($LASTEXITCODE -ne 0) {
     Write-Error "CMake configuration failed with error code $LASTEXITCODE"
     exit $LASTEXITCODE
@@ -40,8 +52,8 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "CMake configuration completed successfully" -ForegroundColor Green
 
 # Build all targets with Ninja
-Write-Host "`nBuilding all targets with Ninja..." -ForegroundColor Cyan
-cmake --build build -j
+Write-Host "`nBuilding all targets with Ninja using $($CMakeCommand.Name)..." -ForegroundColor Cyan
+& $CMakeCommand.Source --build $BuildDir -j
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Build failed with error code $LASTEXITCODE"
     exit $LASTEXITCODE
