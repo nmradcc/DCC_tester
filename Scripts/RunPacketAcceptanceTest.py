@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-RunInterPacketDelayTest Script
+RunPacketAcceptanceTest Script
 ===============================
 
-This script runs multiple iterations of the InterPacketDelayTest
-to verify NEM 671 inter-packet delay requirements (minimum 5ms).
+This script runs multiple iterations of the PacketAcceptanceTest
+to verify NEM 671 inter-packet delay requirements.
 
 The test can be configured with:
-  - Inter-packet delay (default: 5ms)
+  - Inter-packet delay (default: 1000ms)
   - Number of passes (default: 10)
   - COM port and locomotive address
 
@@ -20,10 +20,10 @@ import serial
 
 # Add PacketData directory to path
 script_dir = os.path.dirname(os.path.abspath(__file__))
-packet_data_dir = os.path.join(script_dir, "PacketData")
+packet_data_dir = os.path.join(script_dir, "PacketData", "Motor Current Feedback")
 sys.path.insert(0, packet_data_dir)
 
-from InterPacketDelayTest import DCCTesterRPC, run_inter_packet_delay_test
+from PacketAcceptanceTest import DCCTesterRPC, run_packet_acceptance_test
 
 
 def get_int_input(prompt, default=None):
@@ -55,12 +55,12 @@ def main():
     """Main entry point."""
     
     print("=" * 70)
-    print("DCC Inter-Packet Delay Test Runner")
+    print("DCC Packet Acceptance Test Runner")
     print("NEM 671 Compliance Testing")
     print("=" * 70)
     print()
-    print("This script will run multiple iterations of the inter-packet delay")
-    print("test to verify NEM 671 compliance (minimum 5ms between packets).")
+    print("This script will run multiple iterations of the Packet Acceptance")
+    print("test to verify NEM 671 compliance.")
     print()
     print("If any iteration fails, the test will abort immediately.")
     print()
@@ -70,7 +70,7 @@ def main():
     print("Test Parameters:")
     print("-" * 70)
     
-    delay_ms = get_int_input("Inter-packet delay in milliseconds", default=5)
+    delay_ms = get_int_input("Inter-packet delay in milliseconds", default=1000)
     pass_count = get_int_input("Number of test passes", default=10)
     
     print()
@@ -125,7 +125,7 @@ def main():
             print()
             
             # Run the test
-            result = run_inter_packet_delay_test(rpc, address, delay_ms)
+            result = run_packet_acceptance_test(rpc, address, delay_ms)
             
             if result.get("status") == "PASS":
                 passed_count += 1
