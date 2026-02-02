@@ -72,6 +72,7 @@ def main():
     
     delay_ms = get_int_input("Inter-packet delay in milliseconds", default=1000)
     pass_count = get_int_input("Number of test passes", default=10)
+    logging_level = get_int_input("Logging level (0=none, 1=minimum, 2=verbose)", default=1)
     
     print()
     print("-" * 70)
@@ -92,6 +93,7 @@ def main():
     print(f"  Number of passes:   {pass_count}")
     print(f"  Serial port:        {port}")
     print(f"  Locomotive address: {address}")
+    print(f"  Logging level:      {logging_level}")
     print("=" * 70)
     print()
     
@@ -125,11 +127,10 @@ def main():
             print()
             
             # Run the test
-            result = run_packet_acceptance_test(rpc, address, delay_ms)
+            result = run_packet_acceptance_test(rpc, address, delay_ms, logging_level=logging_level)
             
             if result.get("status") == "PASS":
                 passed_count += 1
-                print()
                 print(f"✓ Pass {i}/{pass_count} completed successfully")
             else:
                 failed_count += 1
