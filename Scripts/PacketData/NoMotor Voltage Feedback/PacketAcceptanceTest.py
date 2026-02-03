@@ -7,7 +7,7 @@ This script tests the inter-packet delay timing as described in NEM 671,
 which specifies a minimum of 5ms between two data packets.
 
 Test: Send motor start command, wait with configurable delay, then send
-      emergency stop command while measuring current to verify motor response.
+    emergency stop command while reading IO13/IO14 to verify response.
 
 The inter_packet_delay_ms parameter can be adjusted for stress testing.
 """
@@ -167,6 +167,30 @@ def make_emergency_stop_packet(address):
     return packet
 
 
+def read_io13_io14(rpc):
+    """
+    Read IO13 and IO14 via a single RPC call.
+
+    Returns:
+        Tuple (io13_high, io14_high) or None on error
+    """
+    response = rpc.send_rpc("get_gpio_inputs", {})
+    if response is None or response.get("status") != "ok":
+        log(1, f"ERROR: Failed to read GPIO inputs: {response}")
+        return None
+
+    gpio_word = response.get("value")
+    if gpio_word is None:
+        log(1, f"ERROR: Missing GPIO value in response: {response}")
+        return None
+
+    io13_high = (gpio_word & (1 << 12)) != 0
+    io14_high = (gpio_word & (1 << 13)) != 0
+
+    log(2, f"GPIO inputs: 0x{gpio_word:04X} (IO13={'HIGH' if io13_high else 'LOW'}, IO14={'HIGH' if io14_high else 'LOW'})")
+    return io13_high, io14_high
+
+
 def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, logging_level=1):
     """
     Run the packet acceptance test.
@@ -203,16 +227,15 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
 
         time.sleep(0.5)
 
-        # Step 2: Read motor off current as baseline
-        log(1, "Step 2: Reading motor off current as baseline...")
-        response = rpc.send_rpc("get_current_feedback_ma", {})
-
-        if response is None or response.get("status") != "ok":
-            log(1, f"ERROR: Failed to read current: {response}")
+        # Step 2: Read motor off IO status as baseline
+        log(1, "Step 2: Reading motor off IO status as baseline...")
+        io_state = read_io13_io14(rpc)
+        if io_state is None:
             rpc.close()
-            return {"status": "FAIL", "error": "Failed to read motor off current"}
-        motor_off_current_ma = response.get("current_ma", 0)
-        log(1, f"✓ Motor off current: {motor_off_current_ma} mA (baseline)")
+            return {"status": "FAIL", "error": "Failed to read IO13/IO14"}
+        io13_high, io14_high = io_state
+        motor_off_ok = io13_high and io14_high
+        log(1, f"✓ Motor off IO state: {motor_off_ok} (IO13={'HIGH' if io13_high else 'LOW'}, IO14={'HIGH' if io14_high else 'LOW'})")
 
         # Step 3: Create motor start packet (half-speed reverse)
         log(1, f"Step 3: Creating motor start packet (speed {HALF_SPEED} reverse)...")
@@ -240,16 +263,15 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
         time.sleep(inter_packet_delay_ms / 1000.0)
         log(2, "✓ Inter-packet delay complete\n")
 
-        # Step 6: Read motor run current
-        log(1, "Step 6: Reading motor run current...")
-        response = rpc.send_rpc("get_current_feedback_ma", {})
-
-        if response is None or response.get("status") != "ok":
-            log(1, f"ERROR: Failed to read current: {response}")
+        # Step 6: Read motor run IO status
+        log(1, "Step 6: Reading motor run IO status...")
+        io_state = read_io13_io14(rpc)
+        if io_state is None:
             rpc.close()
-            return {"status": "FAIL", "error": "Failed to read motor current"}
-        motor_on_current_ma = response.get("current_ma", 0)
-        log(1, f"✓ Motor run current: {motor_on_current_ma} mA")
+            return {"status": "FAIL", "error": "Failed to read IO13/IO14"}
+        io13_high, io14_high = io_state
+        motor_run_ok = (not io13_high) or (not io14_high)
+        log(1, f"✓ Motor run IO state: {motor_run_ok} (IO13={'HIGH' if io13_high else 'LOW'}, IO14={'HIGH' if io14_high else 'LOW'})")
 
         # Step 7: Send emergency stop packet
         log(1, f"Step 7: Sending emergency stop packet to address {loco_address}...")
@@ -271,17 +293,15 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
         log(2, "Step 8: Waiting 1 second for motor to stop...")
         time.sleep(1.0)
 
-        # Step 9: Read motor stopped current
-        log(1, "Step 9: Reading motor stopped current...")
-        response = rpc.send_rpc("get_current_feedback_ma", {})
-
-        if response is None or response.get("status") != "ok":
-            log(1, f"ERROR: Failed to read current: {response}")
+        # Step 9: Read motor stopped IO status
+        log(1, "Step 9: Reading motor stopped IO status...")
+        io_state = read_io13_io14(rpc)
+        if io_state is None:
             rpc.close()
-            return {"status": "FAIL", "error": "Failed to read stopped current"}
-
-        motor_stopped_current_ma = response.get("current_ma", 0)
-        log(1, f"✓ Motor stopped current: {motor_stopped_current_ma} mA")
+            return {"status": "FAIL", "error": "Failed to read IO13/IO14"}
+        io13_high, io14_high = io_state
+        motor_stop_ok = io13_high and io14_high
+        log(1, f"✓ Motor stopped IO state: {motor_stop_ok} (IO13={'HIGH' if io13_high else 'LOW'}, IO14={'HIGH' if io14_high else 'LOW'})")
 
         # Step 10: Stop command station
         log(1, "Step 10: Stopping command station")
@@ -293,12 +313,7 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
             log(2, "✓ Command station stopped\n")
 
         # Evaluate pass/fail
-        current_increase = motor_on_current_ma - motor_off_current_ma
-        current_decrease = motor_on_current_ma - motor_stopped_current_ma
-
-        # Pass criteria: motor current must increase by at least 1mA during run and decrease by at least 1mA after stop
-        MIN_CURRENT_DELTA_MA = 1
-        test_pass = (current_increase >= MIN_CURRENT_DELTA_MA and current_decrease >= MIN_CURRENT_DELTA_MA)
+        test_pass = motor_off_ok and motor_run_ok and motor_stop_ok
 
         log(2, "\n" + "=" * 70)
         log(2, "✓ TEST COMPLETE")
@@ -314,32 +329,29 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
         log(2, f"  Inter-packet delay:    {inter_packet_delay_ms} ms")
         log(2, "\nTest sequence completed:")
         log(2, "  1. Started command station in custom packet mode")
-        log(2, f"  2. Read motor off current: {motor_off_current_ma} mA (baseline)")
+        log(2, f"  2. Read motor off IO state: {motor_off_ok}")
         log(2, f"  3. Created motor start packet (speed {HALF_SPEED} reverse)")
         log(2, f"  4. Transmitted motor start packet to address {loco_address}")
         log(2, f"  5. Waited {inter_packet_delay_ms} ms (inter-packet delay)")
-        log(2, f"  6. Read motor run current: {motor_on_current_ma} mA")
+        log(2, f"  6. Read motor run IO state: {motor_run_ok}")
         log(2, f"  7. Sent emergency stop packet to address {loco_address}")
         log(2, "  8. Waited 1 second for motor to stop")
-        log(2, f"  9. Read motor stopped current: {motor_stopped_current_ma} mA")
+        log(2, f"  9. Read motor stopped IO state: {motor_stop_ok}")
         log(2, "  10. Stopped command station")
-        log(2, "\nCurrent measurements:")
-        log(2, f"  Motor off:     {motor_off_current_ma} mA (baseline)")
-        log(2, f"  Motor running: {motor_on_current_ma} mA (delta: {current_increase:+d} mA)")
-        log(2, f"  Motor stopped: {motor_stopped_current_ma} mA (delta from baseline: {motor_stopped_current_ma - motor_off_current_ma:+d} mA)")
-        log(2, f"\nPass Criteria (minimum delta: {MIN_CURRENT_DELTA_MA} mA):")
-        log(2, f"  Current increased during run: {current_increase >= MIN_CURRENT_DELTA_MA} ({current_increase:+d} mA >= {MIN_CURRENT_DELTA_MA} mA)")
-        log(2, f"  Current decreased after stop: {current_decrease >= MIN_CURRENT_DELTA_MA} ({current_decrease:+d} mA >= {MIN_CURRENT_DELTA_MA} mA)")
+        log(2, "\nIO state measurements:")
+        log(2, f"  Motor off OK:  {motor_off_ok}")
+        log(2, f"  Motor run OK:  {motor_run_ok}")
+        log(2, f"  Motor stop OK: {motor_stop_ok}")
+        log(2, "\nPass Criteria:")
+        log(2, "  Off, Run, Stop states are all True")
         log(1, "")
 
         return {
             "status": "PASS" if test_pass else "FAIL",
             "inter_packet_delay_ms": inter_packet_delay_ms,
-            "motor_off_current_ma": motor_off_current_ma,
-            "motor_on_current_ma": motor_on_current_ma,
-            "motor_stopped_current_ma": motor_stopped_current_ma,
-            "current_increase": current_increase,
-            "current_decrease": current_decrease
+            "motor_off_ok": motor_off_ok,
+            "motor_run_ok": motor_run_ok,
+            "motor_stop_ok": motor_stop_ok
         }
 
     except serial.SerialException as e:
