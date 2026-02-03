@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../DCC"
+		}
+	],
+	"settings": {
+		"stm32cube-ide-clangd.arguments": [
+			"starm-clangd",
+			"--query-driver=${env:CUBE_BUNDLE_PATH}/st-arm-clang/19.1.6+st.10/bin/starm-clang.exe",
+			"--query-driver=${env:CUBE_BUNDLE_PATH}/st-arm-clang/19.1.6+st.10/bin/starm-clang++.exe"
+		],
+		"stm32cube-ide-clangd.path": "cube"
+	}
+}

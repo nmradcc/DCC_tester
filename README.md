@@ -67,6 +67,10 @@ Its worth maintaining compatability going forward.
 
 Command line builds can be accomplished via the generate_project.ps1 PowerShell script.
 
+Script are developed using Python running on the host PC.
+See the how_to_run_scripts.txt in the Scripts folder for more information.
+Script development and debug can also be accomplished using the same Visual Studio Code tool.
+
 ### Run
 
 The debug USB interface creates a virtual serial serial uart.
@@ -77,9 +81,11 @@ See the CLI help menu for available commands.
 
 More extensive control is offered via an RPC JSON interface implemented on the NUCLEO aux user USB interface.
 Plugging in the user USB interface to a host computer will offer up an additional virtual com port.
-Through this com port you can exicute any series of commands by using simple JSON formatted instructions.
-See RPC_TEST_MESSAGES.txt file in the data directory for a complete list of presently implemented commands.
-Again you can use a simple terminal program, cut and paste commands directly from the document into the terminal send window.
+Through this com port you can exicute any series of commands (scripts) by using simple JSON formatted instructions.
+See RPC_TEST_MESSAGES.txt file in the Doc directory for a complete list of presently implemented commands.
+Again you can use a simple terminal program, cut and paste individual commands directly from the document into the terminal send window.
+Higher level control can be accomplished via Python scripts that can aggregate RPC commands.
+See Script folder for more information.
 
 Have fun!
 
