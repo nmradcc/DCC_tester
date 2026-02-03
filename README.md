@@ -67,6 +67,10 @@ Its worth maintaining compatability going forward.
 
 Command line builds can be accomplished via the generate_project.ps1 PowerShell script.
 
+Script are developed using Python running on the host PC.
+See the how_to_run_scripts.txt in the Scripts folder for more information.
+Script development and debug can also be accomplished using the same Visual Studio Code tool.
+
 ### Run
 
 The debug USB interface creates a virtual serial serial uart.
