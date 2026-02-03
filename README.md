@@ -82,9 +82,13 @@ See the CLI help menu for available commands.
 More extensive control is offered via an RPC JSON interface implemented on the NUCLEO aux user USB interface.
 Plugging in the user USB interface to a host computer will offer up an additional virtual com port.
 Through this com port you can exicute any series of commands (scripts) by using simple JSON formatted instructions.
-See RPC_TEST_MESSAGES.txt file in the Doc directory for a complete list of presently implemented commands.
+
+See RPC_TEST_MESSAGES.txt file in the Doc directory for a complete list of presently implemented RPC commands.
+
 Again you can use a simple terminal program, cut and paste individual commands directly from the document into the terminal send window.
+
 Higher level control can be accomplished via Python scripts that can aggregate RPC commands.
+
 See Script folder for more information.
 
 Have fun!
