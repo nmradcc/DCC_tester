@@ -282,13 +282,13 @@ void CommandStationThread(void *argument) {
       
     }
     else if (commandStationLoop == 3) {
-      // Test loop3: Speed ramping test (address 10)
+      // Test loop3: Speed ramping test (address 3)
       printf("Starting test loop3: Speed ramping test\n");
       while (commandStationRunning) {
         // Ramp up speed forward
         for (uint8_t speed = 0; speed <= 126 && commandStationRunning; speed += 10) {
           BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_advanced_operations_speed_packet(10u, 1u << 7u | speed);
+          packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | speed);
           command_station.packet(packet);
           printf("Loop3: speed step %d forward\n", speed);
           osDelay(500u);
@@ -299,7 +299,7 @@ void CommandStationThread(void *argument) {
         // Ramp down speed forward
         for (int8_t speed = 126; speed >= 0 && commandStationRunning; speed -= 10) {
           BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_advanced_operations_speed_packet(10u, 1u << 7u | speed);
+          packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | speed);
           command_station.packet(packet);
           printf("Loop3: speed step %d forward\n", speed);
           osDelay(500u);
@@ -310,7 +310,7 @@ void CommandStationThread(void *argument) {
         // Ramp up speed reverse
         for (uint8_t speed = 0; speed <= 126 && commandStationRunning; speed += 10) {
           BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_advanced_operations_speed_packet(10u, speed);
+          packet = dcc::make_advanced_operations_speed_packet(3u, speed);
           command_station.packet(packet);
           printf("Loop3: speed step %d reverse\n", speed);
           osDelay(500u);
@@ -321,7 +321,7 @@ void CommandStationThread(void *argument) {
         // Ramp down speed reverse
         for (int8_t speed = 126; speed >= 0 && commandStationRunning; speed -= 10) {
           BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_advanced_operations_speed_packet(10u, speed);
+          packet = dcc::make_advanced_operations_speed_packet(3u, speed);
           command_station.packet(packet);
           printf("Loop3: speed step %d reverse\n", speed);
           osDelay(500u);

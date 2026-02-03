@@ -33,7 +33,7 @@ Or if you have both Python 2 and 3 installed:
 Windows:
     - Open Device Manager
     - Look under "Ports (COM & LPT)"
-    - Find "USB Serial Device" or "STMicroelectronics Virtual COM Port"
+    - Find "USB Serial Device" Note: This is NOT "STMicroelectronics Virtual COM Port"
     - Note the COM port number (e.g., COM3, COM4, etc.)
 
 Linux:
@@ -48,26 +48,13 @@ macOS:
     - The device will be something like /dev/tty.usbmodem*
 
 ===============================================================================
-USING AcceptanceTestPacket.py
+USING RunPacketAcceptanceTest.py
 ===============================================================================
 
 Purpose
 -------
-This script tests custom DCC packet injection by sending 3 half-speed reverse
-packets to a locomotive with 100ms delay between transmissions.
-
-Configuration
--------------
-1. Open AcceptanceTestPacket.py in a text editor
-2. Find the configuration section near the top of main():
-   
-   COM_PORT = "COM3"       # Change to your serial port
-   LOCO_ADDRESS = 3        # Locomotive address (0-127)
-   HALF_SPEED = 64         # Speed value (64 ≈ half of 127)
-
-3. Update COM_PORT to match your system (e.g., "COM4", "/dev/ttyACM0")
-4. Optionally change LOCO_ADDRESS to match your test locomotive
-5. Save the file
+This script tests custom DCC packet injection by sending a half-speed reverse
+packets to a locomotive followed by an Emergency Stop broadcast command.
 
 Running the Script
 ------------------
@@ -75,11 +62,15 @@ From the command line, navigate to the Scripts folder:
 
 Windows:
     cd C:\GitHub\DCC_tester\Scripts
-    python AcceptanceTestPacket.py
+    python RunPacketAcceptanceTest.py
 
 Linux/macOS:
     cd /path/to/DCC_tester/Scripts
-    python3 AcceptanceTestPacket.py
+    python3 RunPacketAcceptanceTest.py
+
+Configuration
+-------------
+Follow on screen prompts to input parameters
 
 Expected Output
 ---------------
@@ -88,46 +79,78 @@ The script will:
 2. Start the command station in custom packet mode
 3. Create a DCC speed packet for half-speed reverse
 4. Load the packet into the command station
-5. Trigger transmission 3 times with 100ms between each
+5. Trigger transmission
 6. Display detailed information about each step
 
 Example console output:
+    PS C:\GitHub\nmradcc\DCC_tester\Scripts> Python .\RunPacketAcceptanceTest.py
     ======================================================================
-    DCC_tester Acceptance Test: Half-Speed Reverse Packets
+    DCC Packet Acceptance Test Runner
+    NEM 671 Compliance Testing
     ======================================================================
-    
-    Connecting to COM3...
-    Connected!
-    
-    Step 1: Starting command station in custom packet mode...
-    → {"method":"command_station_start","params":{"loop":0}}
-    ← {"status":"ok","message":"Command station started","loop":0}
-    ✓ Command station started (loop=0)
-    
-    Step 2: Creating half-speed reverse packet...
-    Packet for address 3, speed 64 reverse:
-      Bytes: 0x03 0x3F 0x40 0x7C
-      Binary breakdown:
-        Address:     0x03 (3)
-        Instruction: 0x3F (advanced operations speed)
-        Speed:       0x40 (dir=reverse, speed=64)
-        Checksum:    0x7C
-    
-    Step 3: Loading packet into command station...
-    → {"method":"command_station_load_packet","params":{"bytes":[3,63,64,124]}}
-    ← {"status":"ok","message":"Packet loaded successfully","length":4}
-    ✓ Packet loaded (length=4 bytes)
-    
-    Step 4: Transmitting packet 3 times with 100ms delay...
-    → {"method":"command_station_transmit_packet","params":{"count":3,"delay_ms":100}}
-    ← {"status":"ok","message":"Packet transmission triggered","count":3,"delay_ms":100}
-    ✓ Packet transmission triggered
-      Count: 3
-      Delay: 100 ms
-    
+
+    This script will run multiple iterations of the Packet Acceptance
+    test to verify NEM 671 compliance.
+
+    If any iteration fails, the test will continue unless stop on failure is enabled.
+
+    ----------------------------------------------------------------------
+    Test Parameters:
+    ----------------------------------------------------------------------
+    Enter locomotive address [default: 3]:
+    Inter-packet delay in milliseconds [default: 1000]:
+    Number of test passes [default: 10]: 5
+    Logging level (0=none, 1=minimum, 2=verbose) [default: 1]:
+    Stop on failure [default: N]:
+
+    ----------------------------------------------------------------------
+    Connection Parameters:
+    ----------------------------------------------------------------------
+    Enter serial port [default: COM6]:
+    In circuit motor [default: N]:
+
     ======================================================================
-    ✓ TEST COMPLETE
+    Configuration Summary:
     ======================================================================
+    Inter-packet delay: 1000 ms
+    Number of passes:   5
+    Serial port:        COM6
+    Locomotive address: 3
+    In circuit motor:   False
+    Logging level:      1
+    Stop on failure:    False
+    ======================================================================
+
+    Run test with these parameters? [Y/n]: y
+    Step 1: Starting command station in custom packet mode
+    Step 2: Reading motor off IO status as baseline...
+    ✓ Motor off IO state: True (IO13=HIGH, IO14=HIGH)
+    Step 3: Creating motor start packet (speed 64 reverse)...
+    Step 4: Loading and transmitting motor start packet...
+    Step 5: Waiting 1000 ms (inter-packet delay)...
+    Step 6: Reading motor run IO status...
+    ✓ Motor run IO state: True (IO13=LOW, IO14=HIGH)
+    Step 7: Sending emergency stop packet to address 3...
+    Step 9: Reading motor stopped IO status...
+    ✓ Motor stopped IO state: True (IO13=HIGH, IO14=HIGH)
+    Step 10: Stopping command station
+
+    ✓ Pass 1/5 completed successfully
+    ...
+
+    ✓ Pass 5/5 completed successfully
+
+    ======================================================================
+    ALL TESTS COMPLETED SUCCESSFULLY
+    ======================================================================
+
+    Results Summary:
+    Total passes: 5
+    Passed: 5
+    Failed: 0
+    Success rate: 100%
+
+    ✓ All 5 test passes completed with 1000ms inter-packet delay
 
 ===============================================================================
 TROUBLESHOOTING
@@ -165,32 +188,6 @@ Solution:
     - The firmware may be outputting debug messages mixed with JSON
     - Check the serial monitor to see what's being transmitted
     - Restart the DCC_tester board
-
-===============================================================================
-CUSTOMIZING THE SCRIPT
-===============================================================================
-
-Creating Different Packet Types
---------------------------------
-Modify the make_speed_packet() function or create new packet functions:
-
-Example - Emergency Stop:
-    packet = [address, 0x3F, 0x81]  # Emergency stop (speed=1, forward)
-    packet.append(calculate_dcc_checksum(packet))
-
-Example - Function Control (F0 headlight):
-    packet = [address, 0b10010000]  # F0=on, F1-F4=off
-    packet.append(calculate_dcc_checksum(packet))
-
-Changing Transmission Parameters
----------------------------------
-Modify the transmit_packet parameters:
-    - count: Number of times to send (1-255)
-    - delay_ms: Delay between transmissions (0-65535 ms)
-
-Example - Send 10 times with 500ms delay:
-    rpc.send_rpc("command_station_transmit_packet", 
-                 {"count": 10, "delay_ms": 500})
 
 ===============================================================================
 ADDITIONAL RESOURCES

@@ -30,9 +30,53 @@ if (Test-Path "build") {
     Write-Host "Build directory cleaned" -ForegroundColor Green
 }
 
+# Select CMake command (prefer cube-cmake if available)
+$CMakeCommand = Get-Command cube-cmake -ErrorAction SilentlyContinue
+if (-not $CMakeCommand) {
+    $CMakeCommand = Get-Command cmake -ErrorAction SilentlyContinue
+}
+if (-not $CMakeCommand) {
+    $cubeCmakeCandidates = @(
+        Join-Path $env:USERPROFILE ".vscode/extensions/stmicroelectronics.stm32cube-ide-build-cmake-*/resources/cube-cmake/win32/cube-cmake.exe"
+    )
+    $cubeCmakePath = Get-ChildItem -Path $cubeCmakeCandidates -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+    if ($cubeCmakePath) {
+        $CMakeCommand = [PSCustomObject]@{
+            Name = "cube-cmake"
+            Source = $cubeCmakePath
+        }
+    }
+}
+if (-not $CMakeCommand) {
+    Write-Error "Neither cube-cmake nor cmake is available in PATH"
+    exit 1
+}
+
+# Ensure cube CLI is on PATH when using cube-cmake
+if ($CMakeCommand.Name -eq "cube-cmake") {
+    $cubePath = $null
+    $cubeCommand = Get-Command cube -ErrorAction SilentlyContinue
+    if ($cubeCommand) {
+        $cubePath = $cubeCommand.Source
+    }
+    if (-not $cubePath) {
+        $cubeCandidates = @(
+            "$env:USERPROFILE\.vscode\extensions\stmicroelectronics.stm32cube-ide-core-*\resources\binaries\win32\x86_64\cube.exe",
+            "$env:USERPROFILE\.vscode\extensions\stmicroelectronics.stm32cube-ide-build-cmake-*\resources\cube\win32\cube.exe"
+        )
+        $cubePath = Get-ChildItem -Path $cubeCandidates -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+    }
+    if ($cubePath) {
+        $cubeDir = Split-Path -Parent $cubePath
+        $env:PATH = "$cubeDir;$env:PATH"
+    }
+}
+
+$BuildDir = Join-Path (Get-Location) "build"
+
 # Run CMake configuration
-Write-Host "`nConfiguring CMake project..." -ForegroundColor Cyan
-cmake -S . -B build -G Ninja
+Write-Host "`nConfiguring CMake project with $($CMakeCommand.Name)..." -ForegroundColor Cyan
+& $CMakeCommand.Source -S . -B $BuildDir -G Ninja
 if ($LASTEXITCODE -ne 0) {
     Write-Error "CMake configuration failed with error code $LASTEXITCODE"
     exit $LASTEXITCODE
@@ -40,8 +84,8 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "CMake configuration completed successfully" -ForegroundColor Green
 
 # Build all targets with Ninja
-Write-Host "`nBuilding all targets with Ninja..." -ForegroundColor Cyan
-cmake --build build -j
+Write-Host "`nBuilding all targets with Ninja using $($CMakeCommand.Name)..." -ForegroundColor Cyan
+& $CMakeCommand.Source --build $BuildDir -j
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Build failed with error code $LASTEXITCODE"
     exit $LASTEXITCODE
