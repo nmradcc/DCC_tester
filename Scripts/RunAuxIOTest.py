@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
 """
-RunPacketAcceptanceTest Script
-===============================
+RunAuxIOTest Script
+===================
 
-This script runs multiple iterations of the PacketAcceptanceTest
-to verify NEM 671 inter-packet delay requirements.
-
-The test is configured via RunPacketAcceptanceTestConfig.txt in the Scripts folder with:
-    - Inter-packet delay (default: 1000ms)
-    - Number of passes (default: 10)
-    - COM port and locomotive address
+This script runs multiple iterations of the AuxIOTest
+using parameters from RunAuxIOTestConfig.txt.
 
 If any iteration fails, the test aborts immediately.
 """
@@ -21,7 +16,8 @@ import importlib.util
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-def load_packet_acceptance_module(file_path, module_name):
+
+def load_aux_io_module(file_path, module_name):
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Unable to load module from {file_path}")
@@ -75,12 +71,16 @@ def load_test_config(config_path):
         "logging_level",
         "stop_on_failure",
         "serial_port",
-        "in_circuit_motor",
+        "aux_number",
     }
 
     missing = sorted(required_keys - set(config.keys()))
     if missing:
         raise ValueError(f"Missing required config keys: {', '.join(missing)}")
+
+    aux_number = _parse_int(config.get("aux_number"), "aux_number")
+    if not 1 <= aux_number <= 4:
+        raise ValueError("aux_number must be between 1 and 4")
 
     return {
         "address": _parse_int(config.get("address"), "address"),
@@ -89,30 +89,28 @@ def load_test_config(config_path):
         "logging_level": _parse_int(config.get("logging_level"), "logging_level"),
         "stop_on_failure": _parse_bool(config.get("stop_on_failure"), "stop_on_failure"),
         "serial_port": config.get("serial_port"),
-        "in_circuit_motor": _parse_bool(config.get("in_circuit_motor"), "in_circuit_motor"),
+        "aux_number": aux_number,
     }
 
 
 def main():
     """Main entry point."""
-    
+
     print("=" * 70)
-    print("DCC Packet Acceptance Test Runner")
-    print("NEM 671 Compliance Testing")
+    print("DCC Aux IO Test Runner")
     print("=" * 70)
     print()
-    print("This script will run multiple iterations of the Packet Acceptance")
-    print("test to verify NEM 671 compliance.")
+    print("This script will run multiple iterations of the Aux IO test.")
     print()
     print("If any iteration fails, the test will continue unless stop on failure is enabled.")
     print()
-    
-    config_path = os.path.join(script_dir, "RunPacketAcceptanceTestConfig.txt")
+
+    config_path = os.path.join(script_dir, "RunAuxIOTestConfig.txt")
     try:
         config = load_test_config(config_path)
     except (FileNotFoundError, ValueError) as exc:
         print(f"ERROR: {exc}")
-        print("Please update RunPacketAcceptanceTestConfig.txt with valid values.")
+        print("Please update RunAuxIOTestConfig.txt with valid values.")
         return 1
 
     address = config["address"]
@@ -121,24 +119,15 @@ def main():
     logging_level = config["logging_level"]
     stop_on_failure = config["stop_on_failure"]
     port = config["serial_port"]
-    in_circuit_motor = config["in_circuit_motor"]
-    
-    packet_data_dir = os.path.join(
-        script_dir,
-        "PacketData",
-        "Motor Current Feedback" if in_circuit_motor else "NoMotor Voltage Feedback"
-    )
-    packet_module_path = os.path.join(packet_data_dir, "PacketAcceptanceTest.py")
+    aux_number = config["aux_number"]
 
-    packet_module = load_packet_acceptance_module(
-        packet_module_path,
-        "packet_acceptance_motor" if in_circuit_motor else "packet_acceptance_no_motor"
-    )
+    aux_module_path = os.path.join(script_dir, "PacketData", "AuxIOTest.py")
+    aux_module = load_aux_io_module(aux_module_path, "aux_io_test")
 
-    DCCTesterRPC = packet_module.DCCTesterRPC
-    run_packet_acceptance_test = packet_module.run_packet_acceptance_test
-    log = packet_module.log
-    set_log_level = packet_module.set_log_level
+    DCCTesterRPC = aux_module.DCCTesterRPC
+    run_aux_io_test = aux_module.run_aux_io_test
+    log = aux_module.log
+    set_log_level = aux_module.set_log_level
 
     set_log_level(logging_level)
 
@@ -150,38 +139,44 @@ def main():
     log(1, f"  Number of passes:   {pass_count}")
     log(1, f"  Serial port:        {port}")
     log(1, f"  Locomotive address: {address}")
-    log(1, f"  In circuit motor:   {in_circuit_motor}")
+    log(1, f"  Aux number:         {aux_number}")
     log(1, f"  Logging level:      {logging_level}")
     log(1, f"  Stop on failure:    {stop_on_failure}")
     log(1, "=" * 70)
     log(1, "")
-    
+
     log(2, "")
     log(2, "=" * 70)
     log(2, "Starting Test Run")
     log(2, "=" * 70)
     log(2, "")
-    
+
     try:
         # Connect to DCC_tester
         log(2, f"Connecting to {port}...")
         rpc = DCCTesterRPC(port)
         log(2, "✓ Connected!\n")
-        
+
         # Run test iterations
         passed_count = 0
         failed_count = 0
-        
+
         for i in range(1, pass_count + 1):
             log(2, "")
             log(2, "=" * 70)
             log(2, f"Test Pass {i} of {pass_count}")
             log(2, "=" * 70)
             log(2, "")
-            
+
             # Run the test
-            result = run_packet_acceptance_test(rpc, address, delay_ms, logging_level=logging_level)
-            
+            result = run_aux_io_test(
+                rpc,
+                address,
+                aux_number,
+                delay_ms,
+                logging_level=logging_level,
+            )
+
             if result.get("status") == "PASS":
                 passed_count += 1
                 log(1, f"✓ Pass {i}/{pass_count} completed successfully")
@@ -202,7 +197,7 @@ def main():
                     log(1, "")
                     rpc.close()
                     return 1
-        
+
         # All tests passed
         log(1, "")
         log(1, "=" * 70)
@@ -216,11 +211,11 @@ def main():
         log(1, "")
         log(1, f"✓ All {pass_count} test passes completed with {delay_ms}ms inter-packet delay")
         log(1, "")
-        
+
         # Close connection
         rpc.close()
         return 0
-        
+
     except serial.SerialException as e:
         log(1, f"\nERROR: Serial port error: {e}")
         log(1, f"Make sure {port} is the correct port and the device is connected.")
