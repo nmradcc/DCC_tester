@@ -187,7 +187,7 @@ def run_function_io_test(rpc, loco_address, function_number, inter_packet_delay_
             rpc.close()
             return {"status": "FAIL", "error": "Failed to read Function IO state (ON)"}
         func_on_ok = func_on_state is True
-        log(1, f"✓ Function ON IO state: {func_on_ok} (IO{function_number}={'HIGH' if func_on_state else 'LOW'})")
+        log(1, f"✓ Function ON IO state: {func_on_ok} (IO{function_number}={'LOW' if func_on_state else 'HIGH'})")
 
         # Step 5: Wait for inter-packet delay
         log(1, f"Step 5: Waiting {inter_packet_delay_ms} ms (inter-packet delay)...")
@@ -222,7 +222,7 @@ def run_function_io_test(rpc, loco_address, function_number, inter_packet_delay_
             rpc.close()
             return {"status": "FAIL", "error": "Failed to read Function IO state (OFF)"}
         func_off_ok = func_off_state is False
-        log(1, f"✓ Function OFF IO state: {func_off_ok} (IO{function_number}={'HIGH' if func_off_state else 'LOW'})")
+        log(1, f"✓ Function OFF IO state: {func_off_ok} (IO{function_number}={'LOW' if func_off_state else 'HIGH'})")
 
         # Step 9: Stop command station
         log(1, "Step 9: Stopping command station")
