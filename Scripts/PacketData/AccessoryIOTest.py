@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-AuxIOTest Script
-================
+AccessoryIOTest Script
+======================
 
-This script tests inter-packet delay timing for Aux IO control.
-Aux packet commands will be implemented later.
+This script tests inter-packet delay timing for accessory IO control.
 """
 
 import json
@@ -95,22 +94,53 @@ def calculate_dcc_checksum(bytes_list):
     return checksum
 
 
-def make_aux_on_packet(address, aux_number):
-    """
-    Create an Aux ON packet for a given auxiliary number.
+def _validate_aux_params(address, aux_number):
+    if not 1 <= aux_number <= 4:
+        raise ValueError("aux_number must be between 1 and 4")
+    if not 1 <= address <= 511:
+        raise ValueError("address must be between 1 and 511 for basic accessory packets")
 
-    NOTE: Placeholder until Aux packet command format is defined.
+
+def _make_basic_accessory_packet(address, aux_number, activate):
     """
-    raise NotImplementedError("Aux ON packet format not implemented yet.")
+    Create a basic accessory decoder packet (NMRA S-9.2.1).
+
+    address: accessory decoder address (1-511)
+    aux_number: output 1-4
+    activate: True for ON/closed, False for OFF/thrown
+    """
+    _validate_aux_params(address, aux_number)
+
+    # NMRA basic accessory packet:
+    # Byte 1: 10AAAAAA (A0-A5)
+    # Byte 2: 1AAACDDD (A6-A8, C=activate, DDD=output 0-7)
+    # Output 1-4 encoded as 0-3.
+    addr = address - 1
+    output = aux_number - 1
+    byte1 = 0x80 | (addr & 0x3F)
+    byte2 = 0x80 | (((addr >> 6) & 0x07) << 4) | ((1 if activate else 0) << 3) | (output & 0x07)
+    checksum = calculate_dcc_checksum([byte1, byte2])
+    packet = [byte1, byte2, checksum]
+
+    log(2, f"Accessory packet for address {address}, aux {aux_number} ({'ON' if activate else 'OFF'}):")
+    log(2, f"  Bytes: {' '.join(f'0x{b:02X}' for b in packet)}")
+    log(2, "  Binary breakdown:")
+    log(2, f"    Address bits:  {addr:09b} (address {address})")
+    log(2, f"    Byte 1:        0x{byte1:02X}")
+    log(2, f"    Byte 2:        0x{byte2:02X} (activate={'ON' if activate else 'OFF'}, output={aux_number})")
+    log(2, f"    Checksum:      0x{checksum:02X}\n")
+
+    return packet
+
+
+def make_aux_on_packet(address, aux_number):
+    """Create an Aux ON packet for a given auxiliary number."""
+    return _make_basic_accessory_packet(address, aux_number, activate=True)
 
 
 def make_aux_off_packet(address, aux_number):
-    """
-    Create an Aux OFF packet for a given auxiliary number.
-
-    NOTE: Placeholder until Aux packet command format is defined.
-    """
-    raise NotImplementedError("Aux OFF packet format not implemented yet.")
+    """Create an Aux OFF packet for a given auxiliary number."""
+    return _make_basic_accessory_packet(address, aux_number, activate=False)
 
 
 def read_aux_io_state(rpc, aux_number):
@@ -152,7 +182,7 @@ def run_aux_io_test(rpc, loco_address, aux_number, inter_packet_delay_ms=1000, l
     set_log_level(logging_level)
 
     log(2, "=" * 70)
-    log(2, "DCC Aux IO Test")
+    log(2, "DCC Accessory IO Test")
     log(2, f"Aux number: {aux_number}")
     log(2, f"Inter-packet delay: {inter_packet_delay_ms} ms")
     log(2, "=" * 70)

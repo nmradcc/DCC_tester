@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-RunAuxIOTest Script
-===================
+RunFunctionIOTest Script
+========================
 
-This script runs multiple iterations of the AuxIOTest
-using parameters from RunAuxIOTestConfig.txt.
+This script runs multiple iterations of the FunctionIOTest
+using parameters from RunFunctionIOTestConfig.txt.
 
 If any iteration fails, the test aborts immediately.
 """
@@ -17,7 +17,7 @@ import importlib.util
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 
-def load_aux_io_module(file_path, module_name):
+def load_function_io_module(file_path, module_name):
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Unable to load module from {file_path}")
@@ -71,16 +71,16 @@ def load_test_config(config_path):
         "logging_level",
         "stop_on_failure",
         "serial_port",
-        "aux_number",
+        "function_number",
     }
 
     missing = sorted(required_keys - set(config.keys()))
     if missing:
         raise ValueError(f"Missing required config keys: {', '.join(missing)}")
 
-    aux_number = _parse_int(config.get("aux_number"), "aux_number")
-    if not 1 <= aux_number <= 4:
-        raise ValueError("aux_number must be between 1 and 4")
+    function_number = _parse_int(config.get("function_number"), "function_number")
+    if not 1 <= function_number <= 4:
+        raise ValueError("function_number must be between 1 and 4")
 
     return {
         "address": _parse_int(config.get("address"), "address"),
@@ -89,7 +89,7 @@ def load_test_config(config_path):
         "logging_level": _parse_int(config.get("logging_level"), "logging_level"),
         "stop_on_failure": _parse_bool(config.get("stop_on_failure"), "stop_on_failure"),
         "serial_port": config.get("serial_port"),
-        "aux_number": aux_number,
+        "function_number": function_number,
     }
 
 
@@ -97,20 +97,20 @@ def main():
     """Main entry point."""
 
     print("=" * 70)
-    print("DCC Aux IO Test Runner")
+    print("DCC Function IO Test Runner")
     print("=" * 70)
     print()
-    print("This script will run multiple iterations of the Aux IO test.")
+    print("This script will run multiple iterations of the Function IO test.")
     print()
     print("If any iteration fails, the test will continue unless stop on failure is enabled.")
     print()
 
-    config_path = os.path.join(script_dir, "RunAuxIOTestConfig.txt")
+    config_path = os.path.join(script_dir, "RunFunctionIOTestConfig.txt")
     try:
         config = load_test_config(config_path)
     except (FileNotFoundError, ValueError) as exc:
         print(f"ERROR: {exc}")
-        print("Please update RunAuxIOTestConfig.txt with valid values.")
+        print("Please update RunFunctionIOTestConfig.txt with valid values.")
         return 1
 
     address = config["address"]
@@ -119,15 +119,15 @@ def main():
     logging_level = config["logging_level"]
     stop_on_failure = config["stop_on_failure"]
     port = config["serial_port"]
-    aux_number = config["aux_number"]
+    function_number = config["function_number"]
 
-    aux_module_path = os.path.join(script_dir, "PacketData", "AuxIOTest.py")
-    aux_module = load_aux_io_module(aux_module_path, "aux_io_test")
+    function_module_path = os.path.join(script_dir, "PacketData", "FunctionIOTest.py")
+    function_module = load_function_io_module(function_module_path, "function_io_test")
 
-    DCCTesterRPC = aux_module.DCCTesterRPC
-    run_aux_io_test = aux_module.run_aux_io_test
-    log = aux_module.log
-    set_log_level = aux_module.set_log_level
+    DCCTesterRPC = function_module.DCCTesterRPC
+    run_function_io_test = function_module.run_function_io_test
+    log = function_module.log
+    set_log_level = function_module.set_log_level
 
     set_log_level(logging_level)
 
@@ -139,7 +139,7 @@ def main():
     log(1, f"  Number of passes:   {pass_count}")
     log(1, f"  Serial port:        {port}")
     log(1, f"  Locomotive address: {address}")
-    log(1, f"  Aux number:         {aux_number}")
+    log(1, f"  Function number:    {function_number}")
     log(1, f"  Logging level:      {logging_level}")
     log(1, f"  Stop on failure:    {stop_on_failure}")
     log(1, "=" * 70)
@@ -169,10 +169,10 @@ def main():
             log(2, "")
 
             # Run the test
-            result = run_aux_io_test(
+            result = run_function_io_test(
                 rpc,
                 address,
-                aux_number,
+                function_number,
                 delay_ms,
                 logging_level=logging_level,
             )
