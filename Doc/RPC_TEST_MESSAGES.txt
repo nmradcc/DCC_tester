@@ -699,93 +699,98 @@ The command station supports loading and transmitting arbitrary DCC packets
 when running in custom packet mode (loop=0). This allows full control over
 DCC packet generation for testing and debugging.
 
-10.1 Load Custom Packet
-------------------------
-Load an arbitrary byte array into the custom packet buffer. Bytes must be
-in the range 0-255, and packet length is limited to DCC_MAX_PACKET_SIZE (64).
+10.1 Load Custom Packet Queue
+------------------------------
+Load an arbitrary byte array into the custom packet queue (max 3 packets).
+Bytes must be in the range 0-255, and packet length is limited to
+DCC_MAX_PACKET_SIZE (18). By default, each call appends to the queue. Use
+"replace": true to clear the queue before loading.
 
 Request:
 {"method":"command_station_load_packet","params":{"bytes":[0xFF,0x00,0xFF]}}
 
 Expected Response:
-{"status":"ok","message":"Packet loaded successfully","length":3}
+{"status":"ok","message":"Packet loaded successfully","length":3,"replace":false}
 
-Error Response (invalid byte value):
-{"status":"error","message":"Invalid byte value at index 1"}
+Request (replace queue):
+{"method":"command_station_load_packet","params":{"bytes":[0xFF,0x00,0xFF],"replace":true}}
+
+Expected Response:
+{"status":"ok","message":"Packet loaded successfully","length":3,"replace":true}
+
+Error Response (invalid byte type):
+{"status":"error","message":"all bytes must be unsigned integers"}
+
+Error Response (byte out of range):
+{"status":"error","message":"byte values must be 0-255"}
 
 Error Response (packet too long):
-{"status":"error","message":"Packet too long (max 18 bytes)"}
+{"status":"error","message":"bytes array must have 1-18 elements"}
+
+Error Response (queue full):
+{"status":"error","message":"Custom packet queue is full (max 3 packets)","queue_count":3}
 
 -------------------------------------------------------------------------------
 
-10.2 Trigger Packet Transmission (Default - Single, 100ms delay)
------------------------------------------------------------------
-Trigger transmission of the loaded custom packet. By default, transmits once
-with 100ms delay (which only applies if count > 1).
+10.2 Trigger Custom Packet Queue Transmission (Default - 100ms delay)
+---------------------------------------------------------------------
+Trigger transmission of the loaded custom packet queue. By default, uses
+100ms delay between packets in the queue.
+
+Note: If only one packet is queued, the delay is ignored.
 
 Request:
 {"method":"command_station_transmit_packet","params":{}}
 
 Expected Response:
-{"status":"ok","message":"Packet transmission triggered","count":1,"delay_ms":100}
+{"status":"ok","message":"Packet transmission triggered","delay_ms":100}
 
 -------------------------------------------------------------------------------
 
-10.3 Trigger Packet Transmission (Multiple Times)
----------------------------------------------------
-Transmit the loaded packet multiple times with default 100ms delay between
-each transmission.
+10.3 Trigger Custom Packet Queue Transmission (Custom Delay)
+-------------------------------------------------------------
+Transmit the custom packet queue with a specified delay in milliseconds between
+each packet.
 
 Request:
-{"method":"command_station_transmit_packet","params":{"count":5}}
+{"method":"command_station_transmit_packet","params":{"delay_ms":500}}
 
 Expected Response:
-{"status":"ok","message":"Packet transmission triggered","count":5,"delay_ms":100}
-
--------------------------------------------------------------------------------
-
-10.4 Trigger Packet Transmission (Custom Delay)
--------------------------------------------------
-Transmit multiple times with a specified delay in milliseconds between each
-transmission.
-
-Request:
-{"method":"command_station_transmit_packet","params":{"count":10,"delay_ms":500}}
-
-Expected Response:
-{"status":"ok","message":"Packet transmission triggered","count":10,"delay_ms":500}
+{"status":"ok","message":"Packet transmission triggered","delay_ms":500}
 
 Note: The delay parameter directly maps to osDelay() in the RTOS.
 
 -------------------------------------------------------------------------------
 
-10.5 Trigger Packet Transmission (No Delay)
----------------------------------------------
-Transmit multiple times with no delay between transmissions.
+10.4 Trigger Custom Packet Queue Transmission (No Delay)
+---------------------------------------------------------
+Transmit the custom packet queue with no delay between packets.
 
 Request:
-{"method":"command_station_transmit_packet","params":{"count":5,"delay_ms":0}}
+{"method":"command_station_transmit_packet","params":{"delay_ms":0}}
 
 Expected Response:
-{"status":"ok","message":"Packet transmission triggered","count":5,"delay_ms":0}
+{"status":"ok","message":"Packet transmission triggered","delay_ms":0}
 
 -------------------------------------------------------------------------------
 
-10.6 Complete Custom Packet Workflow Example
+10.5 Complete Custom Packet Workflow Example
 ----------------------------------------------
 1. Start command station in custom packet mode (loop=0):
    {"method":"command_station_start","params":{"loop":0}}
 
-2. Load a DCC idle packet (address 255, idle instruction, checksum):
+2. Load up to three packets (queue append):
    {"method":"command_station_load_packet","params":{"bytes":[0xFF,0x00,0xFF]}}
+   {"method":"command_station_load_packet","params":{"bytes":[0x03,0x10,0x13]}}
+   {"method":"command_station_load_packet","params":{"bytes":[0x03,0x00,0x03]}}
 
-3. Trigger transmission 3 times with 200ms between each:
-   {"method":"command_station_transmit_packet","params":{"count":3,"delay_ms":200}}
+3. Trigger transmission with 200ms between packets:
+   {"method":"command_station_transmit_packet","params":{"delay_ms":200}}
 
 The console will show:
-Custom packet transmitted [1/3]: 0xFF 0x00 0xFF
-Custom packet transmitted [2/3]: 0xFF 0x00 0xFF
-Custom packet transmitted [3/3]: 0xFF 0x00 0xFF
+Custom packet transmitted [1/3] (packet 1/3): 0xFF 0x00 0xFF
+Custom packet transmitted [2/3] (packet 2/3): 0x03 0x10 0x13
+Custom packet transmitted [3/3] (packet 3/3): 0x03 0x00 0x03
 
 ===============================================================================
 13. GPIO INPUT READING
