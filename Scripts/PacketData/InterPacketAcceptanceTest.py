@@ -101,78 +101,58 @@ def calculate_dcc_checksum(bytes_list):
     return checksum
 
 
-def make_speed_packet(address, speed, forward=True):
+def make_aux_io_packet(address, function_number, enabled):
     """
-    Create a DCC advanced operations speed packet (128-speed step mode).
+    Create a DCC function group packet to control F1-F4.
 
     Args:
         address: Locomotive address (0-127 for short address)
-        speed: Speed value (0-127, where 0=stop, 1=emergency stop, 2-127=speed steps)
-        forward: True for forward, False for reverse
+        function_number: "F1", "F2", "F3", "F4" or integer 1-4
+        enabled: True to turn on, False to turn off
 
     Returns:
         List of packet bytes
     """
-    # Advanced operations speed instruction: 0b00111111 (0x3F)
-    instruction = 0x3F
-
-    # Speed byte: bit 7 = direction (1=forward, 0=reverse), bits 6-0 = speed
-    if forward:
-        speed_byte = (1 << 7) | (speed & 0x7F)
+    if isinstance(function_number, str):
+        normalized = function_number.strip().upper()
+        if not normalized.startswith("F"):
+            raise ValueError(f"Invalid function selector: {function_number}")
+        try:
+            function_index = int(normalized[1:])
+        except ValueError as exc:
+            raise ValueError(f"Invalid function selector: {function_number}") from exc
     else:
-        speed_byte = speed & 0x7F
+        function_index = int(function_number)
 
-    packet = [address, instruction, speed_byte]
+    if function_index < 1 or function_index > 4:
+        raise ValueError(f"Function number must be 1-4, got {function_index}")
+
+    function_bit = 1 << (function_index - 1)
+    function_group = function_bit if enabled else 0
+
+    # Function group 1: 0b1000 F4 F3 F2 F1 (0x80 | function bits)
+    instruction = 0x80 | function_group
+
+    packet = [address, instruction]
     checksum = calculate_dcc_checksum(packet)
     packet.append(checksum)
 
-    log(2, f"Packet for address {address}, speed {speed} {'forward' if forward else 'reverse'}:")
+    log(2, f"Aux IO packet for address {address}, {function_number}={'ON' if enabled else 'OFF'}:")
     log(2, f"  Bytes: {' '.join(f'0x{b:02X}' for b in packet)}")
     log(2, "  Binary breakdown:")
     log(2, f"    Address:     0x{packet[0]:02X} ({packet[0]})")
-    log(2, f"    Instruction: 0x{packet[1]:02X} (advanced operations speed)")
-    log(2, f"    Speed:       0x{packet[2]:02X} (dir={'forward' if forward else 'reverse'}, speed={speed})")
-    log(2, f"    Checksum:    0x{packet[3]:02X}\n")
+    log(2, f"    Instruction: 0x{packet[1]:02X} (function group F1-F4)")
+    log(2, f"    Checksum:    0x{packet[2]:02X}\n")
 
     return packet
 
 
-def make_emergency_stop_packet(address):
+def read_io1_io2_io3(rpc):
     """
-    Create a DCC emergency stop packet.
-
-    Args:
-        address: Locomotive address (0 for broadcast to all locomotives)
+    Read IO1, IO2, and IO3 via a single RPC call.
 
     Returns:
-        List of packet bytes
-    """
-    # Advanced operations speed instruction: 0x3F
-    # Emergency stop: speed = 1, direction = forward (bit 7 = 1)
-    instruction = 0x3F
-    speed_byte = (1 << 7) | 1  # 0x81
-
-    packet = [address, instruction, speed_byte]
-    checksum = calculate_dcc_checksum(packet)
-    packet.append(checksum)
-
-    log(2, "Emergency stop packet:")
-    log(2, f"  Bytes: {' '.join(f'0x{b:02X}' for b in packet)}")
-    log(2, "  Binary breakdown:")
-    log(2, f"    Address:     0x{packet[0]:02X} ({packet[0]})")
-    log(2, f"    Instruction: 0x{packet[1]:02X} (advanced operations speed)")
-    log(2, f"    Speed:       0x{packet[2]:02X} (emergency stop)")
-    log(2, f"    Checksum:    0x{packet[3]:02X}\n")
-
-    return packet
-
-
-def read_io13_io14(rpc):
-    """
-    Read IO13 and IO14 via a single RPC call.
-
-    Returns:
-        Tuple (io13_high, io14_high) or None on error
+        Tuple (io1_high, io2_high, io3_high) or None on error
     """
     response = rpc.send_rpc("get_gpio_inputs", {})
     if response is None or response.get("status") != "ok":
@@ -184,14 +164,15 @@ def read_io13_io14(rpc):
         log(1, f"ERROR: Missing GPIO value in response: {response}")
         return None
 
-    io13_high = (gpio_word & (1 << 12)) != 0
-    io14_high = (gpio_word & (1 << 13)) != 0
+    io1_high = (gpio_word & (1 << 0)) != 0
+    io2_high = (gpio_word & (1 << 1)) != 0
+    io3_high = (gpio_word & (1 << 2)) != 0
 
-    log(2, f"GPIO inputs: 0x{gpio_word:04X} (IO13={'HIGH' if io13_high else 'LOW'}, IO14={'HIGH' if io14_high else 'LOW'})")
-    return io13_high, io14_high
+    log(2, f"GPIO inputs: 0x{gpio_word:04X} (IO1={'HIGH' if io1_high else 'LOW'}, IO2={'HIGH' if io2_high else 'LOW'}, IO3={'HIGH' if io3_high else 'LOW'})")
+    return io1_high, io2_high, io3_high
 
 
-def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, logging_level=1):
+def run_interpacket_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, logging_level=1):
     """
     Run the packet acceptance test.
 
@@ -203,13 +184,10 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
     Returns:
         Dictionary with test results including pass/fail status
     """
-    # Fixed test parameters
-    HALF_SPEED = 64  # Half of 127 (rounded up from 63.5)
-
     set_log_level(logging_level)
 
     log(2, "=" * 70)
-    log(2, "DCC Packet Acceptance Test (NEM 671)")
+    log(2, "DCC InterPacket Acceptance Test (NEM 671)")
     log(2, f"Inter-packet delay: {inter_packet_delay_ms} ms")
     log(2, "=" * 70)
     log(2, "")
@@ -227,84 +205,57 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
 
         time.sleep(0.5)
 
-        # Step 2: Read motor off IO status as baseline
-        log(1, "Step 2: Reading motor off IO status as baseline...")
-        io_state = read_io13_io14(rpc)
+        # Step 2: Create and load F1 on packet (reset queue)
+        log(1, "Step 2: Loading F1 ON packet (reset queue)...")
+        f1_packet = make_aux_io_packet(loco_address, "F1", True)
+        response = rpc.send_rpc("command_station_load_packet", {"bytes": f1_packet, "replace": True})
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to load F1 packet: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to load F1 packet"}
+
+        # Step 3: Load F2 on packet
+        log(1, "Step 3: Loading F2 ON packet...")
+        f2_packet = make_aux_io_packet(loco_address, "F2", True)
+        response = rpc.send_rpc("command_station_load_packet", {"bytes": f2_packet, "replace": False})
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to load F2 packet: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to load F2 packet"}
+
+        # Step 4: Load F3 on packet
+        log(1, "Step 4: Loading F3 ON packet...")
+        f3_packet = make_aux_io_packet(loco_address, "F3", True)
+        response = rpc.send_rpc("command_station_load_packet", {"bytes": f3_packet, "replace": False})
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to load F3 packet: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to load F3 packet"}
+
+        # Step 5: Trigger queue dump with inter-packet delay
+        log(1, f"Step 5: Triggering queue dump ({inter_packet_delay_ms} ms delay)...")
+        response = rpc.send_rpc("command_station_transmit_packet", {"delay_ms": inter_packet_delay_ms})
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to transmit packet queue: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to transmit packet queue"}
+
+        # Step 6: Sleep 0.5 seconds
+        log(1, "Step 6: Waiting 0.5 seconds...")
+        time.sleep(0.5)
+
+        # Step 7: Read IO1/IO2/IO3
+        log(1, "Step 7: Reading IO1/IO2/IO3...")
+        io_state = read_io1_io2_io3(rpc)
         if io_state is None:
             rpc.close()
-            return {"status": "FAIL", "error": "Failed to read IO13/IO14"}
-        io13_high, io14_high = io_state
-        motor_off_ok = io13_high and io14_high
-        log(1, f"✓ Motor off IO state: {motor_off_ok} (IO13={'HIGH' if io13_high else 'LOW'}, IO14={'HIGH' if io14_high else 'LOW'})")
+            return {"status": "FAIL", "error": "Failed to read IO1/IO2/IO3"}
+        io1_high, io2_high, io3_high = io_state
+        log(1, f"✓ IO states: IO1={'HIGH' if io1_high else 'LOW'}, IO2={'HIGH' if io2_high else 'LOW'}, IO3={'HIGH' if io3_high else 'LOW'}")
+        io_all_low = not (io1_high or io2_high or io3_high)
 
-        # Step 3: Create motor start packet (half-speed reverse)
-        log(1, f"Step 3: Creating motor start packet (speed {HALF_SPEED} reverse)...")
-        start_packet = make_speed_packet(loco_address, HALF_SPEED, forward=False)
-
-        # Step 4: Load and transmit the start packet
-        log(1, "Step 4: Loading and transmitting motor start packet...")
-        response = rpc.send_rpc("command_station_load_packet", {"bytes": start_packet, "replace": True})
-
-        if response is None or response.get("status") != "ok":
-            log(1, f"ERROR: Failed to load packet: {response}")
-            rpc.close()
-            return {"status": "FAIL", "error": "Failed to load packet"}
-
-        response = rpc.send_rpc("command_station_transmit_packet",
-                       {"delay_ms": 0})
-
-        if response is None or response.get("status") != "ok":
-            log(1, f"ERROR: Failed to transmit packet: {response}")
-            rpc.close()
-            return {"status": "FAIL", "error": "Failed to transmit packet"}
-
-        # Step 5: Wait for inter-packet delay
-        log(1, f"Step 5: Waiting {inter_packet_delay_ms} ms (inter-packet delay)...")
-        time.sleep(inter_packet_delay_ms / 1000.0)
-        log(2, "✓ Inter-packet delay complete\n")
-
-        # Step 6: Read motor run IO status
-        log(1, "Step 6: Reading motor run IO status...")
-        io_state = read_io13_io14(rpc)
-        if io_state is None:
-            rpc.close()
-            return {"status": "FAIL", "error": "Failed to read IO13/IO14"}
-        io13_high, io14_high = io_state
-        motor_run_ok = (not io13_high) or (not io14_high)
-        log(1, f"✓ Motor run IO state: {motor_run_ok} (IO13={'HIGH' if io13_high else 'LOW'}, IO14={'HIGH' if io14_high else 'LOW'})")
-
-        # Step 7: Send emergency stop packet
-        log(1, f"Step 7: Sending emergency stop packet to address {loco_address}...")
-        estop_packet = make_emergency_stop_packet(loco_address)
-
-        response = rpc.send_rpc("command_station_load_packet", {"bytes": estop_packet, "replace": True})
-        if response is None or response.get("status") != "ok":
-            log(1, f"ERROR: Failed to load emergency stop packet: {response}")
-            rpc.close()
-            return {"status": "FAIL", "error": "Failed to load emergency stop packet"}
-        log(2, "✓ Emergency stop packet loaded\n")
-        response = rpc.send_rpc("command_station_transmit_packet",
-                       {"delay_ms": 0})
-        if response is None or response.get("status") != "ok":
-            log(1, f"ERROR: Failed to transmit emergency stop packet: {response}")
-            rpc.close()
-            return {"status": "FAIL", "error": "Failed to transmit emergency stop"}
-        # Step 8: Wait 1 second for motor to stop
-        log(2, "Step 8: Waiting 1 second for motor to stop...")
-        time.sleep(1.0)
-
-        # Step 9: Read motor stopped IO status
-        log(1, "Step 9: Reading motor stopped IO status...")
-        io_state = read_io13_io14(rpc)
-        if io_state is None:
-            rpc.close()
-            return {"status": "FAIL", "error": "Failed to read IO13/IO14"}
-        io13_high, io14_high = io_state
-        motor_stop_ok = io13_high and io14_high
-        log(1, f"✓ Motor stopped IO state: {motor_stop_ok} (IO13={'HIGH' if io13_high else 'LOW'}, IO14={'HIGH' if io14_high else 'LOW'})")
-
-        # Step 10: Stop command station
-        log(1, "Step 10: Stopping command station")
+        # Step 8: Stop command station
+        log(1, "Step 8: Stopping command station")
         response = rpc.send_rpc("command_station_stop", {})
 
         if response is None or response.get("status") != "ok":
@@ -313,7 +264,7 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
             log(2, "✓ Command station stopped\n")
 
         # Evaluate pass/fail
-        test_pass = motor_off_ok and motor_run_ok and motor_stop_ok
+        test_pass = io_all_low
 
         log(2, "\n" + "=" * 70)
         log(2, "✓ TEST COMPLETE")
@@ -325,33 +276,30 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
         log(2, "=" * 70)
         log(2, "\nTest Parameters:")
         log(2, f"  Locomotive address:    {loco_address}")
-        log(2, f"  Motor speed:           {HALF_SPEED} (reverse)")
         log(2, f"  Inter-packet delay:    {inter_packet_delay_ms} ms")
         log(2, "\nTest sequence completed:")
         log(2, "  1. Started command station in custom packet mode")
-        log(2, f"  2. Read motor off IO state: {motor_off_ok}")
-        log(2, f"  3. Created motor start packet (speed {HALF_SPEED} reverse)")
-        log(2, f"  4. Transmitted motor start packet to address {loco_address}")
-        log(2, f"  5. Waited {inter_packet_delay_ms} ms (inter-packet delay)")
-        log(2, f"  6. Read motor run IO state: {motor_run_ok}")
-        log(2, f"  7. Sent emergency stop packet to address {loco_address}")
-        log(2, "  8. Waited 1 second for motor to stop")
-        log(2, f"  9. Read motor stopped IO state: {motor_stop_ok}")
-        log(2, "  10. Stopped command station")
+        log(2, "  2. Loaded F1 ON packet (reset queue)")
+        log(2, "  3. Loaded F2 ON packet")
+        log(2, "  4. Loaded F3 ON packet")
+        log(2, f"  5. Triggered queue dump with {inter_packet_delay_ms} ms delay")
+        log(2, "  6. Waited 0.5 seconds")
+        log(2, "  7. Read IO1/IO2/IO3")
+        log(2, "  8. Stopped command station")
         log(2, "\nIO state measurements:")
-        log(2, f"  Motor off OK:  {motor_off_ok}")
-        log(2, f"  Motor run OK:  {motor_run_ok}")
-        log(2, f"  Motor stop OK: {motor_stop_ok}")
+        log(2, f"  IO1 LOW: {not io1_high}")
+        log(2, f"  IO2 LOW: {not io2_high}")
+        log(2, f"  IO3 LOW: {not io3_high}")
         log(2, "\nPass Criteria:")
-        log(2, "  Off, Run, Stop states are all True")
+        log(2, "  IO1, IO2, IO3 are all LOW")
         log(1, "")
 
         return {
             "status": "PASS" if test_pass else "FAIL",
             "inter_packet_delay_ms": inter_packet_delay_ms,
-            "motor_off_ok": motor_off_ok,
-            "motor_run_ok": motor_run_ok,
-            "motor_stop_ok": motor_stop_ok
+            "io1_low": not io1_high,
+            "io2_low": not io2_high,
+            "io3_low": not io3_high
         }
 
     except serial.SerialException as e:

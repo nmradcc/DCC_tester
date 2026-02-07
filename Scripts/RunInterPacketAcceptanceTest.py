@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-RunPacketAcceptanceTest Script
-===============================
+RunInterPacketAcceptanceTest Script
+====================================
 
 This script runs multiple iterations of the InterPacketAcceptanceTest
 to verify NEM 671 inter-packet delay requirements.
 
-The test can be configured with:
-  - Inter-packet delay (default: 1000ms)
-  - Number of passes (default: 10)
-  - COM port and locomotive address
+The test is configured via RunInterPacketAcceptanceTestConfig.txt in the Scripts folder with:
+    - Inter-packet delay (default: 1000ms)
+    - Number of passes (default: 10)
+    - COM port and locomotive address
 
 If any iteration fails, the test aborts immediately.
 """
@@ -30,87 +30,95 @@ def load_packet_acceptance_module(file_path, module_name):
     return module
 
 
-def get_int_input(prompt, default=None):
-    """
-    Get integer input from user with optional default value.
-    
-    Args:
-        prompt: Prompt message to display
-        default: Default value if user presses Enter (None = required)
-        
-    Returns:
-        Integer value entered by user
-    """
-    while True:
-        if default is not None:
-            user_input = input(f"{prompt} [default: {default}]: ").strip()
-            if not user_input:
-                return default
-        else:
-            user_input = input(f"{prompt}: ").strip()
-        
-        try:
-            return int(user_input)
-        except ValueError:
-            print("  ERROR: Please enter a valid integer")
+def _parse_bool(value, key):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        raise ValueError(f"Missing boolean value for '{key}'")
+    normalized = str(value).strip().lower()
+    if normalized in {"y", "yes", "true", "1"}:
+        return True
+    if normalized in {"n", "no", "false", "0"}:
+        return False
+    raise ValueError(f"Invalid boolean value for '{key}': {value}")
 
 
-def get_bool_input(prompt, default=False):
-    """
-    Get boolean input from user with optional default value.
+def _parse_int(value, key):
+    if value is None or str(value).strip() == "":
+        raise ValueError(f"Missing integer value for '{key}'")
+    try:
+        return int(str(value).strip())
+    except ValueError as exc:
+        raise ValueError(f"Invalid integer value for '{key}': {value}") from exc
 
-    Args:
-        prompt: Prompt message to display
-        default: Default value if user presses Enter
 
-    Returns:
-        Boolean value entered by user
-    """
-    default_label = "Y" if default else "N"
-    while True:
-        user_input = input(f"{prompt} [default: {default_label}]: ").strip().lower()
-        if not user_input:
-            return default
-        if user_input in ["y", "yes", "true", "1"]:
-            return True
-        if user_input in ["n", "no", "false", "0"]:
-            return False
-        print("  ERROR: Please enter Y or N")
+def load_test_config(config_path):
+    """Load test configuration from a simple key=value text file."""
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+
+    config = {}
+    with open(config_path, "r", encoding="utf-8") as config_file:
+        for raw_line in config_file:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or line.startswith(";"):
+                continue
+            if "=" not in line:
+                raise ValueError(f"Invalid config line (expected key=value): {raw_line.strip()}")
+            key, value = line.split("=", 1)
+            config[key.strip()] = value.strip()
+
+    required_keys = {
+        "address",
+        "inter_packet_delay_ms",
+        "pass_count",
+        "logging_level",
+        "stop_on_failure",
+        "serial_port",
+    }
+
+    missing = sorted(required_keys - set(config.keys()))
+    if missing:
+        raise ValueError(f"Missing required config keys: {', '.join(missing)}")
+
+    return {
+        "address": _parse_int(config.get("address"), "address"),
+        "inter_packet_delay_ms": _parse_int(config.get("inter_packet_delay_ms"), "inter_packet_delay_ms"),
+        "pass_count": _parse_int(config.get("pass_count"), "pass_count"),
+        "logging_level": _parse_int(config.get("logging_level"), "logging_level"),
+        "stop_on_failure": _parse_bool(config.get("stop_on_failure"), "stop_on_failure"),
+        "serial_port": config.get("serial_port"),
+    }
 
 
 def main():
     """Main entry point."""
     
     print("=" * 70)
-    print("DCC Packet Acceptance Test Runner")
+    print("DCC InterPacket Acceptance Test Runner")
     print("NEM 671 Compliance Testing")
     print("=" * 70)
     print()
-    print("This script will run multiple iterations of the Packet Acceptance")
+    print("This script will run multiple iterations of the InterPacket Acceptance")
     print("test to verify NEM 671 compliance.")
     print()
     print("If any iteration fails, the test will continue unless stop on failure is enabled.")
     print()
     
-    # Get test parameters
-    print("-" * 70)
-    print("Test Parameters:")
-    print("-" * 70)
-    
-    address = get_int_input("Enter locomotive address", default=3)
-    delay_ms = get_int_input("Inter-packet delay in milliseconds", default=1000)
-    pass_count = get_int_input("Number of test passes", default=10)
-    logging_level = get_int_input("Logging level (0=none, 1=minimum, 2=verbose)", default=1)
-    stop_on_failure = get_bool_input("Stop on failure", default=False)
-    
-    print()
-    print("-" * 70)
-    print("Connection Parameters:")
-    print("-" * 70)
-    
-    port = input("Enter serial port [default: COM6]: ").strip()
-    if not port:
-        port = "COM6"
+    config_path = os.path.join(script_dir, "RunInterPacketAcceptanceTestConfig.txt")
+    try:
+        config = load_test_config(config_path)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"ERROR: {exc}")
+        print("Please update RunInterPacketAcceptanceTestConfig.txt with valid values.")
+        return 1
+
+    address = config["address"]
+    delay_ms = config["inter_packet_delay_ms"]
+    pass_count = config["pass_count"]
+    logging_level = config["logging_level"]
+    stop_on_failure = config["stop_on_failure"]
+    port = config["serial_port"]
     
     packet_data_dir = os.path.join(script_dir, "PacketData")
     packet_module_path = os.path.join(packet_data_dir, "InterPacketAcceptanceTest.py")
@@ -121,7 +129,7 @@ def main():
     )
 
     DCCTesterRPC = packet_module.DCCTesterRPC
-    run_packet_acceptance_test = packet_module.run_packet_acceptance_test
+    run_interpacket_acceptance_test = packet_module.run_interpacket_acceptance_test
     log = packet_module.log
     set_log_level = packet_module.set_log_level
 
@@ -139,12 +147,6 @@ def main():
     log(1, f"  Stop on failure:    {stop_on_failure}")
     log(1, "=" * 70)
     log(1, "")
-    
-    # Confirm before running
-    confirm = input("Run test with these parameters? [Y/n]: ").strip().lower()
-    if confirm and confirm not in ['y', 'yes']:
-        log(1, "Test cancelled by user.")
-        return 0
     
     log(2, "")
     log(2, "=" * 70)
@@ -170,7 +172,7 @@ def main():
             log(2, "")
             
             # Run the test
-            result = run_packet_acceptance_test(rpc, address, delay_ms, logging_level=logging_level)
+            result = run_interpacket_acceptance_test(rpc, address, delay_ms, logging_level=logging_level)
             
             if result.get("status") == "PASS":
                 passed_count += 1
