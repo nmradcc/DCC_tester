@@ -164,6 +164,8 @@ void CommandStationThread(void *argument) {
     commandStationRunning = true;
     dcc::Packet packet{};
 
+    osDelay(100u);  // Short delay to ensure everything is set up and running
+
     // Check for custom packet trigger when not in loop mode
     if (commandStationLoop == 0) {
       printf("Command station started in custom packet mode\n");
@@ -198,17 +200,25 @@ void CommandStationThread(void *argument) {
       uint16_t current_ma = 0;
       // Test loop1: Basic function and speed control (address 3)
       printf("Starting test loop1: Basic function and speed control (address 3)\n");
+
+      printf("Loop1: stop\n");
+      // required to set direction for some decoders 
+      // (those that don't use the direction bit in the speed step packet but instead infer direction from speed 0 vs nonzero)
+      packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
+      command_station.packet(packet);
+      osDelay(100u);
       // Set function F0
       printf("Loop1: set function F0 Headlight\n");
       packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
       command_station.packet(packet);
-      osDelay(2000u);
+      osDelay(100u);
       while (commandStationRunning) {
+
         // Accelerate forward
         printf("Loop1: accelerate to speed step 42 forward\n");
         packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
         command_station.packet(packet);
-        osDelay(2000u);
+        osDelay(3000u);
 
         // Stop
         printf("Loop1: stop (forward)\n");
@@ -223,25 +233,20 @@ void CommandStationThread(void *argument) {
 // lastIdlePacketCount should have updated by now
 //printf("3 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
 
-        osDelay(2000u);
+        osDelay(1000u);
 
         // Accelerate reverse
         printf("Loop1: accelerate to speed step 42 reverse\n");
         packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
         command_station.packet(packet);
-        osDelay(2000u);
+        osDelay(3000u);
 
         // Stop
         printf("Loop1: stop (reverse)\n");
         packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
         command_station.packet(packet);
-        osDelay(2000u);
+        osDelay(1000u);
       }
-      // Clear function F0 
-      printf("Loop1: clear function F0 Headlight\n");
-      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
-      command_station.packet(packet);
-      osDelay(100u);
     }
     else if (commandStationLoop == 2) {
       // Test loop2: Emergency stop test (address 3)
