@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-RunPacketAcceptanceTest Script
-===============================
+RunInterPacketAcceptanceTest Script
+====================================
 
-This script runs multiple iterations of the PacketAcceptanceTest
+This script runs multiple iterations of the InterPacketAcceptanceTest
 to verify NEM 671 inter-packet delay requirements.
 
-The test is configured via RunPacketAcceptanceTestConfig.txt in the Scripts folder with:
+The test is configured via RunInterPacketAcceptanceTestConfig.txt in the Scripts folder with:
     - Inter-packet delay (default: 1000ms)
     - Number of passes (default: 10)
     - COM port and locomotive address
@@ -75,7 +75,6 @@ def load_test_config(config_path):
         "logging_level",
         "stop_on_failure",
         "serial_port",
-        "in_circuit_motor",
     }
 
     missing = sorted(required_keys - set(config.keys()))
@@ -89,7 +88,6 @@ def load_test_config(config_path):
         "logging_level": _parse_int(config.get("logging_level"), "logging_level"),
         "stop_on_failure": _parse_bool(config.get("stop_on_failure"), "stop_on_failure"),
         "serial_port": config.get("serial_port"),
-        "in_circuit_motor": _parse_bool(config.get("in_circuit_motor"), "in_circuit_motor"),
     }
 
 
@@ -97,22 +95,22 @@ def main():
     """Main entry point."""
     
     print("=" * 70)
-    print("DCC Packet Acceptance Test Runner")
+    print("DCC InterPacket Acceptance Test Runner")
     print("NEM 671 Compliance Testing")
     print("=" * 70)
     print()
-    print("This script will run multiple iterations of the Packet Acceptance")
+    print("This script will run multiple iterations of the InterPacket Acceptance")
     print("test to verify NEM 671 compliance.")
     print()
     print("If any iteration fails, the test will continue unless stop on failure is enabled.")
     print()
     
-    config_path = os.path.join(script_dir, "RunPacketAcceptanceTestConfig.txt")
+    config_path = os.path.join(script_dir, "RunInterPacketAcceptanceTestConfig.txt")
     try:
         config = load_test_config(config_path)
     except (FileNotFoundError, ValueError) as exc:
         print(f"ERROR: {exc}")
-        print("Please update RunPacketAcceptanceTestConfig.txt with valid values.")
+        print("Please update RunInterPacketAcceptanceTestConfig.txt with valid values.")
         return 1
 
     address = config["address"]
@@ -121,22 +119,17 @@ def main():
     logging_level = config["logging_level"]
     stop_on_failure = config["stop_on_failure"]
     port = config["serial_port"]
-    in_circuit_motor = config["in_circuit_motor"]
     
-    packet_data_dir = os.path.join(
-        script_dir,
-        "PacketData",
-        "Motor Current Feedback" if in_circuit_motor else "NoMotor Voltage Feedback"
-    )
-    packet_module_path = os.path.join(packet_data_dir, "PacketAcceptanceTest.py")
+    packet_data_dir = os.path.join(script_dir, "PacketData")
+    packet_module_path = os.path.join(packet_data_dir, "InterPacketAcceptanceTest.py")
 
     packet_module = load_packet_acceptance_module(
         packet_module_path,
-        "packet_acceptance_motor" if in_circuit_motor else "packet_acceptance_no_motor"
+        "packet_acceptance_no_motor"
     )
 
     DCCTesterRPC = packet_module.DCCTesterRPC
-    run_packet_acceptance_test = packet_module.run_packet_acceptance_test
+    run_interpacket_acceptance_test = packet_module.run_interpacket_acceptance_test
     log = packet_module.log
     set_log_level = packet_module.set_log_level
 
@@ -150,7 +143,6 @@ def main():
     log(1, f"  Number of passes:   {pass_count}")
     log(1, f"  Serial port:        {port}")
     log(1, f"  Locomotive address: {address}")
-    log(1, f"  In circuit motor:   {in_circuit_motor}")
     log(1, f"  Logging level:      {logging_level}")
     log(1, f"  Stop on failure:    {stop_on_failure}")
     log(1, "=" * 70)
@@ -180,7 +172,7 @@ def main():
             log(2, "")
             
             # Run the test
-            result = run_packet_acceptance_test(rpc, address, delay_ms, logging_level=logging_level)
+            result = run_interpacket_acceptance_test(rpc, address, delay_ms, logging_level=logging_level)
             
             if result.get("status") == "PASS":
                 passed_count += 1

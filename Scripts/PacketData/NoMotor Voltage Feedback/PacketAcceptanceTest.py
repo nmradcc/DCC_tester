@@ -243,7 +243,7 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
 
         # Step 4: Load and transmit the start packet
         log(1, "Step 4: Loading and transmitting motor start packet...")
-        response = rpc.send_rpc("command_station_load_packet", {"bytes": start_packet})
+        response = rpc.send_rpc("command_station_load_packet", {"bytes": start_packet, "replace": True})
 
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to load packet: {response}")
@@ -251,7 +251,7 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
             return {"status": "FAIL", "error": "Failed to load packet"}
 
         response = rpc.send_rpc("command_station_transmit_packet",
-                               {"count": 1, "delay_ms": 0})
+                       {"delay_ms": 0})
 
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to transmit packet: {response}")
@@ -277,14 +277,14 @@ def run_packet_acceptance_test(rpc, loco_address, inter_packet_delay_ms=1000, lo
         log(1, f"Step 7: Sending emergency stop packet to address {loco_address}...")
         estop_packet = make_emergency_stop_packet(loco_address)
 
-        response = rpc.send_rpc("command_station_load_packet", {"bytes": estop_packet})
+        response = rpc.send_rpc("command_station_load_packet", {"bytes": estop_packet, "replace": True})
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to load emergency stop packet: {response}")
             rpc.close()
             return {"status": "FAIL", "error": "Failed to load emergency stop packet"}
         log(2, "✓ Emergency stop packet loaded\n")
         response = rpc.send_rpc("command_station_transmit_packet",
-                               {"count": 1, "delay_ms": 0})
+                       {"delay_ms": 0})
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to transmit emergency stop packet: {response}")
             rpc.close()

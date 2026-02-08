@@ -179,6 +179,17 @@ static json command_station_load_packet_handler(const json& params) {
         };
     }
     
+    bool replace = false;
+    if (params.contains("replace")) {
+        if (!params["replace"].is_boolean()) {
+            return {
+                {"status", "error"},
+                {"message", "replace must be a boolean"}
+            };
+        }
+        replace = params["replace"].get<bool>();
+    }
+
     uint8_t bytes[DCC_MAX_PACKET_SIZE];
     uint8_t length = 0;
     
@@ -199,7 +210,14 @@ static json command_station_load_packet_handler(const json& params) {
         bytes[length++] = static_cast<uint8_t>(val);
     }
     
-    if (!CommandStation_LoadCustomPacket(bytes, length)) {
+    if (!CommandStation_LoadCustomPacket(bytes, length, replace)) {
+        if (CommandStation_IsCustomPacketQueueFull()) {
+            return {
+                {"status", "error"},
+                {"message", "Custom packet queue is full (max 3 packets)"},
+                {"queue_count", CommandStation_GetCustomPacketQueueCount()}
+            };
+        }
         return {
             {"status", "error"},
             {"message", "Failed to load packet"}
@@ -209,36 +227,24 @@ static json command_station_load_packet_handler(const json& params) {
     return {
         {"status", "ok"},
         {"message", "Packet loaded successfully"},
-        {"length", length}
+        {"length", length},
+        {"replace", replace}
     };
 }
 
 static json command_station_transmit_packet_handler(const json& params) {
-    uint32_t count = 1;  // Default to 1 transmission
     uint32_t delay_ms = 100;  // Default to 100ms delay
-    
-    // Parse optional count parameter
-    if (params.contains("count")) {
-        count = params["count"].get<uint32_t>();
-        if (count == 0) {
-            return {
-                {"status", "error"},
-                {"message", "Count must be greater than 0"}
-            };
-        }
-    }
     
     // Parse optional delay_ms parameter
     if (params.contains("delay_ms")) {
         delay_ms = params["delay_ms"].get<uint32_t>();
     }
     
-    CommandStation_TriggerTransmit(count, delay_ms);
+    CommandStation_TriggerTransmit(delay_ms);
     
     return {
         {"status", "ok"},
         {"message", "Packet transmission triggered"},
-        {"count", count},
         {"delay_ms", delay_ms}
     };
 }

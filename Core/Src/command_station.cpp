@@ -26,12 +26,12 @@ static int32_t zerobitDeltaP = 0;
 static int32_t zerobitDeltaN = 0;
 static bool currentPhaseIsP = true;  // Track current phase (P or N)
 
-// Custom packet storage
-static dcc::Packet customPacket;
-static bool customPacketLoaded = false;
+// Custom packet queue
+static constexpr uint8_t CUSTOM_PACKET_QUEUE_MAX = 3;
+static dcc::Packet customPacketQueue[CUSTOM_PACKET_QUEUE_MAX];
+static uint8_t customPacketQueueCount = 0;
 static bool customPacketTrigger = false;
-static uint32_t customPacketCount = 1;
-static uint32_t customPacketDelay = 100;
+static uint32_t customInterPacketDelay = 100;
 
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
@@ -164,21 +164,31 @@ void CommandStationThread(void *argument) {
     commandStationRunning = true;
     dcc::Packet packet{};
 
+    osDelay(100u);  // Short delay to ensure everything is set up and running
+
     // Check for custom packet trigger when not in loop mode
     if (commandStationLoop == 0) {
       printf("Command station started in custom packet mode\n");
       while (commandStationRunning) {
-        if (customPacketTrigger && customPacketLoaded) {
-          for (uint32_t i = 0; i < customPacketCount; i++) {
-            command_station.packet(customPacket);
-            printf("Custom packet transmitted [%lu/%lu]: ", i + 1, customPacketCount);
-            for (size_t j = 0; j < customPacket.size(); j++) {
-              printf("0x%02X ", customPacket[j]);
+        if (customPacketTrigger && customPacketQueueCount > 0) {
+          uint32_t total_packets = customPacketQueueCount;
+          uint32_t sent_packets = 0;
+          for (uint8_t index = 0; index < customPacketQueueCount; index++) {
+            const dcc::Packet& packet = customPacketQueue[index];
+            command_station.packet(packet);
+            sent_packets++;
+            printf("Custom packet transmitted [%lu/%lu] (packet %u/%u): ",
+                   static_cast<unsigned long>(sent_packets),
+                   static_cast<unsigned long>(total_packets),
+                   static_cast<unsigned>(index + 1),
+                   static_cast<unsigned>(customPacketQueueCount));
+            for (size_t j = 0; j < packet.size(); j++) {
+              printf("0x%02X ", packet[j]);
             }
             printf("lastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
             printf("\n");
-            if (i < customPacketCount - 1 && customPacketDelay > 0) {
-              osDelay(customPacketDelay);
+            if (sent_packets < total_packets && customInterPacketDelay > 0) {
+              osDelay(customInterPacketDelay);
             }
           }
           customPacketTrigger = false;
@@ -189,23 +199,28 @@ void CommandStationThread(void *argument) {
     else if (commandStationLoop == 1) {
       uint16_t current_ma = 0;
       // Test loop1: Basic function and speed control (address 3)
-      printf("Starting test loop1: Basic function and speed control\n");
+      printf("Starting test loop1: Basic function and speed control (address 3)\n");
+
+      printf("Loop1: stop\n");
+      // required to set direction for some decoders 
+      // (those that don't use the direction bit in the speed step packet but instead infer direction from speed 0 vs nonzero)
+      packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
+      command_station.packet(packet);
+      osDelay(100u);
+      // Set function F0
+      printf("Loop1: set function F0 Headlight\n");
+      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
+      command_station.packet(packet);
+      osDelay(100u);
       while (commandStationRunning) {
-        // Set function F0
-//        BSP_LED_Toggle(LED_GREEN);
-//        printf("Loop1: set function F0\n");
-//        packet = dcc::make_function_group_f4_f0_packet(3u, 0b1'0000u);
-//        command_station.packet(packet);
-        osDelay(2000u);
+
         // Accelerate forward
-        BSP_LED_Toggle(LED_GREEN);
         printf("Loop1: accelerate to speed step 42 forward\n");
         packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
         command_station.packet(packet);
-        osDelay(2000u);
+        osDelay(3000u);
 
         // Stop
-        BSP_LED_Toggle(LED_GREEN);
         printf("Loop1: stop (forward)\n");
 //printf("1 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
         packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 0u);
@@ -218,43 +233,19 @@ void CommandStationThread(void *argument) {
 // lastIdlePacketCount should have updated by now
 //printf("3 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
 
-        osDelay(2000u);
-
-        // Clear function
-//        BSP_LED_Toggle(LED_GREEN);
-//        printf("Loop1: clear function F0\n");
-//        packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
-//        command_station.packet(packet);
-//        osDelay(2000u);
-
-        // Set function F1
-//        BSP_LED_Toggle(LED_GREEN);
-//        printf("Loop1: set function F1\n");
-//        packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
-//        command_station.packet(packet);
-//        osDelay(2000u);
+        osDelay(1000u);
 
         // Accelerate reverse
-        BSP_LED_Toggle(LED_GREEN);
         printf("Loop1: accelerate to speed step 42 reverse\n");
         packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
         command_station.packet(packet);
-        osDelay(2000u);
-
+        osDelay(3000u);
 
         // Stop
-        BSP_LED_Toggle(LED_GREEN);
         printf("Loop1: stop (reverse)\n");
         packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
         command_station.packet(packet);
-        osDelay(2000u);
-
-        // Clear function
-//        BSP_LED_Toggle(LED_GREEN);
-//        printf("Loop1: clear function F1\n");
-//        packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0000u);
-//        command_station.packet(packet);
-//        osDelay(2000u);
+        osDelay(1000u);
       }
     }
     else if (commandStationLoop == 2) {
@@ -339,6 +330,8 @@ void CommandStationThread(void *argument) {
     }
     HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_1);
     __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
+    customPacketQueueCount = 0;
+    customPacketTrigger = false;
     
     // Keep semaphore acquired to prevent auto-restart
     // Explicit CommandStation_Start() call is required to run again
@@ -381,27 +374,42 @@ extern "C" bool CommandStation_Start(uint8_t loop)
   }
 }
 
-extern "C" bool CommandStation_LoadCustomPacket(const uint8_t* bytes, uint8_t length) {
+extern "C" bool CommandStation_LoadCustomPacket(const uint8_t* bytes, uint8_t length, bool replace) {
   if (!bytes || length == 0 || length > DCC_MAX_PACKET_SIZE) {
     return false;
   }
-  
-  customPacket.clear();
-  for (uint8_t i = 0; i < length; i++) {
-    customPacket.push_back(bytes[i]);
+  if (replace) {
+    customPacketQueueCount = 0;
+    customPacketTrigger = false;
   }
-  customPacketLoaded = true;
+  if (customPacketQueueCount >= CUSTOM_PACKET_QUEUE_MAX) {
+    return false;
+  }
+
+  dcc::Packet& packet = customPacketQueue[customPacketQueueCount];
+  packet.clear();
+  for (uint8_t i = 0; i < length; i++) {
+    packet.push_back(bytes[i]);
+  }
+  customPacketQueueCount++;
   customPacketTrigger = false;
-  
+
   return true;
 }
 
-extern "C" void CommandStation_TriggerTransmit(uint32_t count, uint32_t delay_ms) {
-  if (customPacketLoaded) {
-    customPacketCount = (count > 0) ? count : 1;
-    customPacketDelay = delay_ms;
+extern "C" void CommandStation_TriggerTransmit(uint32_t delay_ms) {
+  if (customPacketQueueCount > 0) {
+    customInterPacketDelay = delay_ms;
     customPacketTrigger = true;
   }
+}
+
+extern "C" bool CommandStation_IsCustomPacketQueueFull(void) {
+  return customPacketQueueCount >= CUSTOM_PACKET_QUEUE_MAX;
+}
+
+extern "C" uint8_t CommandStation_GetCustomPacketQueueCount(void) {
+  return customPacketQueueCount;
 }
 
 // Can be called from anywhere
