@@ -101,47 +101,31 @@ def calculate_dcc_checksum(bytes_list):
     return checksum
 
 
-def make_aux_io_packet(address, function_number, enabled):
+def make_aux_io_packet(address, function_mask):
     """
-    Create a DCC function group packet to control F1-F4.
+    Create a DCC function group packet to control F0-F4.
 
     Args:
         address: Locomotive address (0-127 for short address)
-        function_number: "F1", "F2", "F3", "F4" or integer 1-4
-        enabled: True to turn on, False to turn off
+        function_mask: Bitmask for F0-F4 (bit0=F0, bit1=F1, bit2=F2, bit3=F3, bit4=F4)
 
     Returns:
         List of packet bytes
     """
-    if isinstance(function_number, str):
-        normalized = function_number.strip().upper()
-        if not normalized.startswith("F"):
-            raise ValueError(f"Invalid function selector: {function_number}")
-        try:
-            function_index = int(normalized[1:])
-        except ValueError as exc:
-            raise ValueError(f"Invalid function selector: {function_number}") from exc
-    else:
-        function_index = int(function_number)
+    function_state = int(function_mask) & 0x1F
 
-    if function_index < 1 or function_index > 4:
-        raise ValueError(f"Function number must be 1-4, got {function_index}")
-
-    function_bit = 1 << (function_index - 1)
-    function_group = function_bit if enabled else 0
-
-    # Function group 1: 0b1000 F4 F3 F2 F1 (0x80 | function bits)
-    instruction = 0x80 | function_group
+    # Function group 1 encoding: 100 F4 F3 F2 F1 with F0 in bit 4
+    instruction = 0x80 | ((function_state & 0x01) << 4) | ((function_state & 0x1E) >> 1)
 
     packet = [address, instruction]
     checksum = calculate_dcc_checksum(packet)
     packet.append(checksum)
 
-    log(2, f"Aux IO packet for address {address}, {function_number}={'ON' if enabled else 'OFF'}:")
+    log(2, f"Aux IO packet for address {address}, mask=0x{function_state:02X}:")
     log(2, f"  Bytes: {' '.join(f'0x{b:02X}' for b in packet)}")
     log(2, "  Binary breakdown:")
     log(2, f"    Address:     0x{packet[0]:02X} ({packet[0]})")
-    log(2, f"    Instruction: 0x{packet[1]:02X} (function group F1-F4)")
+    log(2, f"    Instruction: 0x{packet[1]:02X} (function group F0-F4)")
     log(2, f"    Checksum:    0x{packet[2]:02X}\n")
 
     return packet
@@ -207,25 +191,25 @@ def run_interpacket_acceptance_test(rpc, loco_address, inter_packet_delay_ms=100
 
         # Step 2: Create and load F1 on packet (reset queue)
         log(1, "Step 2: Loading F1 ON packet (reset queue)...")
-        f1_packet = make_aux_io_packet(loco_address, "F1", True)
+        f1_packet = make_aux_io_packet(loco_address, 0b0010)
         response = rpc.send_rpc("command_station_load_packet", {"bytes": f1_packet, "replace": True})
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to load F1 packet: {response}")
             rpc.close()
             return {"status": "FAIL", "error": "Failed to load F1 packet"}
 
-        # Step 3: Load F2 on packet
-        log(1, "Step 3: Loading F2 ON packet...")
-        f2_packet = make_aux_io_packet(loco_address, "F2", True)
+        # Step 3: Load F1+F2 on packet
+        log(1, "Step 3: Loading F1+F2 ON packet...")
+        f2_packet = make_aux_io_packet(loco_address, 0b0110)
         response = rpc.send_rpc("command_station_load_packet", {"bytes": f2_packet, "replace": False})
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to load F2 packet: {response}")
             rpc.close()
             return {"status": "FAIL", "error": "Failed to load F2 packet"}
 
-        # Step 4: Load F3 on packet
-        log(1, "Step 4: Loading F3 ON packet...")
-        f3_packet = make_aux_io_packet(loco_address, "F3", True)
+        # Step 4: Load F1+F2+F3 on packet
+        log(1, "Step 4: Loading F1+F2+F3 ON packet...")
+        f3_packet = make_aux_io_packet(loco_address, 0b1110)
         response = rpc.send_rpc("command_station_load_packet", {"bytes": f3_packet, "replace": False})
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to load F3 packet: {response}")
@@ -280,8 +264,8 @@ def run_interpacket_acceptance_test(rpc, loco_address, inter_packet_delay_ms=100
         log(2, "\nTest sequence completed:")
         log(2, "  1. Started command station in custom packet mode")
         log(2, "  2. Loaded F1 ON packet (reset queue)")
-        log(2, "  3. Loaded F2 ON packet")
-        log(2, "  4. Loaded F3 ON packet")
+        log(2, "  3. Loaded F1+F2 ON packet")
+        log(2, "  4. Loaded F1+F2+F3 ON packet")
         log(2, f"  5. Triggered queue dump with {inter_packet_delay_ms} ms delay")
         log(2, "  6. Waited 0.5 seconds")
         log(2, "  7. Read IO1/IO2/IO3")
