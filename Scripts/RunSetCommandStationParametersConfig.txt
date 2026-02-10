@@ -1,0 +1,13 @@
+# Default configuration for RunSetCommandStationParameters.py
+# Use key=value pairs. Lines starting with # or ; are ignored.
+
+# logging_level 0=none 1=minimal 2=verbose
+logging_level=1
+serial_port=COM6
+
+# DCC command station parameters
+preamble_bits=17
+bit1_duration=58
+bit0_duration=100
+bidi_enable=false
+trigger_first_bit=false
