@@ -94,41 +94,6 @@ def load_config(config_path):
     }
 
 
-def load_timing_params(config_path):
-    """Load only DCC timing parameters from the config file."""
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Configuration file not found: {config_path}")
-
-    config = {}
-    with open(config_path, "r", encoding="utf-8") as config_file:
-        for raw_line in config_file:
-            line = raw_line.strip()
-            if not line or line.startswith("#") or line.startswith(";"):
-                continue
-            if "=" not in line:
-                raise ValueError(f"Invalid config line (expected key=value): {raw_line.strip()}")
-            key, value = line.split("=", 1)
-            config[key.strip()] = value.strip()
-
-    required_keys = {
-        "preamble_bits",
-        "bit1_duration",
-        "bit0_duration",
-        "trigger_first_bit",
-    }
-
-    missing = sorted(required_keys - set(config.keys()))
-    if missing:
-        raise ValueError(f"Missing required timing keys: {', '.join(missing)}")
-
-    return {
-        "preamble_bits": _parse_int(config.get("preamble_bits"), "preamble_bits"),
-        "bit1_duration": _parse_int(config.get("bit1_duration"), "bit1_duration"),
-        "bit0_duration": _parse_int(config.get("bit0_duration"), "bit0_duration"),
-        "trigger_first_bit": _parse_bool(config.get("trigger_first_bit"), "trigger_first_bit"),
-    }
-
-
 def run_acceptance_series(
     rpc,
     run_label,
@@ -335,11 +300,44 @@ def main():
                     break
 
                 try:
-                    timing_params = load_timing_params(config_path)
+                    updated_config = load_config(config_path)
                 except (FileNotFoundError, ValueError) as exc:
                     log(1, f"ERROR: {exc}")
                     exit_code = 1
                     break
+
+                if updated_config["serial_port"] != port:
+                    log(1, f"WARNING: serial_port change ignored (still {port})")
+
+                address = updated_config["address"]
+                delay_ms = updated_config["inter_packet_delay_ms"]
+                pass_count = updated_config["pass_count"]
+                logging_level = updated_config["logging_level"]
+                stop_on_failure = updated_config["stop_on_failure"]
+
+                if updated_config["in_circuit_motor"] != in_circuit_motor:
+                    in_circuit_motor = updated_config["in_circuit_motor"]
+                    packet_data_dir = os.path.join(
+                        script_dir,
+                        "PacketData",
+                        "Motor Current Feedback" if in_circuit_motor else "NoMotor Voltage Feedback"
+                    )
+                    packet_module_path = os.path.join(packet_data_dir, "PacketAcceptanceTest.py")
+                    packet_module = load_packet_acceptance_module(
+                        packet_module_path,
+                        "packet_acceptance_motor" if in_circuit_motor else "packet_acceptance_no_motor"
+                    )
+                    run_packet_acceptance_test = packet_module.run_packet_acceptance_test
+                    log = packet_module.log
+                    set_log_level = packet_module.set_log_level
+
+                set_log_level(logging_level)
+                timing_params = {
+                    "preamble_bits": updated_config["preamble_bits"],
+                    "bit1_duration": updated_config["bit1_duration"],
+                    "bit0_duration": updated_config["bit0_duration"],
+                    "trigger_first_bit": updated_config["trigger_first_bit"],
+                }
         finally:
             response = rpc.send_rpc("command_station_params", default_params)
             if response is None or response.get("status") != "ok":

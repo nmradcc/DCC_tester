@@ -1,6 +1,8 @@
 # Default configuration for RunTimingMarginLoopTest.py
 # Use key=value pairs. Lines starting with # or ; are ignored.
 
+serial_port=COM6
+
 # PacketAcceptance settings
 address=3
 inter_packet_delay_ms=1000
@@ -8,7 +10,6 @@ pass_count=1
 # logging_level 0=none 1=minimal 2=verbose
 logging_level=1
 stop_on_failure=true
-serial_port=COM6
 in_circuit_motor=true
 
 # Default DCC timing parameters
