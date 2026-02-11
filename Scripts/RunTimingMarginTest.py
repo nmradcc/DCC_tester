@@ -73,7 +73,6 @@ def load_config(config_path):
         "preamble_bits",
         "bit1_duration",
         "bit0_duration",
-        "bidi_enable",
         "trigger_first_bit",
         "min_bit1_duration",
         "max_bit1_duration",
@@ -101,7 +100,6 @@ def load_config(config_path):
         "preamble_bits": _parse_int(config.get("preamble_bits"), "preamble_bits"),
         "bit1_duration": _parse_int(config.get("bit1_duration"), "bit1_duration"),
         "bit0_duration": _parse_int(config.get("bit0_duration"), "bit0_duration"),
-        "bidi_enable": _parse_bool(config.get("bidi_enable"), "bidi_enable"),
         "trigger_first_bit": _parse_bool(config.get("trigger_first_bit"), "trigger_first_bit"),
         "min_bit1_duration": _parse_int(config.get("min_bit1_duration"), "min_bit1_duration"),
         "max_bit1_duration": _parse_int(config.get("max_bit1_duration"), "max_bit1_duration"),
@@ -177,7 +175,8 @@ def run_acceptance_series(
 
 
 def wait_for_button_press(rpc, log):
-    log(1, "Waiting for button press on IO16...")
+    log(1, "Press the user button to continue.")
+    log(1, "Waiting for button press...")
     was_pressed = False
 
     while True:
@@ -259,7 +258,6 @@ def main():
     log(1, f"  Preamble bits:          {config['preamble_bits']}")
     log(1, f"  Bit1 duration:          {config['bit1_duration']} us")
     log(1, f"  Bit0 duration:          {config['bit0_duration']} us")
-    log(1, f"  BiDi enable:            {config['bidi_enable']}")
     log(1, f"  Trigger first bit:      {config['trigger_first_bit']}")
     log(1, f"  Min bit1 duration:      {min_bit1_duration} us")
     log(1, f"  Max bit1 duration:      {max_bit1_duration} us")
@@ -278,7 +276,6 @@ def main():
             "preamble_bits": config["preamble_bits"],
             "bit1_duration": config["bit1_duration"],
             "bit0_duration": config["bit0_duration"],
-            "bidi_enable": config["bidi_enable"],
             "trigger_first_bit": config["trigger_first_bit"],
         }
 
@@ -295,17 +292,11 @@ def main():
             params_out = response.get("parameters", {})
             log(1, "")
             log(1, "Current Parameters:")
-            log(1, f"  Track voltage:      {params_out.get('track_voltage')}")
             log(1, f"  Preamble bits:      {params_out.get('preamble_bits')}")
             log(1, f"  Bit1 duration:      {params_out.get('bit1_duration')} us")
             log(1, f"  Bit0 duration:      {params_out.get('bit0_duration')} us")
-            log(1, f"  BiDi enable:        {params_out.get('bidi_enable')}")
-            log(1, f"  BiDi DAC:           {params_out.get('bidi_dac')}")
             log(1, f"  Trigger first bit:  {params_out.get('trigger_first_bit')}")
             log(1, "")
-
-        if wait_for_button:
-            wait_for_button_press(rpc, log)
 
         if not run_acceptance_series(
             rpc,
@@ -322,6 +313,10 @@ def main():
             return 1
 
         log(1, "Step 3: Setting minimum bit1 duration")
+
+        if wait_for_button:
+            wait_for_button_press(rpc, log)
+
         response = rpc.send_rpc("command_station_params", {"bit1_duration": min_bit1_duration})
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to set bit1 duration: {response}")
@@ -335,33 +330,40 @@ def main():
             params_out = response.get("parameters", {})
             log(1, "")
             log(1, "Current Parameters:")
-            log(1, f"  Track voltage:      {params_out.get('track_voltage')}")
             log(1, f"  Preamble bits:      {params_out.get('preamble_bits')}")
             log(1, f"  Bit1 duration:      {params_out.get('bit1_duration')} us")
             log(1, f"  Bit0 duration:      {params_out.get('bit0_duration')} us")
-            log(1, f"  BiDi enable:        {params_out.get('bidi_enable')}")
-            log(1, f"  BiDi DAC:           {params_out.get('bidi_dac')}")
             log(1, f"  Trigger first bit:  {params_out.get('trigger_first_bit')}")
             log(1, "")
 
-        if wait_for_button:
-            wait_for_button_press(rpc, log)
+        ok = False
+        try:
+            ok = run_acceptance_series(
+                rpc,
+                "Step 4: Running Packet Acceptance Test",
+                address,
+                delay_ms,
+                pass_count,
+                logging_level,
+                stop_on_failure,
+                log,
+                run_packet_acceptance_test
+            )
+        finally:
+            response = rpc.send_rpc("command_station_params", {"bit1_duration": config["bit1_duration"]})
+            if response is None or response.get("status") != "ok":
+                log(1, f"ERROR: Failed to restore bit1 duration: {response}")
+            else:
+                log(1, f"OK Bit1 duration restored to {config['bit1_duration']} us")
 
-        if not run_acceptance_series(
-            rpc,
-            "Step 4: Running Packet Acceptance Test",
-            address,
-            delay_ms,
-            pass_count,
-            logging_level,
-            stop_on_failure,
-            log,
-            run_packet_acceptance_test
-        ):
+        if not ok:
             rpc.close()
             return 1
 
         log(1, "Step 5: Setting maximum bit1 duration")
+        if wait_for_button:
+            wait_for_button_press(rpc, log)
+
         response = rpc.send_rpc("command_station_params", {"bit1_duration": max_bit1_duration})
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to set bit1 duration: {response}")
@@ -375,33 +377,40 @@ def main():
             params_out = response.get("parameters", {})
             log(1, "")
             log(1, "Current Parameters:")
-            log(1, f"  Track voltage:      {params_out.get('track_voltage')}")
             log(1, f"  Preamble bits:      {params_out.get('preamble_bits')}")
             log(1, f"  Bit1 duration:      {params_out.get('bit1_duration')} us")
             log(1, f"  Bit0 duration:      {params_out.get('bit0_duration')} us")
-            log(1, f"  BiDi enable:        {params_out.get('bidi_enable')}")
-            log(1, f"  BiDi DAC:           {params_out.get('bidi_dac')}")
             log(1, f"  Trigger first bit:  {params_out.get('trigger_first_bit')}")
             log(1, "")
 
-        if wait_for_button:
-            wait_for_button_press(rpc, log)
+        ok = False
+        try:
+            ok = run_acceptance_series(
+                rpc,
+                "Step 6: Running Packet Acceptance Test",
+                address,
+                delay_ms,
+                pass_count,
+                logging_level,
+                stop_on_failure,
+                log,
+                run_packet_acceptance_test
+            )
+        finally:
+            response = rpc.send_rpc("command_station_params", {"bit1_duration": config["bit1_duration"]})
+            if response is None or response.get("status") != "ok":
+                log(1, f"ERROR: Failed to restore bit1 duration: {response}")
+            else:
+                log(1, f"OK Bit1 duration restored to {config['bit1_duration']} us")
 
-        if not run_acceptance_series(
-            rpc,
-            "Step 6: Running Packet Acceptance Test",
-            address,
-            delay_ms,
-            pass_count,
-            logging_level,
-            stop_on_failure,
-            log,
-            run_packet_acceptance_test
-        ):
+        if not ok:
             rpc.close()
             return 1
 
         log(1, "Step 7: Setting minimum bit0 duration")
+        if wait_for_button:
+            wait_for_button_press(rpc, log)
+
         response = rpc.send_rpc("command_station_params", {"bit0_duration": min_bit0_duration})
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to set bit0 duration: {response}")
@@ -415,33 +424,40 @@ def main():
             params_out = response.get("parameters", {})
             log(1, "")
             log(1, "Current Parameters:")
-            log(1, f"  Track voltage:      {params_out.get('track_voltage')}")
             log(1, f"  Preamble bits:      {params_out.get('preamble_bits')}")
             log(1, f"  Bit1 duration:      {params_out.get('bit1_duration')} us")
             log(1, f"  Bit0 duration:      {params_out.get('bit0_duration')} us")
-            log(1, f"  BiDi enable:        {params_out.get('bidi_enable')}")
-            log(1, f"  BiDi DAC:           {params_out.get('bidi_dac')}")
             log(1, f"  Trigger first bit:  {params_out.get('trigger_first_bit')}")
             log(1, "")
 
-        if wait_for_button:
-            wait_for_button_press(rpc, log)
+        ok = False
+        try:
+            ok = run_acceptance_series(
+                rpc,
+                "Step 8: Running Packet Acceptance Test",
+                address,
+                delay_ms,
+                pass_count,
+                logging_level,
+                stop_on_failure,
+                log,
+                run_packet_acceptance_test
+            )
+        finally:
+            response = rpc.send_rpc("command_station_params", {"bit0_duration": config["bit0_duration"]})
+            if response is None or response.get("status") != "ok":
+                log(1, f"ERROR: Failed to restore bit0 duration: {response}")
+            else:
+                log(1, f"OK Bit0 duration restored to {config['bit0_duration']} us")
 
-        if not run_acceptance_series(
-            rpc,
-            "Step 8: Running Packet Acceptance Test",
-            address,
-            delay_ms,
-            pass_count,
-            logging_level,
-            stop_on_failure,
-            log,
-            run_packet_acceptance_test
-        ):
+        if not ok:
             rpc.close()
             return 1
 
         log(1, "Step 9: Setting maximum bit0 duration")
+        if wait_for_button:
+            wait_for_button_press(rpc, log)
+
         response = rpc.send_rpc("command_station_params", {"bit0_duration": max_bit0_duration})
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to set bit0 duration: {response}")
@@ -455,38 +471,44 @@ def main():
             params_out = response.get("parameters", {})
             log(1, "")
             log(1, "Current Parameters:")
-            log(1, f"  Track voltage:      {params_out.get('track_voltage')}")
             log(1, f"  Preamble bits:      {params_out.get('preamble_bits')}")
             log(1, f"  Bit1 duration:      {params_out.get('bit1_duration')} us")
             log(1, f"  Bit0 duration:      {params_out.get('bit0_duration')} us")
-            log(1, f"  BiDi enable:        {params_out.get('bidi_enable')}")
-            log(1, f"  BiDi DAC:           {params_out.get('bidi_dac')}")
             log(1, f"  Trigger first bit:  {params_out.get('trigger_first_bit')}")
             log(1, "")
 
-        if wait_for_button:
-            wait_for_button_press(rpc, log)
+        ok = False
+        try:
+            ok = run_acceptance_series(
+                rpc,
+                "Step 10: Running Packet Acceptance Test",
+                address,
+                delay_ms,
+                pass_count,
+                logging_level,
+                stop_on_failure,
+                log,
+                run_packet_acceptance_test
+            )
+        finally:
+            response = rpc.send_rpc("command_station_params", {"bit0_duration": config["bit0_duration"]})
+            if response is None or response.get("status") != "ok":
+                log(1, f"ERROR: Failed to restore bit0 duration: {response}")
+            else:
+                log(1, f"OK Bit0 duration restored to {config['bit0_duration']} us")
 
-        if not run_acceptance_series(
-            rpc,
-            "Step 10: Running Packet Acceptance Test",
-            address,
-            delay_ms,
-            pass_count,
-            logging_level,
-            stop_on_failure,
-            log,
-            run_packet_acceptance_test
-        ):
+        if not ok:
             rpc.close()
             return 1
 
         log(1, "Step 11: Restoring default command station parameters")
+        if wait_for_button:
+            wait_for_button_press(rpc, log)
+
         params = {
             "preamble_bits": config["preamble_bits"],
             "bit1_duration": config["bit1_duration"],
             "bit0_duration": config["bit0_duration"],
-            "bidi_enable": config["bidi_enable"],
             "trigger_first_bit": config["trigger_first_bit"],
         }
 
@@ -503,12 +525,9 @@ def main():
             params_out = response.get("parameters", {})
             log(1, "")
             log(1, "Current Parameters:")
-            log(1, f"  Track voltage:      {params_out.get('track_voltage')}")
             log(1, f"  Preamble bits:      {params_out.get('preamble_bits')}")
             log(1, f"  Bit1 duration:      {params_out.get('bit1_duration')} us")
             log(1, f"  Bit0 duration:      {params_out.get('bit0_duration')} us")
-            log(1, f"  BiDi enable:        {params_out.get('bidi_enable')}")
-            log(1, f"  BiDi DAC:           {params_out.get('bidi_dac')}")
             log(1, f"  Trigger first bit:  {params_out.get('trigger_first_bit')}")
             log(1, "")
 

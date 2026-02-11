@@ -1,4 +1,4 @@
-# Default configuration for RunTimingMarginTest.py
+# Default configuration for RunTimingMarginLoopTest.py
 # Use key=value pairs. Lines starting with # or ; are ignored.
 
 # PacketAcceptance settings
@@ -10,16 +10,9 @@ logging_level=1
 stop_on_failure=true
 serial_port=COM6
 in_circuit_motor=true
-wait_for_button=true
 
 # Default DCC timing parameters
 preamble_bits=17
 bit1_duration=58
 bit0_duration=100
 trigger_first_bit=true
-
-# Timing margin limits
-min_bit1_duration=52
-max_bit1_duration=64
-min_bit0_duration=90
-max_bit0_duration=1000
