@@ -347,6 +347,17 @@ def main():
             else:
                 log(1, "OK Command station parameters restored")
 
+            response = rpc.send_rpc("command_station_get_params", {})
+            if response is not None and response.get("status") == "ok":
+                params_out = response.get("parameters", {})
+                log(1, "")
+                log(1, "Restored Parameters:")
+                log(1, f"  Preamble bits:      {params_out.get('preamble_bits')}")
+                log(1, f"  Bit1 duration:      {params_out.get('bit1_duration')} us")
+                log(1, f"  Bit0 duration:      {params_out.get('bit0_duration')} us")
+                log(1, f"  Trigger first bit:  {params_out.get('trigger_first_bit')}")
+                log(1, "")
+
         if exit_code == 0:
             log(1, "Loop completed successfully")
         else:
