@@ -94,6 +94,41 @@ def load_config(config_path):
     }
 
 
+def load_timing_params(config_path):
+    """Load only DCC timing parameters from the config file."""
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+
+    config = {}
+    with open(config_path, "r", encoding="utf-8") as config_file:
+        for raw_line in config_file:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or line.startswith(";"):
+                continue
+            if "=" not in line:
+                raise ValueError(f"Invalid config line (expected key=value): {raw_line.strip()}")
+            key, value = line.split("=", 1)
+            config[key.strip()] = value.strip()
+
+    required_keys = {
+        "preamble_bits",
+        "bit1_duration",
+        "bit0_duration",
+        "trigger_first_bit",
+    }
+
+    missing = sorted(required_keys - set(config.keys()))
+    if missing:
+        raise ValueError(f"Missing required timing keys: {', '.join(missing)}")
+
+    return {
+        "preamble_bits": _parse_int(config.get("preamble_bits"), "preamble_bits"),
+        "bit1_duration": _parse_int(config.get("bit1_duration"), "bit1_duration"),
+        "bit0_duration": _parse_int(config.get("bit0_duration"), "bit0_duration"),
+        "trigger_first_bit": _parse_bool(config.get("trigger_first_bit"), "trigger_first_bit"),
+    }
+
+
 def run_acceptance_series(
     rpc,
     run_label,
@@ -241,14 +276,25 @@ def main():
         }
 
         exit_code = 0
+        timing_params = {
+            "preamble_bits": config["preamble_bits"],
+            "bit1_duration": config["bit1_duration"],
+            "bit0_duration": config["bit0_duration"],
+            "trigger_first_bit": config["trigger_first_bit"],
+        }
         try:
             while True:
+                log(1, "Timing parameters for this pass:")
+                log(1, f"  Preamble bits:     {timing_params['preamble_bits']}")
+                log(1, f"  Bit1 duration:     {timing_params['bit1_duration']} us")
+                log(1, f"  Bit0 duration:     {timing_params['bit0_duration']} us")
+                log(1, f"  Trigger first bit: {timing_params['trigger_first_bit']}")
                 log(1, "Step 1: Setting command station parameters")
                 params = {
-                    "preamble_bits": config["preamble_bits"],
-                    "bit1_duration": config["bit1_duration"],
-                    "bit0_duration": config["bit0_duration"],
-                    "trigger_first_bit": config["trigger_first_bit"],
+                    "preamble_bits": timing_params["preamble_bits"],
+                    "bit1_duration": timing_params["bit1_duration"],
+                    "bit0_duration": timing_params["bit0_duration"],
+                    "trigger_first_bit": timing_params["trigger_first_bit"],
                 }
 
                 response = rpc.send_rpc("command_station_params", params)
@@ -286,6 +332,13 @@ def main():
 
                 choice = input("Exit loop? [y/N]: ").strip().lower()
                 if choice in {"y", "yes"}:
+                    break
+
+                try:
+                    timing_params = load_timing_params(config_path)
+                except (FileNotFoundError, ValueError) as exc:
+                    log(1, f"ERROR: {exc}")
+                    exit_code = 1
                     break
         finally:
             response = rpc.send_rpc("command_station_params", default_params)
