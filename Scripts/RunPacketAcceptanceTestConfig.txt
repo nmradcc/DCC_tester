@@ -3,9 +3,10 @@
 
 address=3
 inter_packet_delay_ms=1000
-pass_count=10
+test_stop_delay=1000
+pass_count=1
 # logging_level 0=none 1=minimal 2=verbose
-logging_level=1
+logging_level=2
 stop_on_failure=false
 serial_port=COM6
-in_circuit_motor=false
+in_circuit_motor=true

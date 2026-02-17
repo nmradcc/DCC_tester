@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-RunPacketAcceptanceTest Script
-===============================
+RunBadBitTest Script
+====================
 
-This script runs multiple iterations of the PacketAcceptanceTest
-to verify NEM 671 inter-packet delay requirements.
+This script runs multiple iterations of the BadBitTest.
 
-The test is configured via RunPacketAcceptanceTestConfig.txt in the Scripts folder with:
+The test is configured via RunBadBitTestConfig.txt in the Scripts folder with:
     - Inter-packet delay (default: 1000ms)
     - Number of passes (default: 10)
     - COM port and locomotive address
+    - Flip mask (32-bit)
 
 If any iteration fails, the test aborts immediately.
 """
@@ -21,7 +21,8 @@ import importlib.util
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-def load_packet_acceptance_module(file_path, module_name):
+
+def load_bad_bit_module(file_path, module_name):
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Unable to load module from {file_path}")
@@ -47,7 +48,7 @@ def _parse_int(value, key):
     if value is None or str(value).strip() == "":
         raise ValueError(f"Missing integer value for '{key}'")
     try:
-        return int(str(value).strip())
+        return int(str(value).strip(), 0)
     except ValueError as exc:
         raise ValueError(f"Invalid integer value for '{key}': {value}") from exc
 
@@ -76,6 +77,7 @@ def load_test_config(config_path):
         "stop_on_failure",
         "serial_port",
         "in_circuit_motor",
+        "flip_mask",
         "test_stop_delay",
     }
 
@@ -91,30 +93,29 @@ def load_test_config(config_path):
         "stop_on_failure": _parse_bool(config.get("stop_on_failure"), "stop_on_failure"),
         "serial_port": config.get("serial_port"),
         "in_circuit_motor": _parse_bool(config.get("in_circuit_motor"), "in_circuit_motor"),
+        "flip_mask": _parse_int(config.get("flip_mask"), "flip_mask"),
         "test_stop_delay": _parse_int(config.get("test_stop_delay"), "test_stop_delay"),
     }
 
 
 def main():
     """Main entry point."""
-    
+
     print("=" * 70)
-    print("DCC Packet Acceptance Test Runner")
-    print("NEM 671 Compliance Testing")
+    print("DCC Bad Bit Test Runner")
     print("=" * 70)
     print()
-    print("This script will run multiple iterations of the Packet Acceptance")
-    print("test to verify NEM 671 compliance.")
+    print("This script will run multiple iterations of the Bad Bit Test.")
     print()
     print("If any iteration fails, the test will continue unless stop on failure is enabled.")
     print()
-    
-    config_path = os.path.join(script_dir, "RunPacketAcceptanceTestConfig.txt")
+
+    config_path = os.path.join(script_dir, "RunBadBitTestConfig.txt")
     try:
         config = load_test_config(config_path)
     except (FileNotFoundError, ValueError) as exc:
         print(f"ERROR: {exc}")
-        print("Please update RunPacketAcceptanceTestConfig.txt with valid values.")
+        print("Please update RunBadBitTestConfig.txt with valid values.")
         return 1
 
     address = config["address"]
@@ -124,17 +125,18 @@ def main():
     stop_on_failure = config["stop_on_failure"]
     port = config["serial_port"]
     in_circuit_motor = config["in_circuit_motor"]
+    flip_mask = config["flip_mask"]
     test_stop_delay = config["test_stop_delay"]
-    
-    packet_module_path = os.path.join(script_dir, "PacketData", "PacketAcceptanceTest.py")
 
-    packet_module = load_packet_acceptance_module(
+    packet_module_path = os.path.join(script_dir, "PacketData", "BadBitTest.py")
+
+    packet_module = load_bad_bit_module(
         packet_module_path,
-        "packet_acceptance"
+        "bad_bit_test",
     )
 
     DCCTesterRPC = packet_module.DCCTesterRPC
-    run_packet_acceptance_test = packet_module.run_packet_acceptance_test
+    run_bad_bit_test = packet_module.run_bad_bit_test
     log = packet_module.log
     set_log_level = packet_module.set_log_level
 
@@ -149,53 +151,50 @@ def main():
     log(1, f"  Serial port:        {port}")
     log(1, f"  Locomotive address: {address}")
     log(1, f"  In circuit motor:   {in_circuit_motor}")
+    log(1, f"  Flip mask:          0x{flip_mask:08X}")
     log(1, f"  Stop delay:         {test_stop_delay} ms")
     log(1, f"  Logging level:      {logging_level}")
     log(1, f"  Stop on failure:    {stop_on_failure}")
     log(1, "=" * 70)
     log(1, "")
-    
+
     log(2, "")
     log(2, "=" * 70)
     log(2, "Starting Test Run")
     log(2, "=" * 70)
     log(2, "")
-    
+
     try:
-        # Connect to DCC_tester
         log(2, f"Connecting to {port}...")
         rpc = DCCTesterRPC(port)
         log(2, "✓ Connected!\n")
-        
-        # Run test iterations
+
         passed_count = 0
         failed_count = 0
-        
+
         for i in range(1, pass_count + 1):
             log(2, "")
             log(2, "=" * 70)
             log(2, f"Test Pass {i} of {pass_count}")
             log(2, "=" * 70)
             log(2, "")
-            
-            # Run the test
-            result = run_packet_acceptance_test(
+
+            log(1, f"Step A: Running baseline test (flip_mask=0)")
+            result_nominal = run_bad_bit_test(
                 rpc,
                 address,
                 delay_ms,
                 logging_level=logging_level,
                 in_circuit_motor=in_circuit_motor,
+                flip_mask=0,
                 test_stop_delay_ms=test_stop_delay,
             )
-            
-            if result.get("status") == "PASS":
-                passed_count += 1
-                log(1, f"✓ Pass {i}/{pass_count} completed successfully")
-            else:
+
+            if result_nominal.get("status") != "PASS":
                 failed_count += 1
                 log(1, "")
-                log(1, f"✗ Pass {i}/{pass_count} FAILED")
-                log(1, f"Error: {result.get('error', 'Unknown error')}")
+                log(1, f"✗ Pass {i}/{pass_count} FAILED (baseline)")
+                log(1, f"Error: {result_nominal.get('error', 'Unknown error')}")
                 if stop_on_failure:
                     log(1, "")
                     log(1, "=" * 70)
@@ -208,8 +207,112 @@ def main():
                     log(1, "")
                     rpc.close()
                     return 1
-        
-        # All tests passed
+                continue
+
+            if flip_mask == 0:
+                log(1, "Flip mask is 0; testing all 32 bits")
+                all_bits_ok = True
+                for bit_index in range(32):
+                    bit_mask = 0x80000000 >> bit_index
+                    log(1, f"Step A: Baseline test for mask 0x{bit_mask:08X}")
+                    result_nominal = run_bad_bit_test(
+                        rpc,
+                        address,
+                        delay_ms,
+                        logging_level=logging_level,
+                        in_circuit_motor=in_circuit_motor,
+                        flip_mask=0,
+                        test_stop_delay_ms=test_stop_delay,
+                    )
+
+                    if result_nominal.get("status") != "PASS":
+                        failed_count += 1
+                        all_bits_ok = False
+                        log(1, "")
+                        log(1, f"✗ Pass {i}/{pass_count} FAILED (baseline)")
+                        log(1, f"Error: {result_nominal.get('error', 'Unknown error')}")
+                        if stop_on_failure:
+                            log(1, "")
+                            log(1, "=" * 70)
+                            log(1, "TEST ABORTED DUE TO FAILURE")
+                            log(1, "=" * 70)
+                            log(1, "\nResults Summary:")
+                            log(1, f"  Total passes run: {i}")
+                            log(1, f"  Passed: {passed_count}")
+                            log(1, f"  Failed: {failed_count}")
+                            log(1, "")
+                            rpc.close()
+                            return 1
+                        break
+
+                    log(1, f"Step B: Running bad-bit test (flip_mask=0x{bit_mask:08X})")
+                    result_bad = run_bad_bit_test(
+                        rpc,
+                        address,
+                        delay_ms,
+                        logging_level=logging_level,
+                        in_circuit_motor=in_circuit_motor,
+                        flip_mask=bit_mask,
+                        test_stop_delay_ms=test_stop_delay,
+                    )
+
+                    if result_bad.get("status") == "PASS":
+                        failed_count += 1
+                        all_bits_ok = False
+                        log(1, "")
+                        log(1, f"✗ Pass {i}/{pass_count} FAILED (bad-bit accepted)")
+                        log(1, f"Error: Bad-bit test unexpectedly passed for 0x{bit_mask:08X}")
+                        if stop_on_failure:
+                            log(1, "")
+                            log(1, "=" * 70)
+                            log(1, "TEST ABORTED DUE TO FAILURE")
+                            log(1, "=" * 70)
+                            log(1, "\nResults Summary:")
+                            log(1, f"  Total passes run: {i}")
+                            log(1, f"  Passed: {passed_count}")
+                            log(1, f"  Failed: {failed_count}")
+                            log(1, "")
+                            rpc.close()
+                            return 1
+                        break
+
+                if all_bits_ok:
+                    passed_count += 1
+                    log(1, f"✓ Pass {i}/{pass_count} completed successfully (all 32 bits)")
+                continue
+
+            log(1, f"Step B: Running bad-bit test (flip_mask=0x{flip_mask:08X})")
+            result_bad = run_bad_bit_test(
+                rpc,
+                address,
+                delay_ms,
+                logging_level=logging_level,
+                in_circuit_motor=in_circuit_motor,
+                flip_mask=flip_mask,
+                test_stop_delay_ms=test_stop_delay,
+            )
+
+            if result_bad.get("status") != "PASS":
+                passed_count += 1
+                log(1, f"✓ Pass {i}/{pass_count} completed successfully")
+            else:
+                failed_count += 1
+                log(1, "")
+                log(1, f"✗ Pass {i}/{pass_count} FAILED (bad-bit accepted)")
+                log(1, "Error: Bad-bit test unexpectedly passed")
+                if stop_on_failure:
+                    log(1, "")
+                    log(1, "=" * 70)
+                    log(1, "TEST ABORTED DUE TO FAILURE")
+                    log(1, "=" * 70)
+                    log(1, "\nResults Summary:")
+                    log(1, f"  Total passes run: {i}")
+                    log(1, f"  Passed: {passed_count}")
+                    log(1, f"  Failed: {failed_count}")
+                    log(1, "")
+                    rpc.close()
+                    return 1
+
         log(1, "")
         log(1, "=" * 70)
         log(1, "ALL TESTS COMPLETED SUCCESSFULLY")
@@ -222,11 +325,10 @@ def main():
         log(1, "")
         log(1, f"✓ All {pass_count} test passes completed with {delay_ms}ms inter-packet delay")
         log(1, "")
-        
-        # Close connection
+
         rpc.close()
         return 0
-        
+
     except serial.SerialException as e:
         log(1, f"\nERROR: Serial port error: {e}")
         log(1, f"Make sure {port} is the correct port and the device is connected.")
