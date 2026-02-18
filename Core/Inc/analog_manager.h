@@ -42,7 +42,9 @@ int analog_manager_init(void);
 int analog_manager_get_value(uint8_t adc_num, uint8_t channel, uint16_t *value);
 
 int get_voltage_feedback_mv(uint16_t *voltage_mv);
+int get_voltage_feedback_mv_averaged(uint16_t *voltage_mv, uint8_t num_samples, uint32_t sample_delay_ms);
 int get_current_feedback_ma(uint16_t *current_ma);
+int get_current_feedback_ma_averaged(uint16_t *current_ma, uint8_t num_samples, uint32_t sample_delay_ms);
 
 #ifdef __cplusplus
 }
