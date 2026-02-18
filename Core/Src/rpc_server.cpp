@@ -523,10 +523,62 @@ static json system_reboot_handler(const json& params) {
 }
 
 static json get_voltage_feedback_mv_handler(const json& params) {
-    (void)params;  // Unused parameter
-    
     uint16_t voltage_mv = 0;
     
+    // Check if averaging parameters are provided
+    if (params.contains("num_samples") && params.contains("sample_delay_ms")) {
+        // Validate num_samples
+        if (!params["num_samples"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "num_samples must be a positive integer"}
+            };
+        }
+        
+        // Validate sample_delay_ms
+        if (!params["sample_delay_ms"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "sample_delay_ms must be a positive integer"}
+            };
+        }
+        
+        uint8_t num_samples = params["num_samples"].get<uint8_t>();
+        uint32_t sample_delay_ms = params["sample_delay_ms"].get<uint32_t>();
+        
+        // Validate parameter limits
+        if (num_samples > 16) {
+            return {
+                {"status", "error"},
+                {"message", "num_samples must be between 1 and 16"}
+            };
+        }
+        
+        if (sample_delay_ms > 1000) {
+            return {
+                {"status", "error"},
+                {"message", "sample_delay_ms must be between 0 and 1000"}
+            };
+        }
+        
+        // Call the averaged version
+        if (get_voltage_feedback_mv_averaged(&voltage_mv, num_samples, sample_delay_ms) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to read voltage feedback (averaged)"}
+            };
+        }
+        
+        return {
+            {"status", "ok"},
+            {"voltage_mv", voltage_mv},
+            {"averaged", true},
+            {"num_samples", num_samples},
+            {"sample_delay_ms", sample_delay_ms}
+        };
+    }
+    
+    // No averaging parameters, use the basic version
     if (get_voltage_feedback_mv(&voltage_mv) != 0) {
         return {
             {"status", "error"},
@@ -541,10 +593,62 @@ static json get_voltage_feedback_mv_handler(const json& params) {
 }
 
 static json get_current_feedback_ma_handler(const json& params) {
-    (void)params;  // Unused parameter
-    
     uint16_t current_ma = 0;
     
+    // Check if averaging parameters are provided
+    if (params.contains("num_samples") && params.contains("sample_delay_ms")) {
+        // Validate num_samples
+        if (!params["num_samples"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "num_samples must be a positive integer"}
+            };
+        }
+        
+        // Validate sample_delay_ms
+        if (!params["sample_delay_ms"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "sample_delay_ms must be a positive integer"}
+            };
+        }
+        
+        uint8_t num_samples = params["num_samples"].get<uint8_t>();
+        uint32_t sample_delay_ms = params["sample_delay_ms"].get<uint32_t>();
+        
+        // Validate parameter limits
+        if (num_samples > 16) {
+            return {
+                {"status", "error"},
+                {"message", "num_samples must be between 1 and 16"}
+            };
+        }
+        
+        if (sample_delay_ms > 1000) {
+            return {
+                {"status", "error"},
+                {"message", "sample_delay_ms must be between 0 and 1000"}
+            };
+        }
+        
+        // Call the averaged version
+        if (get_current_feedback_ma_averaged(&current_ma, num_samples, sample_delay_ms) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to read current feedback (averaged)"}
+            };
+        }
+        
+        return {
+            {"status", "ok"},
+            {"current_ma", current_ma},
+            {"averaged", true},
+            {"num_samples", num_samples},
+            {"sample_delay_ms", sample_delay_ms}
+        };
+    }
+    
+    // No averaging parameters, use the basic version
     if (get_current_feedback_ma(&current_ma) != 0) {
         return {
             {"status", "error"},

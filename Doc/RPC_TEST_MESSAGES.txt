@@ -505,7 +505,40 @@ Note: Returns track voltage feedback in millivolts (mV).
 
 -------------------------------------------------------------------------------
 
-7.2 Get Current Feedback
+7.2 Get Voltage Feedback (Averaged)
+-------------------------------------
+Request (with custom sampling):
+{"method":"get_voltage_feedback_mv","params":{"num_samples":10,"sample_delay_ms":50}}
+
+Expected Response:
+{"status":"ok","voltage_mv":15250,"averaged":true,"num_samples":10,"sample_delay_ms":50}
+
+Note: Returns averaged track voltage feedback in millivolts (mV).
+- Performs multiple ADC readings with configurable delay between samples
+- Averages the raw ADC values before scaling to millivolts
+- Useful for reducing noise and getting stable readings
+
+**IMPORTANT: Response will be delayed while sampling is in progress.**
+Total delay = (num_samples × sample_delay_ms) + ADC conversion time per sample (~10ms)
+Example: 10 samples × 50ms delay = ~500ms minimum response time
+
+Parameters:
+- num_samples: Number of samples to average (1-16, required)
+- sample_delay_ms: Delay between samples in milliseconds (0-1000, required)
+
+Examples:
+- Fast averaging (10 samples, 10ms between): {"num_samples":10,"sample_delay_ms":10}
+- Slow averaging (16 samples, 100ms between): {"num_samples":16,"sample_delay_ms":100}
+- No delay (5 samples, back-to-back): {"num_samples":5,"sample_delay_ms":0}
+
+Error Cases:
+- num_samples > 16: {"status":"error","message":"num_samples must be between 1 and 16"}
+- sample_delay_ms > 1000: {"status":"error","message":"sample_delay_ms must be between 0 and 1000"}
+- Missing parameters: falls back to basic single-sample reading (section 7.1)
+
+-------------------------------------------------------------------------------
+
+7.3 Get Current Feedback
 --------------------------
 Request:
 {"method":"get_current_feedback_ma","params":{}}
@@ -518,6 +551,39 @@ Note: Returns track current feedback in milliamps (mA).
 - Scale factor: 0.5 mA per ADC count
 - Resolution: 12-bit (0-4095 counts)
 - Typical range: 0-2047 mA (0-2.047A)
+
+-------------------------------------------------------------------------------
+
+7.4 Get Current Feedback (Averaged)
+-------------------------------------
+Request (with custom sampling):
+{"method":"get_current_feedback_ma","params":{"num_samples":10,"sample_delay_ms":50}}
+
+Expected Response:
+{"status":"ok","current_ma":2485,"averaged":true,"num_samples":10,"sample_delay_ms":50}
+
+Note: Returns averaged track current feedback in milliamps (mA).
+- Performs multiple ADC readings with configurable delay between samples
+- Averages the raw ADC values before scaling to milliamps
+- Useful for reducing noise and getting stable readings
+
+**IMPORTANT: Response will be delayed while sampling is in progress.**
+Total delay = (num_samples × sample_delay_ms) + ADC conversion time per sample (~10ms)
+Example: 10 samples × 50ms delay = ~500ms minimum response time
+
+Parameters:
+- num_samples: Number of samples to average (1-16, required)
+- sample_delay_ms: Delay between samples in milliseconds (0-1000, required)
+
+Examples:
+- Fast averaging (10 samples, 10ms between): {"num_samples":10,"sample_delay_ms":10}
+- Slow averaging (16 samples, 100ms between): {"num_samples":16,"sample_delay_ms":100}
+- No delay (5 samples, back-to-back): {"num_samples":5,"sample_delay_ms":0}
+
+Error Cases:
+- num_samples > 16: {"status":"error","message":"num_samples must be between 1 and 16"}
+- sample_delay_ms > 1000: {"status":"error","message":"sample_delay_ms must be between 0 and 1000"}
+- Missing parameters: falls back to basic single-sample reading (section 7.3)
 
 ===============================================================================
 9. ERROR CASES
@@ -651,6 +717,16 @@ Step 3: Read current feedback
 {"method":"get_current_feedback_ma","params":{}}
 
 Step 4: Repeat steps 2-3 as needed for monitoring
+
+Alternative Step 2: Read averaged voltage feedback (more stable in noisy environments)
+{"method":"get_voltage_feedback_mv","params":{"num_samples":10,"sample_delay_ms":50}}
+
+Alternative Step 3: Read averaged current feedback (more stable in noisy environments)
+{"method":"get_current_feedback_ma","params":{"num_samples":10,"sample_delay_ms":50}}
+
+Note: Averaging reduces noise but takes longer (10 samples × 50ms delay = ~500ms total)
+      The RPC response will be delayed until all samples are collected and averaged.
+      Use lower num_samples or sample_delay_ms for faster updates at the cost of more noise.
 
 -------------------------------------------------------------------------------
 
@@ -994,8 +1070,8 @@ Available RPC Methods:
 14. parameters_restore                   - Restore parameters from flash (excludes override params)
 15. parameters_factory_reset             - Reset all parameters to factory defaults (excludes override params)
 16. system_reboot                        - Reboot the microcontroller
-17. get_voltage_feedback_mv              - Get track voltage feedback in millivolts
-18. get_current_feedback_ma              - Get track current feedback in milliamps
+17. get_voltage_feedback_mv              - Get track voltage feedback in millivolts (supports optional averaging)
+18. get_current_feedback_ma              - Get track current feedback in milliamps (supports optional averaging)
 19. get_gpio_input                       - Read individual GPIO input pin (IO1-IO16)
 20. get_gpio_inputs                      - Read all GPIO inputs as 16-bit word
 21. configure_gpio_output                - Configure GPIO pin as output with initial state

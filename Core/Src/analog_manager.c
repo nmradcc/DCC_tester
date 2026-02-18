@@ -222,6 +222,42 @@ int get_voltage_feedback_mv(uint16_t *voltage_mv)
 }
 
 
+int get_voltage_feedback_mv_averaged(uint16_t *voltage_mv, uint8_t num_samples, uint32_t sample_delay_ms)
+{
+    if (voltage_mv == NULL) {
+        return -1;
+    }
+
+    if (num_samples == 0) {
+        num_samples = 1;
+    }
+
+    uint32_t sum = 0;
+    uint16_t adc_value = 0;
+
+    // Collect samples with delay
+    for (uint8_t i = 0; i < num_samples; i++) {
+        if (analog_manager_get_value(1, 6, &adc_value) != 0) {
+            return -1;
+        }
+        sum += adc_value;
+
+        // Delay between samples (except after the last sample)
+        if (i < num_samples - 1 && sample_delay_ms > 0) {
+            osDelay(sample_delay_ms);
+        }
+    }
+
+    // Calculate average
+    uint16_t avg_adc_value = (uint16_t)(sum / num_samples);
+
+    // Convert averaged ADC value to millivolts
+    *voltage_mv = (uint16_t)((float)avg_adc_value * VOLTAGE_FEEDBACK_SCALE_FACTOR_MV);
+
+    return 0;
+}
+
+
 int get_current_feedback_ma(uint16_t *current_ma)
 {
     if (current_ma == NULL) {
@@ -235,6 +271,42 @@ int get_current_feedback_ma(uint16_t *current_ma)
 
     // Convert ADC value to milliamps  (0.5ma per ADC count) 
     *current_ma = (uint16_t)(adc_value / CURRENT_FEEDBACK_SCALE_FACTOR_MA);
+
+    return 0;
+}
+
+
+int get_current_feedback_ma_averaged(uint16_t *current_ma, uint8_t num_samples, uint32_t sample_delay_ms)
+{
+    if (current_ma == NULL) {
+        return -1;
+    }
+
+    if (num_samples == 0) {
+        num_samples = 1;
+    }
+
+    uint32_t sum = 0;
+    uint16_t adc_value = 0;
+
+    // Collect samples with delay
+    for (uint8_t i = 0; i < num_samples; i++) {
+        if (analog_manager_get_value(2, 2, &adc_value) != 0) {
+            return -1;
+        }
+        sum += adc_value;
+
+        // Delay between samples (except after the last sample)
+        if (i < num_samples - 1 && sample_delay_ms > 0) {
+            osDelay(sample_delay_ms);
+        }
+    }
+
+    // Calculate average
+    uint16_t avg_adc_value = (uint16_t)(sum / num_samples);
+
+    // Convert averaged ADC value to milliamps (0.5ma per ADC count)
+    *current_ma = (uint16_t)(avg_adc_value / CURRENT_FEEDBACK_SCALE_FACTOR_MA);
 
     return 0;
 }
