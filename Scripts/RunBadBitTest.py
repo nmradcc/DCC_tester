@@ -5,11 +5,9 @@ RunBadBitTest Script
 
 This script runs multiple iterations of the BadBitTest.
 
-The test is configured via RunBadBitTestConfig.txt in the Scripts folder with:
-    - Inter-packet delay (default: 1000ms)
-    - Number of passes (default: 10)
-    - COM port and locomotive address
-    - Flip mask (32-bit)
+The test is configured via:
+    - SystemConfig.txt (global settings: serial port, in-circuit motor, logging level)
+    - RunBadBitTestConfig.txt (test-specific settings: address, delays, flip mask, etc.)
 
 If any iteration fails, the test aborts immediately.
 """
@@ -21,6 +19,10 @@ import importlib.util
 import msvcrt
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Import system configuration
+sys.path.insert(0, script_dir)
+import System
 
 
 def load_bad_bit_module(file_path, module_name):
@@ -74,10 +76,7 @@ def load_test_config(config_path):
         "address",
         "inter_packet_delay_ms",
         "pass_count",
-        "logging_level",
         "stop_on_failure",
-        "serial_port",
-        "in_circuit_motor",
         "flip_mask",
         "test_stop_delay",
         "wait_key_press",
@@ -91,10 +90,7 @@ def load_test_config(config_path):
         "address": _parse_int(config.get("address"), "address"),
         "inter_packet_delay_ms": _parse_int(config.get("inter_packet_delay_ms"), "inter_packet_delay_ms"),
         "pass_count": _parse_int(config.get("pass_count"), "pass_count"),
-        "logging_level": _parse_int(config.get("logging_level"), "logging_level"),
         "stop_on_failure": _parse_bool(config.get("stop_on_failure"), "stop_on_failure"),
-        "serial_port": config.get("serial_port"),
-        "in_circuit_motor": _parse_bool(config.get("in_circuit_motor"), "in_circuit_motor"),
         "flip_mask": _parse_int(config.get("flip_mask"), "flip_mask"),
         "test_stop_delay": _parse_int(config.get("test_stop_delay"), "test_stop_delay"),
         "wait_key_press": _parse_bool(config.get("wait_key_press"), "wait_key_press"),
@@ -102,8 +98,8 @@ def load_test_config(config_path):
 
 
 def wait_for_key_press(rpc, log):
-    """Wait for any key press. 'c' or 'C' triggers capture_screen, any other key continues."""
-    log(1, "Press any key to continue (or 'c' to capture screen)...")
+    """Wait for any key press. 'c' captures screen, 'q' quits, any other key continues."""
+    log(1, "Press any key to continue ('c' to capture screen, 'q' to quit)...")
     
     # Wait for key press
     key = msvcrt.getch()
@@ -115,22 +111,12 @@ def wait_for_key_press(rpc, log):
         key_char = ''
     
     if key_char == 'c':
-        log(1, "✓ 'c' pressed - capturing screen...")
-        # Call external capture_screen.py module
-        capture_screen_path = os.path.join(script_dir, "capture_screen.py")
-        if os.path.exists(capture_screen_path):
-            try:
-                capture_module = load_bad_bit_module(capture_screen_path, "capture_screen_module")
-                if hasattr(capture_module, 'main'):
-                    capture_module.main()
-                elif hasattr(capture_module, 'capture_screen'):
-                    capture_module.capture_screen()
-                else:
-                    log(1, "Warning: capture_screen.py found but no main() or capture_screen() function")
-            except Exception as e:
-                log(1, f"Error running capture_screen.py: {e}")
-        else:
-            log(1, "Warning: capture_screen.py not found in Scripts folder")
+        log(1, "✓ 'c' pressed - capturing screen, press Enter or add optional file name prefix text...")
+        # Call System module's capture_screen function with base prefix, still allows user to add text
+        System.capture_screen(prefix="bad_bit_test", interactive=True)
+    elif key_char == 'q':
+        log(1, "✓ 'q' pressed - quitting test...")
+        raise KeyboardInterrupt("User requested early exit")
     else:
         log(1, "✓ Key pressed, continuing...")
 
@@ -155,16 +141,21 @@ def main():
         print("Please update RunBadBitTestConfig.txt with valid values.")
         return 1
 
+    # Get system-level configuration
+    sys_config = System.get_config()
+
     address = config["address"]
     delay_ms = config["inter_packet_delay_ms"]
     pass_count = config["pass_count"]
-    logging_level = config["logging_level"]
     stop_on_failure = config["stop_on_failure"]
-    port = config["serial_port"]
-    in_circuit_motor = config["in_circuit_motor"]
     flip_mask = config["flip_mask"]
     test_stop_delay = config["test_stop_delay"]
     wait_key_press = config["wait_key_press"]
+    
+    # Get system-level settings
+    logging_level = sys_config.logging_level
+    port = sys_config.serial_port
+    in_circuit_motor = sys_config.in_circuit_motor
 
     packet_module_path = os.path.join(script_dir, "PacketData", "BadBitTest.py")
 
@@ -184,14 +175,17 @@ def main():
     log(1, "=" * 70)
     log(1, "Configuration Summary:")
     log(1, "=" * 70)
-    log(1, f"  Inter-packet delay: {delay_ms} ms")
-    log(1, f"  Number of passes:   {pass_count}")
+    log(1, "System Parameters:")
     log(1, f"  Serial port:        {port}")
-    log(1, f"  Locomotive address: {address}")
     log(1, f"  In circuit motor:   {in_circuit_motor}")
-    log(1, f"  Flip mask:          0x{flip_mask:08X}")
-    log(1, f"  Stop delay:         {test_stop_delay} ms")
     log(1, f"  Logging level:      {logging_level}")
+    log(1, "")
+    log(1, "Test Parameters:")
+    log(1, f"  Locomotive address: {address}")
+    log(1, f"  Inter-packet delay: {delay_ms} ms")
+    log(1, f"  Test stop delay:    {test_stop_delay} ms")
+    log(1, f"  Number of passes:   {pass_count}")
+    log(1, f"  Flip mask:          0x{flip_mask:08X}")
     log(1, f"  Stop on failure:    {stop_on_failure}")
     log(1, f"  Wait key press:     {wait_key_press}")
     log(1, "=" * 70)
@@ -285,6 +279,7 @@ def main():
                         break
 
                     if wait_key_press:
+                        log(1, "")
                         wait_for_key_press(rpc, log)
 
                     log(1, f"Step B: Running bad-bit test (flip_mask=0x{bit_mask:08X})")
@@ -332,6 +327,7 @@ def main():
                 continue
 
             if wait_key_press:
+                log(1, "")
                 wait_for_key_press(rpc, log)
 
             log(1, f"Step B: Running bad-bit test (flip_mask=0x{flip_mask:08X})")
@@ -366,8 +362,8 @@ def main():
                     rpc.close()
                     return 1
 
-            # Wait for key press before next iteration
-            if wait_key_press and i < pass_count:
+            # Wait for key press after Step B
+            if wait_key_press:
                 log(1, "")
                 wait_for_key_press(rpc, log)
 
