@@ -1,0 +1,11 @@
+# ReadManufacturerIdCvConfig.txt
+# Service mode direct bit verify with best-effort ACK detection
+
+serial_port=COM6
+cv_number=8
+ack_current_threshold_ma=20
+ack_window_ms=20
+repeats_per_bit=3
+inter_packet_delay_ms=0
+preamble_bits=25
+logging_level=1
