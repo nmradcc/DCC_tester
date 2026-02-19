@@ -181,11 +181,15 @@ def read_io13_io14(rpc):
 
 
 def read_current_ma(rpc):
-    response = rpc.send_rpc("get_current_feedback_ma", {})
+    response = rpc.send_rpc("get_current_feedback_ma", {"num_samples": 4, "sample_delay_ms": 25})
     if response is None or response.get("status") != "ok":
         log(1, f"ERROR: Failed to read current: {response}")
         return None
     return response.get("current_ma", 0)
+
+
+
+    # TODO: Implement capture monitor logic here
 
 
 def run_bad_bit_test(
@@ -336,7 +340,7 @@ def run_bad_bit_test(
         if in_circuit_motor:
             current_increase = motor_on_current_ma - motor_off_current_ma
             current_decrease = motor_on_current_ma - motor_stopped_current_ma
-            min_current_delta_ma = 1
+            min_current_delta_ma = 10
             test_pass = (current_increase >= min_current_delta_ma and current_decrease >= min_current_delta_ma)
 
             motor_stopped_ok = current_decrease >= min_current_delta_ma

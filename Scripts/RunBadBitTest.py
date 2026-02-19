@@ -18,6 +18,7 @@ import sys
 import os
 import serial
 import importlib.util
+import msvcrt
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -79,6 +80,7 @@ def load_test_config(config_path):
         "in_circuit_motor",
         "flip_mask",
         "test_stop_delay",
+        "wait_key_press",
     }
 
     missing = sorted(required_keys - set(config.keys()))
@@ -95,7 +97,42 @@ def load_test_config(config_path):
         "in_circuit_motor": _parse_bool(config.get("in_circuit_motor"), "in_circuit_motor"),
         "flip_mask": _parse_int(config.get("flip_mask"), "flip_mask"),
         "test_stop_delay": _parse_int(config.get("test_stop_delay"), "test_stop_delay"),
+        "wait_key_press": _parse_bool(config.get("wait_key_press"), "wait_key_press"),
     }
+
+
+def wait_for_key_press(rpc, log):
+    """Wait for any key press. 'c' or 'C' triggers capture_screen, any other key continues."""
+    log(1, "Press any key to continue (or 'c' to capture screen)...")
+    
+    # Wait for key press
+    key = msvcrt.getch()
+    
+    # Decode the key
+    try:
+        key_char = key.decode('utf-8').lower()
+    except:
+        key_char = ''
+    
+    if key_char == 'c':
+        log(1, "✓ 'c' pressed - capturing screen...")
+        # Call external capture_screen.py module
+        capture_screen_path = os.path.join(script_dir, "capture_screen.py")
+        if os.path.exists(capture_screen_path):
+            try:
+                capture_module = load_bad_bit_module(capture_screen_path, "capture_screen_module")
+                if hasattr(capture_module, 'main'):
+                    capture_module.main()
+                elif hasattr(capture_module, 'capture_screen'):
+                    capture_module.capture_screen()
+                else:
+                    log(1, "Warning: capture_screen.py found but no main() or capture_screen() function")
+            except Exception as e:
+                log(1, f"Error running capture_screen.py: {e}")
+        else:
+            log(1, "Warning: capture_screen.py not found in Scripts folder")
+    else:
+        log(1, "✓ Key pressed, continuing...")
 
 
 def main():
@@ -127,6 +164,7 @@ def main():
     in_circuit_motor = config["in_circuit_motor"]
     flip_mask = config["flip_mask"]
     test_stop_delay = config["test_stop_delay"]
+    wait_key_press = config["wait_key_press"]
 
     packet_module_path = os.path.join(script_dir, "PacketData", "BadBitTest.py")
 
@@ -155,6 +193,7 @@ def main():
     log(1, f"  Stop delay:         {test_stop_delay} ms")
     log(1, f"  Logging level:      {logging_level}")
     log(1, f"  Stop on failure:    {stop_on_failure}")
+    log(1, f"  Wait key press:     {wait_key_press}")
     log(1, "=" * 70)
     log(1, "")
 
@@ -245,6 +284,9 @@ def main():
                             return 1
                         break
 
+                    if wait_key_press:
+                        wait_for_key_press(rpc, log)
+
                     log(1, f"Step B: Running bad-bit test (flip_mask=0x{bit_mask:08X})")
                     result_bad = run_bad_bit_test(
                         rpc,
@@ -276,10 +318,21 @@ def main():
                             return 1
                         break
 
+                    # Wait for key press before next bit (after Step B completes)
+                    if wait_key_press and bit_index < 31:
+                        log(1, "")
+                        wait_for_key_press(rpc, log)
+
                 if all_bits_ok:
                     passed_count += 1
                     log(1, f"✓ Pass {i}/{pass_count} completed successfully (all 32 bits)")
+                    if wait_key_press and i < pass_count:
+                        log(1, "")
+                        wait_for_key_press(rpc, log)
                 continue
+
+            if wait_key_press:
+                wait_for_key_press(rpc, log)
 
             log(1, f"Step B: Running bad-bit test (flip_mask=0x{flip_mask:08X})")
             result_bad = run_bad_bit_test(
@@ -312,6 +365,11 @@ def main():
                     log(1, "")
                     rpc.close()
                     return 1
+
+            # Wait for key press before next iteration
+            if wait_key_press and i < pass_count:
+                log(1, "")
+                wait_for_key_press(rpc, log)
 
         log(1, "")
         log(1, "=" * 70)

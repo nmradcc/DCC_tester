@@ -182,7 +182,7 @@ def send_packet(rpc, packet_bytes):
 
 
 def read_current_ma(rpc):
-    response = rpc.send_rpc("get_current_feedback_ma", {})
+    response = rpc.send_rpc("get_current_feedback_ma", {"num_samples": 4, "sample_delay_ms": 25})
     if response is None or response.get("status") != "ok":
         return None
     return response.get("current_ma")
@@ -191,7 +191,7 @@ def read_current_ma(rpc):
 def wait_for_button_press(rpc):
     log(1, "Press USER button to continue...")
     while True:
-        response = rpc.send_rpc("get_gpio_input", {"pin": 16}, quiet=True)
+        response = rpc.send_rpc("get_gpio_input", {"pin": 16})
         if response is not None and response.get("status") == "ok":
             if response.get("value") == 1:
                 time.sleep(0.1)

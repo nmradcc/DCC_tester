@@ -174,7 +174,7 @@ def read_io13_io14(rpc):
 
 
 def read_current_ma(rpc):
-    response = rpc.send_rpc("get_current_feedback_ma", {})
+    response = rpc.send_rpc("get_current_feedback_ma", {"num_samples": 4, "sample_delay_ms": 25})
     if response is None or response.get("status") != "ok":
         log(1, f"ERROR: Failed to read current: {response}")
         return None
