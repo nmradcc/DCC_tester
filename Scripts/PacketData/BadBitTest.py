@@ -188,10 +188,6 @@ def read_current_ma(rpc):
     return response.get("current_ma", 0)
 
 
-
-    # TODO: Implement capture monitor logic here
-
-
 def run_bad_bit_test(
     rpc,
     loco_address,
