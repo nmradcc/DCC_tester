@@ -9,12 +9,12 @@ serial_port=COM6
 # Set to true if testing with motor connected
 in_circuit_motor=false
 
-# Logging level (1=normal, 2=verbose, 3=debug)
+# Logging level (0=none, 1=normal, 2=verbose)
 logging_level=1
 
 # Save logs to file (true/false)
 # Note: Console/screen output is always displayed, this only controls file logging
-save_logs=true
+save_logs=false
 
 # Log directory path (relative to Scripts folder or absolute path)
 log_directory=c:\tmp\logs

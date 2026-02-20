@@ -33,7 +33,11 @@ def set_log_level(level):
 
 def log(level, message):
     if LOG_LEVEL >= level:
-        print(message)
+        if LOG_LEVEL == 2:
+            timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+            print(f"[{timestamp}] {message}")
+        else:
+            print(message)
 
 
 class DCCTesterRPC:
