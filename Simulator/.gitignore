@@ -1,0 +1,18 @@
+# Simulator log directory (auto-generated)
+simulator_logs/
+
+# Parsed log outputs
+*_pairs.json
+*_scenario.json
+*_summary.json
+parsed_*
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor files
+.vscode/
+*.swp
+*~

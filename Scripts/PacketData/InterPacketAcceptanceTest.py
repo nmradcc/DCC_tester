@@ -16,6 +16,7 @@ import json
 import serial
 import time
 import sys
+from datetime import datetime
 
 
 LOG_LEVEL = 1  # 0 = none, 1 = minimum, 2 = verbose
