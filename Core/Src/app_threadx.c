@@ -33,6 +33,7 @@
 #include "SUSI.h"
 #include "parameter_manager.h"
 #include "analog_manager.h"
+#include "legacy_mode.h"
 
 /* USER CODE END Includes */
 
@@ -116,6 +117,8 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   CommandStation_Init();
   /* Create the decoder task ... but don't start it */
   Decoder_Init();
+  /* Initialize legacy sender mode state */
+  LegacyMode_Init();
   /* Create the SUSI Master task ... but don't start it */
   SUSI_Master_Init(&hspi5);
   /* Create the SUSI Slave task ... but don't start it */

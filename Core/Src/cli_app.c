@@ -17,6 +17,7 @@
 #include "command_station.h"
 #include "decoder.h"
 #include "susi.h"
+#include "legacy_mode.h"
 
 // Declare _write prototype to avoid implicit declaration error
 int _write(int file, char *ptr, int len);
@@ -185,6 +186,40 @@ void trigger_command(const char *arg1, const char *arg2) {
     }
 }
 
+void legacy_command(const char *arg1, const char *arg2) {
+    if (strcasecmp(arg1, "start") == 0) {
+        if (LegacyMode_Start()) {
+            printf("Legacy mode started (reserved timer TIM%u)\n", LegacyMode_GetReservedTimer());
+        } else {
+            printf("Legacy mode already running\n");
+        }
+    }
+    else if (strcasecmp(arg1, "stop") == 0) {
+        if (LegacyMode_Stop()) {
+            printf("Legacy mode stopped\n");
+        } else {
+            printf("Legacy mode not running\n");
+        }
+    }
+    else if (strcasecmp(arg1, "status") == 0 || arg1[0] == '\0') {
+        printf("Legacy mode: %s (reserved timer TIM%u)\n",
+               LegacyMode_IsRunning() ? "running" : "stopped",
+               LegacyMode_GetReservedTimer());
+    }
+    else if (strcasecmp(arg1, "timer") == 0) {
+        uint8_t timer_id = (uint8_t)atoi(arg2);
+        if (LegacyMode_SetReservedTimer(timer_id)) {
+            printf("Legacy mode reserved timer set to TIM%u\n", LegacyMode_GetReservedTimer());
+        } else {
+            printf("Unsupported timer TIM%u. Allowed for now: TIM14\n", timer_id);
+        }
+    }
+    else {
+        printf("Unknown legacy command: %s\n", arg1);
+        printf("Usage: legacy <start|stop|status|timer> [14]\n");
+    }
+}
+
 
 
 void hello_command(const char *arg1, const char *arg2) {
@@ -252,11 +287,17 @@ Command cmd_rpcs = {
     .help = "RPC Server: rpc_server <start|stop>",
     .next = &cmd_trigger
 };
+Command cmd_legacy = {
+    .name = "legacy",
+    .execute = legacy_command,
+    .help = "Legacy sender mode: legacy <start|stop|status|timer> [14]",
+    .next = &cmd_rpcs
+};
 Command cmd_cms = {
     .name = "cms", 
     .execute = command_station_command,
     .help = "Command Station: cms <start|stop> [0|1|2|3|loop|loop1|loop2|loop3]",
-    .next = &cmd_rpcs
+    .next = &cmd_legacy
 };
 Command cmd_dec = {
     .name = "dec", 
