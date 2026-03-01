@@ -18,6 +18,7 @@ import sys
 import os
 import serial
 import importlib.util
+import msvcrt
 import System
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -72,8 +73,10 @@ def load_test_config(config_path):
     required_keys = {
         "address",
         "inter_packet_delay_ms",
+        "delta_ms",
         "pass_count",
         "stop_on_failure",
+        "wait_key_press",
     }
 
     missing = sorted(required_keys - set(config.keys()))
@@ -83,9 +86,32 @@ def load_test_config(config_path):
     return {
         "address": _parse_int(config.get("address"), "address"),
         "inter_packet_delay_ms": _parse_int(config.get("inter_packet_delay_ms"), "inter_packet_delay_ms"),
+        "delta_ms": _parse_int(config.get("delta_ms"), "delta_ms"),
         "pass_count": _parse_int(config.get("pass_count"), "pass_count"),
         "stop_on_failure": _parse_bool(config.get("stop_on_failure"), "stop_on_failure"),
+        "wait_key_press": _parse_bool(config.get("wait_key_press"), "wait_key_press"),
     }
+
+
+def wait_for_key_press(log):
+    """Wait for any key press. 'c' captures screen, 'q' quits, any other key continues."""
+    log(1, "Press any key to continue ('c' to capture screen, 'q' to quit)...")
+
+    key = msvcrt.getch()
+
+    try:
+        key_char = key.decode('utf-8').lower()
+    except Exception:
+        key_char = ''
+
+    if key_char == 'c':
+        log(1, "✓ 'c' pressed - capturing screen, press Enter or add optional file name prefix text...")
+        System.capture_screen(prefix="interpacket_test", interactive=True)
+    elif key_char == 'q':
+        log(1, "✓ 'q' pressed - quitting test...")
+        raise KeyboardInterrupt("User requested early exit")
+    else:
+        log(1, "✓ Key pressed, continuing...")
 
 
 def main():
@@ -114,9 +140,15 @@ def main():
     sys_config = System.get_config()
 
     address = config["address"]
-    delay_ms = config["inter_packet_delay_ms"]
+    start_delay_ms = config["inter_packet_delay_ms"]
+    delta_ms = config["delta_ms"]
     pass_count = config["pass_count"]
     stop_on_failure = config["stop_on_failure"]
+    wait_key_press = config["wait_key_press"]
+
+    if delta_ms <= 0:
+        print("ERROR: delta_ms must be > 0")
+        return 1
     
     # Get system-level settings
     logging_level = sys_config.logging_level
@@ -147,9 +179,11 @@ def main():
     log(1, "")
     log(1, "Test Parameters:")
     log(1, f"  Locomotive address: {address}")
-    log(1, f"  Inter-packet delay: {delay_ms} ms")
+    log(1, f"  Initial delay:      {start_delay_ms} ms")
+    log(1, f"  Delay decrement:    {delta_ms} ms")
     log(1, f"  Number of passes:   {pass_count}")
     log(1, f"  Stop on failure:    {stop_on_failure}")
+    log(1, f"  Wait key press:     {wait_key_press}")
     log(1, "=" * 70)
     log(1, "")
     
@@ -168,6 +202,7 @@ def main():
         # Run test iterations
         passed_count = 0
         failed_count = 0
+        total_tests = 0
         
         for i in range(1, pass_count + 1):
             log(2, "")
@@ -175,48 +210,75 @@ def main():
             log(2, f"Test Pass {i} of {pass_count}")
             log(2, "=" * 70)
             log(2, "")
-            
-            # Run the test
-            result = run_interpacket_acceptance_test(rpc, address, delay_ms, logging_level=logging_level)
-            
-            if result.get("status") == "PASS":
-                passed_count += 1
-                log(1, f"✓ Pass {i}/{pass_count} completed successfully")
-            else:
-                failed_count += 1
-                log(1, "")
-                log(1, f"✗ Pass {i}/{pass_count} FAILED")
-                log(1, f"Error: {result.get('error', 'Unknown error')}")
-                if stop_on_failure:
+
+            current_delay_ms = start_delay_ms
+            while current_delay_ms >= 0:
+                total_tests += 1
+                log(1, f"Step A: Inter-packet delay test at {current_delay_ms} ms")
+
+                result = run_interpacket_acceptance_test(
+                    rpc,
+                    address,
+                    current_delay_ms,
+                    logging_level=logging_level,
+                )
+
+                if result.get("status") == "PASS":
+                    passed_count += 1
+                    log(1, f"✓ Delay {current_delay_ms} ms passed")
+                else:
+                    failed_count += 1
                     log(1, "")
-                    log(1, "=" * 70)
-                    log(1, "TEST ABORTED DUE TO FAILURE")
-                    log(1, "=" * 70)
-                    log(1, "\nResults Summary:")
-                    log(1, f"  Total passes run: {i}")
-                    log(1, f"  Passed: {passed_count}")
-                    log(1, f"  Failed: {failed_count}")
+                    log(1, f"✗ Delay {current_delay_ms} ms FAILED")
+                    log(1, f"Error: {result.get('error', 'Unknown error')}")
+
+                    if stop_on_failure:
+                        log(1, "")
+                        log(1, "=" * 70)
+                        log(1, "TEST ABORTED DUE TO FAILURE")
+                        log(1, "=" * 70)
+                        log(1, "\nResults Summary:")
+                        log(1, f"  Pass index:        {i}/{pass_count}")
+                        log(1, f"  Delay at failure:  {current_delay_ms} ms")
+                        log(1, f"  Total tests run:   {total_tests}")
+                        log(1, f"  Passed:            {passed_count}")
+                        log(1, f"  Failed:            {failed_count}")
+                        log(1, "")
+                        rpc.close()
+                        return 1
+
+                next_delay_ms = current_delay_ms - delta_ms
+
+                if wait_key_press and next_delay_ms >= 0:
                     log(1, "")
-                    rpc.close()
-                    return 1
+                    wait_for_key_press(log)
+
+                current_delay_ms = next_delay_ms
         
-        # All tests passed
+        # All tests complete
         log(1, "")
         log(1, "=" * 70)
-        log(1, "ALL TESTS COMPLETED SUCCESSFULLY")
+        if failed_count == 0:
+            log(1, "ALL TESTS COMPLETED SUCCESSFULLY")
+        else:
+            log(1, "TEST RUN COMPLETED WITH FAILURES")
         log(1, "=" * 70)
         log(1, "\nResults Summary:")
-        log(1, f"  Total passes: {pass_count}")
-        log(1, f"  Passed: {passed_count}")
-        log(1, f"  Failed: {failed_count}")
-        log(1, "  Success rate: 100%")
+        log(1, f"  Pass loops:         {pass_count}")
+        log(1, f"  Delay range:        {start_delay_ms} -> 0 ms (step {delta_ms} ms)")
+        log(1, f"  Total tests:        {total_tests}")
+        log(1, f"  Passed:             {passed_count}")
+        log(1, f"  Failed:             {failed_count}")
+        if total_tests > 0:
+            success_rate = (passed_count * 100.0) / total_tests
+            log(1, f"  Success rate:       {success_rate:.1f}%")
         log(1, "")
-        log(1, f"✓ All {pass_count} test passes completed with {delay_ms}ms inter-packet delay")
+        log(1, "✓ Delay sweep complete")
         log(1, "")
         
         # Close connection
         rpc.close()
-        return 0
+        return 0 if failed_count == 0 else 1
         
     except serial.SerialException as e:
         log(1, f"\nERROR: Serial port error: {e}")
