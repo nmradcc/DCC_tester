@@ -53,9 +53,6 @@ TX_QUEUE ux_app_MsgQueue;
 TX_QUEUE rpc_rxqueue;
 static TX_THREAD ux_cdc_read_thread;
 
-static ULONG ux_app_msg_queue_buffer[APP_QUEUE_SIZE];
-static ULONG rpc_rx_queue_buffer[RX_POOL_SIZE];
-
 TX_EVENT_FLAGS_GROUP EventFlag;
 #if defined ( __ICCARM__ ) /* IAR Compiler */
   #pragma data_alignment=4
@@ -85,24 +82,6 @@ UINT MX_USBX_Device_Init(VOID *memory_ptr)
   /* USER CODE END MX_USBX_Device_Init 0 */
 
   /* USER CODE BEGIN MX_USBX_Device_Init 1 */
-  if (tx_queue_create(&ux_app_MsgQueue,
-                      "USB Device Msg Queue",
-                      TX_1_ULONG,
-                      ux_app_msg_queue_buffer,
-                      sizeof(ux_app_msg_queue_buffer)) != TX_SUCCESS)
-  {
-    return TX_QUEUE_ERROR;
-  }
-
-  if (tx_queue_create(&rpc_rxqueue,
-                      "RPC RX Queue",
-                      TX_1_ULONG,
-                      rpc_rx_queue_buffer,
-                      sizeof(rpc_rx_queue_buffer)) != TX_SUCCESS)
-  {
-    return TX_QUEUE_ERROR;
-  }
-
   if (tx_event_flags_create(&EventFlag, "USBX Event Flags") != TX_SUCCESS)
   {
     return TX_GROUP_ERROR;
@@ -125,6 +104,40 @@ UINT MX_USBX_Device_Init(VOID *memory_ptr)
                        TX_AUTO_START) != TX_SUCCESS)
   {
     return TX_THREAD_ERROR;
+  }
+
+  if (tx_byte_allocate(byte_pool,
+                       (VOID **) &pointer,
+                       APP_QUEUE_SIZE * sizeof(ULONG),
+                       TX_NO_WAIT) != TX_SUCCESS)
+  {
+    return TX_POOL_ERROR;
+  }
+
+  if (tx_queue_create(&ux_app_MsgQueue,
+                      "Message Queue app",
+                      TX_1_ULONG,
+                      pointer,
+                      APP_QUEUE_SIZE * sizeof(ULONG)) != TX_SUCCESS)
+  {
+    return TX_QUEUE_ERROR;
+  }
+
+  if (tx_byte_allocate(byte_pool,
+                       (VOID **) &pointer,
+                       APP_QUEUE_SIZE * sizeof(ULONG),
+                       TX_NO_WAIT) != TX_SUCCESS)
+  {
+    return TX_POOL_ERROR;
+  }
+
+  if (tx_queue_create(&rpc_rxqueue,
+                      "RPC RX Queue",
+                      TX_1_ULONG,
+                      pointer,
+                      APP_QUEUE_SIZE * sizeof(ULONG)) != TX_SUCCESS)
+  {
+    return TX_QUEUE_ERROR;
   }
   /* USER CODE END MX_USBX_Device_Init 1 */
 
@@ -267,11 +280,7 @@ static VOID app_ux_device_thread_entry(ULONG thread_input)
     /* USER CODE END MAIN_INITIALIZE_STACK_ERROR */
   }
 
-  USB_Device_State_Msg = START_USB_DEVICE;
-  if (tx_queue_send(&ux_app_MsgQueue, &USB_Device_State_Msg, TX_NO_WAIT) != TX_SUCCESS)
-  {
-    Error_Handler();
-  }
+  HAL_PCD_Start(&hpcd_USB_DRD_FS);
 
   /* Wait for message queue to start/stop the device */
   while(1)

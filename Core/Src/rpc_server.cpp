@@ -1227,6 +1227,22 @@ static json command_station_get_params_handler(const json& params) {
     };
 }
 
+static json system_usb_status_handler(const json& params) {
+    (void)params;
+
+    uint32_t device_configured = 0;
+    uint32_t cdc_active = 0;
+    UsbCdcAcm_GetStatus(&device_configured, &cdc_active);
+
+    return {
+        {"status", "ok"},
+        {"usb", {
+            {"device_configured", device_configured != 0U},
+            {"cdc_active", cdc_active != 0U}
+        }}
+    };
+}
+
 // ---------------- RTOS Task ----------------
 
 RpcServer server;
@@ -1263,6 +1279,7 @@ void RpcServerThread(void* argument) {
     server.register_method("set_gpio_output", set_gpio_output_handler);
     server.register_method("get_rtc_datetime", get_rtc_datetime_handler);
     server.register_method("set_rtc_datetime", set_rtc_datetime_handler);
+    server.register_method("system_usb_status", system_usb_status_handler);
 
     while (rpcServerRunning) {
         std::string request;
@@ -1270,7 +1287,7 @@ void RpcServerThread(void* argument) {
         if (tx_queue_receive(&rpc_rxqueue, &msg, 10) == TX_SUCCESS)
         {
             std::string request(msg->data, msg->length);
-            std::string response = server.handle(request);
+            std::string response = server.handle(request) + "\r\n";
             /* transport_send(response);*/
             /* Send response data over the class cdc_acm_write */
             UsbCdcAcm_Write((const uint8_t *)response.c_str(),

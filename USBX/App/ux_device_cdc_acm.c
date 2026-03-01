@@ -212,6 +212,30 @@ uint32_t UsbCdcAcm_Write(const uint8_t* data, uint32_t length, uint32_t* actual_
   return (uint32_t)status;
 }
 
+void UsbCdcAcm_GetStatus(uint32_t* device_configured, uint32_t* cdc_active)
+{
+  uint32_t configured = 0;
+  uint32_t active = (cdc_acm != UX_NULL) ? 1U : 0U;
+
+  if (_ux_system_slave != UX_NULL)
+  {
+    if (_ux_system_slave->ux_system_slave_device.ux_slave_device_state == UX_DEVICE_CONFIGURED)
+    {
+      configured = 1U;
+    }
+  }
+
+  if (device_configured != UX_NULL)
+  {
+    *device_configured = configured;
+  }
+
+  if (cdc_active != UX_NULL)
+  {
+    *cdc_active = active;
+  }
+}
+
 /**
   * @brief  USBX CDC ACM RX thread entry
   * @param  thread_input: Not used
