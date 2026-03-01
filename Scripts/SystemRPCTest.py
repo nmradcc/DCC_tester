@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-SystemTest.py
-=============
+SystemRPCTest.py
+================
 
 Quick RPC connectivity test for DCC_tester.
 - Loads serial port from SystemConfig.txt (key: serial_port)
+- Runs USB preflight via system_usb_status
 - Sends one JSON-RPC echo request
 - Prints PASS/FAIL and exits with code 0/1
 """
@@ -45,11 +46,17 @@ def main() -> int:
     port = load_serial_port()
     baudrate = 115200
 
-    request_obj = {
+    status_request_obj = {
+        "method": "system_usb_status",
+        "params": {},
+    }
+    status_request_line = json.dumps(status_request_obj) + "\r\n"
+
+    echo_request_obj = {
         "method": "echo",
         "params": {"message": "system_test"},
     }
-    request_line = json.dumps(request_obj) + "\r\n"
+    echo_request_line = json.dumps(echo_request_obj) + "\r\n"
 
     print("=" * 60)
     print("DCC_tester RPC Echo System Test")
@@ -69,61 +76,55 @@ def main() -> int:
             ser.reset_input_buffer()
             ser.reset_output_buffer()
 
-                status_request_obj = {
-                    "method": "system_usb_status",
-                    "params": {},
-                }
-                status_request_line = json.dumps(status_request_obj) + "\r\n"
-
-                print("Preflight: Query USB status")
-                print(f"-> {status_request_line.strip()}")
-                ser.write(status_request_line.encode("utf-8"))
-                ser.flush()
-
-                response_line = ser.readline().decode("utf-8", errors="replace").strip()
-                print(f"<- {response_line}")
-
-                if not response_line:
-                    print("\nFAIL: No response to system_usb_status.")
-                    return 1
-
-                try:
-                    status_response = json.loads(response_line)
-                except json.JSONDecodeError:
-                    print("\nFAIL: system_usb_status response is not valid JSON.")
-                    return 1
-
-                if status_response.get("status") != "ok":
-                    print("\nFAIL: system_usb_status returned error.")
-                    return 1
-
-                usb_status = status_response.get("usb", {})
-                device_configured = bool(usb_status.get("device_configured", False))
-                cdc_active = bool(usb_status.get("cdc_active", False))
-
-                print(f"USB configured: {device_configured}")
-                print(f"CDC active:     {cdc_active}")
-
-                if not device_configured or not cdc_active:
-                    print("\nFAIL: USB preflight not ready (device not configured or CDC inactive).")
-                    return 1
-
-                print("\nPreflight OK: Running echo test")
-            print(f"-> {request_line.strip()}")
-            ser.write(request_line.encode("utf-8"))
+            print("Preflight: Query USB status")
+            print(f"-> {status_request_line.strip()}")
+            ser.write(status_request_line.encode("utf-8"))
             ser.flush()
 
             response_line = ser.readline().decode("utf-8", errors="replace").strip()
             print(f"<- {response_line}")
 
             if not response_line:
-                print("\nFAIL: No response received.")
+                print("\nFAIL: No response to system_usb_status.")
+                return 1
+
+            try:
+                status_response = json.loads(response_line)
+            except json.JSONDecodeError:
+                print("\nFAIL: system_usb_status response is not valid JSON.")
+                return 1
+
+            if status_response.get("status") != "ok":
+                print("\nFAIL: system_usb_status returned error.")
+                return 1
+
+            usb_status = status_response.get("usb", {})
+            device_configured = bool(usb_status.get("device_configured", False))
+            cdc_active = bool(usb_status.get("cdc_active", False))
+
+            print(f"USB configured: {device_configured}")
+            print(f"CDC active:     {cdc_active}")
+
+            if not device_configured or not cdc_active:
+                print("\nFAIL: USB preflight not ready (device not configured or CDC inactive).")
+                return 1
+
+            print("\nPreflight OK: Running echo test")
+            print(f"-> {echo_request_line.strip()}")
+            ser.write(echo_request_line.encode("utf-8"))
+            ser.flush()
+
+            response_line = ser.readline().decode("utf-8", errors="replace").strip()
+            print(f"<- {response_line}")
+
+            if not response_line:
+                print("\nFAIL: No response to echo request.")
                 return 1
 
             try:
                 response = json.loads(response_line)
             except json.JSONDecodeError:
-                print("\nFAIL: Response is not valid JSON.")
+                print("\nFAIL: Echo response is not valid JSON.")
                 return 1
 
             if response.get("status") == "ok" and "echo" in response:

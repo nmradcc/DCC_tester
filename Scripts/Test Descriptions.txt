@@ -9,17 +9,21 @@ DCC bit one duration = 58
 DCC bit zero duration = 100
 
 Default user options are:
+From RunPacketAcceptanceTestConfig.txt:
 address=3
 inter_packet_delay_ms=1000
-pass_count=10
+test_stop_delay=1000
+pass_count=3
+stop_on_failure=false
+
+From SystemConfig.txt:
 # logging_level 0=none 1=minimal 2=verbose
 logging_level=1
-stop_on_failure=false
 serial_port=COM6
 in_circuit_motor=false
 
 The test can be run with or without the motor in circuit.
-The Pass/Fail critera is slightly different depending on in_circuit_motor selection.
+The Pass/Fail criteria are slightly different depending on in_circuit_motor selection.
 
 The test involves starting the locomotive decoder to 1/2 speed reverse,
 waiting a delay then sending an Emergency Stop command. Checks are made
@@ -27,12 +31,124 @@ throughout to verify the decoder received and operated on the commands.
 
 With in_circuit_motor=true current feedback is used. The baseline off current is
 initially measured then again when running and when stopped.
-The pass critera inforces the current increased when started and decreased back to baseline
+The pass criteria enforce that the current increases when started and decreases back toward baseline
 off when stopped.
 
 With in_circuit_motor=false voltage feedback is used. The M+ and M- motor
 leads are sensed via optocoupled logic inputs. Again the logic is sampled throughout
 and similar Pass/Fail logic is used.
+
+
+2. RunTimingMarginTest
+
+This test checks timing margin robustness by running PacketAcceptanceTest under
+different DCC bit timing conditions.
+
+Each pass runs 4 timing margin checks:
+- Minimum bit1 duration
+- Maximum bit1 duration
+- Minimum bit0 duration
+- Maximum bit0 duration
+
+For each margin check:
+- Step A runs a baseline PacketAcceptanceTest with default timing (should pass)
+- Step B runs PacketAcceptanceTest with one modified timing value (should pass)
+
+Default user options are:
+From RunTimingMarginTestConfig.txt:
+address=3
+inter_packet_delay_ms=1000
+pass_count=1
+stop_on_failure=false
+wait_key_press=false
+preamble_bits=17
+bit1_duration=58
+bit0_duration=100
+trigger_first_bit=true
+min_bit1_duration=52
+max_bit1_duration=64
+min_bit0_duration=90
+max_bit0_duration=200
+
+From SystemConfig.txt:
+# logging_level 0=none 1=minimal 2=verbose
+logging_level=1
+serial_port=COM6
+in_circuit_motor=false
+
+The script restores default timing parameters on failure or exit.
+
+
+3. RunInterPacketAcceptanceTest
+
+This test verifies inter-packet timing behavior using function packets and IO feedback.
+
+The runner executes a delay sweep for each pass:
+- Start at inter_packet_delay_ms
+- Decrement by delta_ms
+- Continue until 0 ms is tested
+
+At each delay point, the test sequence is:
+- Start command station in custom packet mode
+- Queue three function packets (F1, then F1+F2, then F1+F2+F3)
+- Trigger transmit with the current delay value
+- Read IO1/IO2/IO3 and evaluate pass/fail
+
+Optional controls:
+- wait_key_press=true pauses between delay steps
+- stop_on_failure=true aborts immediately on first failure
+
+Default user options are:
+From RunInterPacketAcceptanceTestConfig.txt:
+address=3
+inter_packet_delay_ms=200
+delta_ms=10
+pass_count=1
+stop_on_failure=false
+wait_key_press=false
+
+From SystemConfig.txt:
+# logging_level 0=none 1=minimal 2=verbose
+logging_level=1
+serial_port=COM6
+
+Pass criterion:
+IO1, IO2, and IO3 are all LOW after the transmit sequence.
+
+
+4. RunBadBitTest
+
+This test validates rejection behavior by comparing:
+- Step A baseline (flip_mask=0, should PASS)
+- Step B bad-bit case (flip_mask applied, should FAIL)
+
+If flip_mask=0 in config, the script tests all 32 bit positions one at a time
+(starting at 0x80000000 and shifting right each test).
+
+Default user options are:
+From RunBadBitTestConfig.txt:
+address=3
+inter_packet_delay_ms=1000
+test_stop_delay=2000
+pass_count=1
+stop_on_failure=false
+wait_key_press=false
+flip_mask=0x00000000
+
+From SystemConfig.txt:
+# logging_level 0=none 1=minimal 2=verbose
+logging_level=1
+serial_port=COM6
+in_circuit_motor=false
+
+BadBitTest packet behavior:
+- Start packet is standard half-speed reverse packet
+- Stop packet is an address-directed stop packet
+- flip_mask is applied to the stop packet bytes before transmit
+
+Pass/Fail behavior:
+- Baseline must PASS
+- Modified (bad-bit) test should not PASS
 
 
 
