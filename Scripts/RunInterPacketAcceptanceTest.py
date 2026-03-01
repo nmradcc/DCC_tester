@@ -18,6 +18,7 @@ import sys
 import os
 import serial
 import importlib.util
+import System
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -72,9 +73,7 @@ def load_test_config(config_path):
         "address",
         "inter_packet_delay_ms",
         "pass_count",
-        "logging_level",
         "stop_on_failure",
-        "serial_port",
     }
 
     missing = sorted(required_keys - set(config.keys()))
@@ -85,9 +84,7 @@ def load_test_config(config_path):
         "address": _parse_int(config.get("address"), "address"),
         "inter_packet_delay_ms": _parse_int(config.get("inter_packet_delay_ms"), "inter_packet_delay_ms"),
         "pass_count": _parse_int(config.get("pass_count"), "pass_count"),
-        "logging_level": _parse_int(config.get("logging_level"), "logging_level"),
         "stop_on_failure": _parse_bool(config.get("stop_on_failure"), "stop_on_failure"),
-        "serial_port": config.get("serial_port"),
     }
 
 
@@ -113,12 +110,17 @@ def main():
         print("Please update RunInterPacketAcceptanceTestConfig.txt with valid values.")
         return 1
 
+    # Get system-level configuration
+    sys_config = System.get_config()
+
     address = config["address"]
     delay_ms = config["inter_packet_delay_ms"]
     pass_count = config["pass_count"]
-    logging_level = config["logging_level"]
     stop_on_failure = config["stop_on_failure"]
-    port = config["serial_port"]
+    
+    # Get system-level settings
+    logging_level = sys_config.logging_level
+    port = sys_config.serial_port
     
     packet_data_dir = os.path.join(script_dir, "PacketData")
     packet_module_path = os.path.join(packet_data_dir, "InterPacketAcceptanceTest.py")

@@ -8,7 +8,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2025 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -48,8 +48,7 @@ extern "C" {
 #define FX_APP_MEM_POOL_SIZE                     4096
 
 #define NX_APP_MEM_POOL_SIZE                     65536
-
-#define UX_DEVICE_APP_MEM_POOL_SIZE              30720
+#define UX_APP_MEM_POOL_SIZE                     30720
 
 /* USER CODE BEGIN EC */
 

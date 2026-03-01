@@ -393,14 +393,13 @@ def display_menu():
     print("Available Tests:")
     print()
     print("  1. Packet Acceptance Test")
-    print("  2. Inter-Packet Acceptance Test")
-    print("  3. Bad Bit Test")
-    print("  4. Timing Margin Test")
-    print("  5. Timing Margin Loop Test")
-    print("  6. Function I/O Test")
-    print("  7. Accessory I/O Test")
-    print("  8. Acceptance Test with Override")
-    print("  9. Set Command Station Parameters")
+    print("  2. Timing Margin Test")
+    print("  3. Inter-Packet Acceptance Test")
+    print("  4. Bad Bit Test")
+    print("  5. Function I/O Test")
+    print("  6. Accessory I/O Test")
+    print("  7. Acceptance Test with Override")
+    print("  8. Set Command Station Parameters")
     print()
     print("  C. View/Edit System Configuration")
     
@@ -414,7 +413,7 @@ def display_menu():
     print("=" * 70)
     print()
     
-    choice = input("Select test to run (1-9, C, L, Q): ").strip().upper()
+    choice = input("Select test to run (1-8, C, L, Q): ").strip().upper()
     return choice
 
 
@@ -487,31 +486,28 @@ def main():
                 run_script("RunPacketAcceptanceTest.py")
             
             elif choice == "2":
-                run_script("RunInterPacketAcceptanceTest.py")
-            
-            elif choice == "3":
-                run_script("RunBadBitTest.py")
-            
-            elif choice == "4":
                 run_script("RunTimingMarginTest.py")
             
-            elif choice == "5":
-                run_script("RunTimingMarginLoopTest.py")
+            elif choice == "3":
+                run_script("RunInterPacketAcceptanceTest.py")
             
-            elif choice == "6":
+            elif choice == "4":
+                run_script("RunBadBitTest.py")
+            
+            elif choice == "5":
                 run_script("RunFunctionIOTest.py")
             
-            elif choice == "7":
+            elif choice == "6":
                 run_script("RunAccessoryIOTest.py")
             
-            elif choice == "8":
+            elif choice == "7":
                 run_script("RunAcceptanceTestWithOverride.py")
             
-            elif choice == "9":
+            elif choice == "8":
                 run_script("RunSetCommandStationParameters.py")
             
             else:
-                print("\nInvalid selection. Please choose 1-9, C, L, or Q.")
+                print("\nInvalid selection. Please choose 1-8, C, L, or Q.")
                 continue
             
             print()

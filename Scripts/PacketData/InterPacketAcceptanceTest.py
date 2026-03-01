@@ -16,6 +16,7 @@ import json
 import serial
 import time
 import sys
+from datetime import datetime
 
 
 LOG_LEVEL = 1  # 0 = none, 1 = minimum, 2 = verbose
@@ -33,7 +34,11 @@ def set_log_level(level):
 
 def log(level, message):
     if LOG_LEVEL >= level:
-        print(message)
+        if LOG_LEVEL == 2:
+            timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+            print(f"[{timestamp}] {message}")
+        else:
+            print(message)
 
 
 class DCCTesterRPC:

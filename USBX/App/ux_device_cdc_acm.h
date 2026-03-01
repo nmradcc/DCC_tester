@@ -7,7 +7,7 @@
   ******************************************************************************
     * @attention
   *
-  * Copyright (c) 2025 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -32,26 +32,23 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "main.h"
+#include "app_usbx_device.h"
+#include "rpc_transport_types.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
 
 #define RX_POOL_SIZE    4
-#define RX_BUFFER_SIZE  2048
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-typedef struct {
-    char data[RX_BUFFER_SIZE];
-    uint16_t length;
-} rpc_rxbuffer_t;
-
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/

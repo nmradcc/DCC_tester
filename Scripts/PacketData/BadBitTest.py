@@ -18,6 +18,7 @@ targets the LSB of the checksum byte.
 import json
 import serial
 import time
+from datetime import datetime
 
 
 LOG_LEVEL = 1  # 0 = none, 1 = minimum, 2 = verbose
@@ -35,7 +36,11 @@ def set_log_level(level):
 
 def log(level, message):
     if LOG_LEVEL >= level:
-        print(message)
+        if LOG_LEVEL == 2:
+            timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+            print(f"[{timestamp}] {message}")
+        else:
+            print(message)
 
 
 class DCCTesterRPC:
@@ -186,10 +191,6 @@ def read_current_ma(rpc):
         log(1, f"ERROR: Failed to read current: {response}")
         return None
     return response.get("current_ma", 0)
-
-
-
-    # TODO: Implement capture monitor logic here
 
 
 def run_bad_bit_test(

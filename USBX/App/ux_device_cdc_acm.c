@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
+#include "usbx_cdc_transport.h"
 
 /* USER CODE END Includes */
 
@@ -187,6 +188,53 @@ VOID USBD_CDC_ACM_ParameterChange(VOID *cdc_acm_instance)
 }
 
 /* USER CODE BEGIN 1 */
+
+uint32_t UsbCdcAcm_Write(const uint8_t* data, uint32_t length, uint32_t* actual_length)
+{
+  ULONG written = 0;
+
+  if ((data == UX_NULL) || (cdc_acm == UX_NULL))
+  {
+    if (actual_length != UX_NULL)
+    {
+      *actual_length = 0;
+    }
+    return UX_ERROR;
+  }
+
+  UINT status = ux_device_class_cdc_acm_write(cdc_acm, (UCHAR *)data, (ULONG)length, &written);
+
+  if (actual_length != UX_NULL)
+  {
+    *actual_length = (uint32_t)written;
+  }
+
+  return (uint32_t)status;
+}
+
+void UsbCdcAcm_GetStatus(uint32_t* device_configured, uint32_t* cdc_active)
+{
+  uint32_t configured = 0;
+  uint32_t active = (cdc_acm != UX_NULL) ? 1U : 0U;
+
+  if (_ux_system_slave != UX_NULL)
+  {
+    if (_ux_system_slave->ux_system_slave_device.ux_slave_device_state == UX_DEVICE_CONFIGURED)
+    {
+      configured = 1U;
+    }
+  }
+
+  if (device_configured != UX_NULL)
+  {
+    *device_configured = configured;
+  }
+
+  if (cdc_active != UX_NULL)
+  {
+    *cdc_active = active;
+  }
+}
 
 /**
   * @brief  USBX CDC ACM RX thread entry
