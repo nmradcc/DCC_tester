@@ -7,16 +7,15 @@
 #include "decoder.h"
 #include "parameter_manager.h"
 #include "analog_manager.h"
+#include "usbx_cdc_transport.h"
+#include "rpc_transport_types.h"
 
 #include "rpc_server.hpp"
 
-#include "ux_device_cdc_acm.h"
-#include "ux_device_class_cdc_acm.h"
 #include <cstring>
 #include <cstdio>
 
 extern TX_QUEUE rpc_rxqueue;
-extern UX_SLAVE_CLASS_CDC_ACM  *cdc_acm;
 
 static osThreadId_t rpcServerThread_id;
 static osSemaphoreId_t rpcServerStart_sem;
@@ -1228,6 +1227,22 @@ static json command_station_get_params_handler(const json& params) {
     };
 }
 
+static json system_usb_status_handler(const json& params) {
+    (void)params;
+
+    uint32_t device_configured = 0;
+    uint32_t cdc_active = 0;
+    UsbCdcAcm_GetStatus(&device_configured, &cdc_active);
+
+    return {
+        {"status", "ok"},
+        {"usb", {
+            {"device_configured", device_configured != 0U},
+            {"cdc_active", cdc_active != 0U}
+        }}
+    };
+}
+
 // ---------------- RTOS Task ----------------
 
 RpcServer server;
@@ -1235,7 +1250,7 @@ RpcServer server;
 void RpcServerThread(void* argument) {
     (void)argument;
     rpc_rxbuffer_t* msg;
-    ULONG actual_length;
+    uint32_t actual_length;
 
     osSemaphoreAcquire(rpcServerStart_sem, osWaitForever);
     rpcServerRunning = true;
@@ -1264,18 +1279,20 @@ void RpcServerThread(void* argument) {
     server.register_method("set_gpio_output", set_gpio_output_handler);
     server.register_method("get_rtc_datetime", get_rtc_datetime_handler);
     server.register_method("set_rtc_datetime", set_rtc_datetime_handler);
+    server.register_method("system_usb_status", system_usb_status_handler);
 
     while (rpcServerRunning) {
         std::string request;
         // Block until a message pointer is available from RX thread
-        if (tx_queue_receive(&rpc_rxqueue, &msg, MS_TO_TICK(10)) == TX_SUCCESS)
+        if (tx_queue_receive(&rpc_rxqueue, &msg, 10) == TX_SUCCESS)
         {
             std::string request(msg->data, msg->length);
-            std::string response = server.handle(request);
+            std::string response = server.handle(request) + "\r\n";
             /* transport_send(response);*/
             /* Send response data over the class cdc_acm_write */
-            ux_device_class_cdc_acm_write(cdc_acm, (UCHAR *)response.c_str(),
-                                                response.size(), &actual_length);
+            UsbCdcAcm_Write((const uint8_t *)response.c_str(),
+                            (uint32_t)response.size(),
+                            &actual_length);
         }
     }
     osSemaphoreRelease(rpcServerStart_sem);
