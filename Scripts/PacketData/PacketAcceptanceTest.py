@@ -11,10 +11,7 @@ measurement mode.
 import json
 import serial
 import time
-<<<<<<< HEAD
 from datetime import datetime
-=======
->>>>>>> mx-6.17.0
 
 
 LOG_LEVEL = 1  # 0 = none, 1 = minimum, 2 = verbose
