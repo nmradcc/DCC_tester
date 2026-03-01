@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """
 SystemRPCTest.py
-================
-
-Quick RPC connectivity test for DCC_tester.
-- Loads serial port from SystemConfig.txt (key: serial_port)
-- Runs USB preflight via system_usb_status
 - Sends one JSON-RPC echo request
 - Prints PASS/FAIL and exits with code 0/1
 """
