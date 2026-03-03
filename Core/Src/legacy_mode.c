@@ -16,6 +16,7 @@ typedef enum {
     LEGACY_MODE_STREAM_ZERO,
     LEGACY_MODE_STREAM_ONE,
     LEGACY_MODE_STRETCHED_ZERO,
+    LEGACY_MODE_STRETCHED_PATTERN,
     LEGACY_MODE_SCOPE_A,
     LEGACY_MODE_SCOPE_B,
     LEGACY_MODE_SCOPE_O
@@ -23,7 +24,7 @@ typedef enum {
 
 static legacy_wave_mode_t legacy_wave_mode = LEGACY_MODE_PACKET;
 
-static uint8_t bit_index = 0;
+static uint32_t bit_index = 0;
 static uint8_t half_phase = 0;
 static bool phase_p = true;
 
@@ -31,6 +32,10 @@ static const uint8_t reset_packet_bytes[] = {0xff, 0xf0, 0x00, 0x00, 0x01};
 static const uint8_t hard_reset_packet_bytes[] = {0xff, 0xf0, 0x00, 0x04, 0x03};
 static const uint8_t idle_packet_bytes[] = {0xff, 0xf7, 0xf8, 0x01, 0xff};
 static const uint8_t base_packet_bytes[] = {0xff, 0xf0, 0x19, 0xd0, 0xef};
+static const uint8_t stretched_pattern_bytes[] = {0xff, 0x02};
+
+static const uint32_t legacy_warble_one_bits = 3072U * 8U;
+static const uint32_t legacy_warble_total_bits = (3072U + 1024U) * 8U;
 
 static const uint16_t legacy_bit1_ticks = 58;   // ~58us @ 1MHz
 static const uint16_t legacy_bit0_ticks = 100;  // ~100us @ 1MHz
@@ -39,6 +44,7 @@ static const uint16_t legacy_scope_o_ticks[] = {100, 10000, 1000, 10};
 static uint8_t legacy_scope_o_index = 0;
 static bool legacy_fw_state = true;
 static uint8_t legacy_kickstart_cycles = 0;
+static bool legacy_dcc_mode_active = false;
 
 static const char* legacy_packet_name(uint8_t packet_id)
 {
@@ -71,6 +77,8 @@ static const char* legacy_mode_name(legacy_wave_mode_t mode)
             return "ones";
         case LEGACY_MODE_STRETCHED_ZERO:
             return "stretched_zero";
+        case LEGACY_MODE_STRETCHED_PATTERN:
+            return "stretched_pattern";
         case LEGACY_MODE_SCOPE_A:
             return "scope_a";
         case LEGACY_MODE_SCOPE_B:
@@ -111,11 +119,21 @@ static inline uint8_t legacy_get_current_bit(void)
     if (legacy_wave_mode == LEGACY_MODE_STREAM_ONE) {
         return 1U;
     }
+    if (legacy_wave_mode == LEGACY_MODE_WARBLE) {
+        const uint32_t warble_idx = bit_index % legacy_warble_total_bits;
+        return (warble_idx < legacy_warble_one_bits) ? 1U : 0U;
+    }
+    if (legacy_wave_mode == LEGACY_MODE_STRETCHED_PATTERN) {
+        const uint32_t pattern_idx = bit_index % (uint32_t)(sizeof(stretched_pattern_bytes) * 8U);
+        const uint8_t byte_index = (uint8_t)(pattern_idx / 8U);
+        const uint8_t bit_in_byte = (uint8_t)(7U - (pattern_idx % 8U));
+        return (uint8_t)((stretched_pattern_bytes[byte_index] >> bit_in_byte) & 0x01U);
+    }
     if (legacy_wave_mode == LEGACY_MODE_SCOPE_A) {
-        return (uint8_t)((bit_index & 1U) ? 1U : 0U);
+        return (uint8_t)((bit_index & 1UL) ? 1U : 0U);
     }
     if (legacy_wave_mode == LEGACY_MODE_SCOPE_B) {
-        return (uint8_t)((bit_index & 1U) ? 0U : 1U);
+        return (uint8_t)((bit_index & 1UL) ? 0U : 1U);
     }
     if (legacy_wave_mode == LEGACY_MODE_SCOPE_O) {
         return 1U;
@@ -127,7 +145,7 @@ static inline uint8_t legacy_get_current_bit(void)
         return 1;
     }
 
-    const uint16_t total_bits = (uint16_t)(size * 8U);
+    const uint32_t total_bits = (uint32_t)(size * 8U);
     if (total_bits == 0U) {
         return 1;
     }
@@ -137,18 +155,61 @@ static inline uint8_t legacy_get_current_bit(void)
     }
 
     const uint8_t byte_index = (uint8_t)(bit_index / 8U);
-    const uint8_t bit_in_byte = (uint8_t)(7U - (bit_index % 8U));
+    const uint8_t bit_in_byte = (uint8_t)(7U - ((uint8_t)bit_index % 8U));
     return (uint8_t)((data[byte_index] >> bit_in_byte) & 0x01U);
+}
+
+static inline bool legacy_is_first_zero_in_selected_packet(uint32_t packet_bit_index)
+{
+    size_t size = 0;
+    const uint8_t* data = legacy_packet_data(selected_packet_id, &size);
+    if ((data == NULL) || (size == 0U)) {
+        return false;
+    }
+
+    const uint32_t total_bits = (uint32_t)(size * 8U);
+    if (total_bits == 0U) {
+        return false;
+    }
+
+    const uint32_t index = packet_bit_index % total_bits;
+    const uint8_t current_byte = (uint8_t)(index / 8U);
+    const uint8_t current_bit = (uint8_t)(7U - (index % 8U));
+    const uint8_t current_value = (uint8_t)((data[current_byte] >> current_bit) & 0x01U);
+
+    if (current_value != 0U) {
+        return false;
+    }
+
+    for (uint32_t i = 0U; i < index; ++i) {
+        const uint8_t b = (uint8_t)(i / 8U);
+        const uint8_t bi = (uint8_t)(7U - (i % 8U));
+        if (((data[b] >> bi) & 0x01U) == 0U) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 static inline uint16_t legacy_get_ticks_for_bit(uint8_t bit)
 {
-    if ((legacy_wave_mode == LEGACY_MODE_STRETCHED_ZERO) ||
-        (legacy_wave_mode == LEGACY_MODE_PACKET_STRETCHED)) {
+    if (legacy_wave_mode == LEGACY_MODE_STRETCHED_ZERO) {
         return legacy_stretched0_ticks;
     }
     if (legacy_wave_mode == LEGACY_MODE_SCOPE_O) {
         return legacy_scope_o_ticks[legacy_scope_o_index];
+    }
+    if (legacy_wave_mode == LEGACY_MODE_STRETCHED_PATTERN) {
+        const uint32_t pattern_idx = bit_index % (uint32_t)(sizeof(stretched_pattern_bytes) * 8U);
+        if ((pattern_idx == 8U) && (bit == 0U)) {
+            return legacy_stretched0_ticks;
+        }
+    }
+    if ((legacy_wave_mode == LEGACY_MODE_PACKET_STRETCHED) &&
+        (bit == 0U) &&
+        legacy_is_first_zero_in_selected_packet(bit_index)) {
+        return legacy_stretched0_ticks;
     }
     return (bit != 0U) ? legacy_bit1_ticks : legacy_bit0_ticks;
 }
@@ -193,22 +254,28 @@ void TIM14_IRQHandler(void)
             if (half_phase >= 2U) {
                 half_phase = 0;
                 if ((legacy_wave_mode == LEGACY_MODE_PACKET) ||
-                    (legacy_wave_mode == LEGACY_MODE_PACKET_STRETCHED) ||
-                    (legacy_wave_mode == LEGACY_MODE_WARBLE)) {
+                    (legacy_wave_mode == LEGACY_MODE_PACKET_STRETCHED)) {
                     size_t size = 0;
                     (void)legacy_packet_data(selected_packet_id, &size);
                     bit_index++;
-                    if ((size > 0U) && (bit_index >= (uint16_t)(size * 8U))) {
+                    if ((size > 0U) && (bit_index >= (uint32_t)(size * 8U))) {
                         bit_index = 0;
-                        if (legacy_wave_mode == LEGACY_MODE_WARBLE) {
-                            selected_packet_id = (selected_packet_id == LEGACY_PACKET_RESET) ?
-                                                 LEGACY_PACKET_BASE : LEGACY_PACKET_RESET;
-                        } else if (legacy_kickstart_cycles > 0U) {
+                        if (legacy_kickstart_cycles > 0U) {
                             legacy_kickstart_cycles--;
                             if (legacy_kickstart_cycles == 0U) {
                                 selected_packet_id = LEGACY_PACKET_IDLE;
                             }
                         }
+                    }
+                } else if (legacy_wave_mode == LEGACY_MODE_WARBLE) {
+                    bit_index++;
+                    if (bit_index >= legacy_warble_total_bits) {
+                        bit_index = 0;
+                    }
+                } else if (legacy_wave_mode == LEGACY_MODE_STRETCHED_PATTERN) {
+                    bit_index++;
+                    if (bit_index >= (uint32_t)(sizeof(stretched_pattern_bytes) * 8U)) {
+                        bit_index = 0;
                     }
                 } else if ((legacy_wave_mode == LEGACY_MODE_SCOPE_A) || (legacy_wave_mode == LEGACY_MODE_SCOPE_B)) {
                     bit_index++;
@@ -229,6 +296,7 @@ void LegacyMode_Init(void)
     legacy_scope_o_index = 0;
     legacy_fw_state = true;
     legacy_kickstart_cycles = 0;
+    legacy_dcc_mode_active = false;
     bit_index = 0;
     half_phase = 0;
     phase_p = true;
@@ -309,6 +377,7 @@ bool LegacyMode_SelectPacket(uint8_t packet_id)
     selected_packet_id = packet_id;
     legacy_wave_mode = LEGACY_MODE_PACKET;
     legacy_kickstart_cycles = 0;
+    legacy_dcc_mode_active = (packet_id == LEGACY_PACKET_BASE);
     bit_index = 0;
     half_phase = 0;
     return true;
@@ -368,6 +437,7 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
             selected_packet_id = LEGACY_PACKET_BASE;
             legacy_wave_mode = LEGACY_MODE_PACKET_STRETCHED;
             legacy_kickstart_cycles = 0;
+            legacy_dcc_mode_active = true;
             bit_index = 0;
             half_phase = 0;
             if (!LegacyMode_IsRunning()) {
@@ -376,6 +446,7 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
             return true;
         case 'a':
             legacy_wave_mode = LEGACY_MODE_SCOPE_A;
+            legacy_dcc_mode_active = false;
             bit_index = 0;
             half_phase = 0;
             if (!LegacyMode_IsRunning()) {
@@ -384,6 +455,7 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
             return true;
         case 'b':
             legacy_wave_mode = LEGACY_MODE_SCOPE_B;
+            legacy_dcc_mode_active = false;
             bit_index = 0;
             half_phase = 0;
             if (!LegacyMode_IsRunning()) {
@@ -392,6 +464,7 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
             return true;
         case 'o':
             legacy_wave_mode = LEGACY_MODE_SCOPE_O;
+            legacy_dcc_mode_active = false;
             legacy_scope_o_index++;
             if (legacy_scope_o_index >= (uint8_t)(sizeof(legacy_scope_o_ticks) / sizeof(legacy_scope_o_ticks[0]))) {
                 legacy_scope_o_index = 0;
@@ -404,7 +477,7 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
             return true;
         case 'w':
             legacy_wave_mode = LEGACY_MODE_WARBLE;
-            selected_packet_id = LEGACY_PACKET_RESET;
+            legacy_dcc_mode_active = false;
             legacy_kickstart_cycles = 0;
             bit_index = 0;
             half_phase = 0;
@@ -414,6 +487,7 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
             return true;
         case '0':
             legacy_wave_mode = LEGACY_MODE_STREAM_ZERO;
+            legacy_dcc_mode_active = false;
             bit_index = 0;
             half_phase = 0;
             if (!LegacyMode_IsRunning()) {
@@ -424,6 +498,7 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
         case 'c':
         case 'C':
             legacy_wave_mode = LEGACY_MODE_STREAM_ONE;
+            legacy_dcc_mode_active = false;
             bit_index = 0;
             half_phase = 0;
             if (!LegacyMode_IsRunning()) {
@@ -431,7 +506,8 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
             }
             return true;
         case 'S':
-            legacy_wave_mode = LEGACY_MODE_STRETCHED_ZERO;
+            legacy_wave_mode = LEGACY_MODE_STRETCHED_PATTERN;
+            legacy_dcc_mode_active = false;
             bit_index = 0;
             half_phase = 0;
             if (!LegacyMode_IsRunning()) {
@@ -439,7 +515,10 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
             }
             return true;
         case 'e':
-            if (!LegacyMode_SelectPacket(LEGACY_PACKET_HARD)) {
+            if (!legacy_dcc_mode_active) {
+                return false;
+            }
+            if (!LegacyMode_SelectPacket(LEGACY_PACKET_BASE)) {
                 return false;
             }
             if (!LegacyMode_IsRunning()) {
@@ -447,6 +526,9 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
             }
             return true;
         case 'f':
+            if (!legacy_dcc_mode_active) {
+                return false;
+            }
             legacy_fw_state = !legacy_fw_state;
             if (!LegacyMode_SelectPacket(legacy_fw_state ? LEGACY_PACKET_BASE : LEGACY_PACKET_IDLE)) {
                 return false;
@@ -456,9 +538,13 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
             }
             return true;
         case 'k':
+            if (!legacy_dcc_mode_active) {
+                return false;
+            }
             selected_packet_id = LEGACY_PACKET_BASE;
             legacy_wave_mode = LEGACY_MODE_PACKET;
             legacy_kickstart_cycles = 16U;
+            legacy_dcc_mode_active = true;
             bit_index = 0;
             half_phase = 0;
             if (!LegacyMode_IsRunning()) {

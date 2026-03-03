@@ -87,6 +87,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 #    newlib_lock_glue.c
 #    picolibc_threadx_lock.c
     Core/Src/cli_app.c
+    Core/Src/cli_legacy_app.c
     Core/Src/rpc_server.cpp
     Core/Src/command_station.cpp
     Core/Src/decoder.cpp
