@@ -1,7 +1,10 @@
 #include "legacy_mode.h"
 #include "main.h"
+#include "app_filex.h"
 
 #include <stddef.h>
+#include <ctype.h>
+#include <string.h>
 
 #include "command_station.h"
 
@@ -45,6 +48,149 @@ static uint8_t legacy_scope_o_index = 0;
 static bool legacy_fw_state = true;
 static uint8_t legacy_kickstart_cycles = 0;
 static bool legacy_dcc_mode_active = false;
+
+typedef enum {
+    LEGACY_STARTUP_CFG_NONE = 0,
+    LEGACY_STARTUP_CFG_SEND_CFG,
+    LEGACY_STARTUP_CFG_SEND_INI
+} legacy_startup_cfg_t;
+
+static legacy_startup_cfg_t legacy_startup_cfg = LEGACY_STARTUP_CFG_NONE;
+
+typedef struct {
+    bool loaded;
+    bool manual;
+    bool log_pkts;
+    char decoder_type;
+} legacy_startup_cfg_values_t;
+
+static legacy_startup_cfg_values_t legacy_startup_cfg_values = {false, false, false, 'l'};
+static char legacy_cfg_text_buffer[2048];
+
+static void legacy_trim_spaces(char** start_ptr, char** end_ptr)
+{
+    while ((*start_ptr < *end_ptr) && isspace((unsigned char)**start_ptr)) {
+        ++(*start_ptr);
+    }
+    while ((*end_ptr > *start_ptr) && isspace((unsigned char)*((*end_ptr) - 1))) {
+        --(*end_ptr);
+    }
+}
+
+static bool legacy_token_equals(const char* token_start, size_t token_len, const char* word)
+{
+    size_t i = 0;
+    for (; i < token_len && word[i] != '\0'; ++i) {
+        if (toupper((unsigned char)token_start[i]) != toupper((unsigned char)word[i])) {
+            return false;
+        }
+    }
+    return (i == token_len) && (word[i] == '\0');
+}
+
+static void legacy_parse_startup_cfg_text(char* cfg_text)
+{
+    char* line = cfg_text;
+
+    legacy_startup_cfg_values.loaded = true;
+    legacy_startup_cfg_values.manual = false;
+    legacy_startup_cfg_values.log_pkts = false;
+    legacy_startup_cfg_values.decoder_type = 'l';
+
+    while ((line != NULL) && (*line != '\0')) {
+        char* next = strpbrk(line, "\r\n");
+        if (next != NULL) {
+            *next = '\0';
+        }
+
+        char* start = line;
+        char* end = line + strlen(line);
+        legacy_trim_spaces(&start, &end);
+
+        if ((start < end) && (*start != ';') && (*start != '#')) {
+            char* token_end = start;
+            while ((token_end < end) && !isspace((unsigned char)*token_end)) {
+                ++token_end;
+            }
+
+            if (legacy_token_equals(start, (size_t)(token_end - start), "MANUAL")) {
+                legacy_startup_cfg_values.manual = true;
+            } else if (legacy_token_equals(start, (size_t)(token_end - start), "LOG_PKTS")) {
+                legacy_startup_cfg_values.log_pkts = true;
+            } else if (legacy_token_equals(start, (size_t)(token_end - start), "TYPE")) {
+                char* value = token_end;
+                while ((value < end) && isspace((unsigned char)*value)) {
+                    ++value;
+                }
+                if (value < end) {
+                    const char type_char = (char)tolower((unsigned char)*value);
+                    if ((type_char == 'l') || (type_char == 'f') || (type_char == 'a') || (type_char == 's')) {
+                        legacy_startup_cfg_values.decoder_type = type_char;
+                    }
+                }
+            }
+        }
+
+        if (next == NULL) {
+            break;
+        }
+
+        line = next + 1;
+        if ((*line == '\n') || (*line == '\r')) {
+            ++line;
+        }
+    }
+}
+
+static void legacy_apply_startup_cfg_defaults(void)
+{
+    const bool is_default_idle_start =
+        (legacy_wave_mode == LEGACY_MODE_PACKET) &&
+        (selected_packet_id == LEGACY_PACKET_IDLE) &&
+        (legacy_dcc_mode_active == false) &&
+        (bit_index == 0U) &&
+        (half_phase == 0U);
+
+    if (!is_default_idle_start || !legacy_startup_cfg_values.loaded) {
+        return;
+    }
+
+    if (legacy_startup_cfg_values.manual) {
+        return;
+    }
+
+    // Sender defaults to immediate decoder-test path when MANUAL is absent.
+    // In legacy mode, map that behavior to starting in BASE packet mode.
+    selected_packet_id = LEGACY_PACKET_BASE;
+    legacy_wave_mode = LEGACY_MODE_PACKET;
+    legacy_dcc_mode_active = true;
+}
+
+static void legacy_probe_startup_cfg_on_sd(void)
+{
+    legacy_startup_cfg = LEGACY_STARTUP_CFG_NONE;
+    legacy_startup_cfg_values.loaded = false;
+    legacy_startup_cfg_values.manual = false;
+    legacy_startup_cfg_values.log_pkts = false;
+    legacy_startup_cfg_values.decoder_type = 'l';
+
+    if (AppFileX_FileExistsOnSd("SEND.CFG") == FX_SUCCESS) {
+        legacy_startup_cfg = LEGACY_STARTUP_CFG_SEND_CFG;
+        if (AppFileX_LoadTextFileOnSd("SEND.CFG", legacy_cfg_text_buffer, sizeof(legacy_cfg_text_buffer), NULL) == FX_SUCCESS) {
+            legacy_parse_startup_cfg_text(legacy_cfg_text_buffer);
+        }
+    } else if (AppFileX_FileExistsOnSd("SEND.INI") == FX_SUCCESS) {
+        legacy_startup_cfg = LEGACY_STARTUP_CFG_SEND_INI;
+        if (AppFileX_LoadTextFileOnSd("SEND.INI", legacy_cfg_text_buffer, sizeof(legacy_cfg_text_buffer), NULL) == FX_SUCCESS) {
+            legacy_parse_startup_cfg_text(legacy_cfg_text_buffer);
+        }
+    } else {
+        legacy_startup_cfg = LEGACY_STARTUP_CFG_NONE;
+        legacy_startup_cfg_values.loaded = false;
+    }
+
+    legacy_apply_startup_cfg_defaults();
+}
 
 static const char* legacy_packet_name(uint8_t packet_id)
 {
@@ -297,6 +443,11 @@ void LegacyMode_Init(void)
     legacy_fw_state = true;
     legacy_kickstart_cycles = 0;
     legacy_dcc_mode_active = false;
+    legacy_startup_cfg = LEGACY_STARTUP_CFG_NONE;
+    legacy_startup_cfg_values.loaded = false;
+    legacy_startup_cfg_values.manual = false;
+    legacy_startup_cfg_values.log_pkts = false;
+    legacy_startup_cfg_values.decoder_type = 'l';
     bit_index = 0;
     half_phase = 0;
     phase_p = true;
@@ -330,6 +481,8 @@ bool LegacyMode_Start(void)
     }
 
     legacy_mode_running = true;
+    // Match sender startup search order on SD: SEND.CFG then SEND.INI.
+    legacy_probe_startup_cfg_on_sd();
     return true;
 }
 
@@ -396,6 +549,33 @@ const char* LegacyMode_GetSelectedPacketName(void)
 const char* LegacyMode_GetModeName(void)
 {
     return legacy_mode_name(legacy_wave_mode);
+}
+
+const char* LegacyMode_GetStartupConfigName(void)
+{
+    switch (legacy_startup_cfg) {
+        case LEGACY_STARTUP_CFG_SEND_CFG:
+            return "SEND.CFG";
+        case LEGACY_STARTUP_CFG_SEND_INI:
+            return "SEND.INI";
+        default:
+            return "none";
+    }
+}
+
+bool LegacyMode_GetStartupManual(void)
+{
+    return legacy_startup_cfg_values.loaded && legacy_startup_cfg_values.manual;
+}
+
+bool LegacyMode_GetStartupLogPkts(void)
+{
+    return legacy_startup_cfg_values.loaded && legacy_startup_cfg_values.log_pkts;
+}
+
+char LegacyMode_GetStartupDecoderType(void)
+{
+    return legacy_startup_cfg_values.loaded ? legacy_startup_cfg_values.decoder_type : '?';
 }
 
 bool LegacyMode_ApplyCompatKey(char key_cmd)

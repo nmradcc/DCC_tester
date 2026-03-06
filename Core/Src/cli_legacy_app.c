@@ -28,7 +28,7 @@ static ParsedInput parsed = {0};
 static const osThreadAttr_t legacy_cli_task_attributes = {
     .name = "legacyCliTask",
     .priority = (osPriority_t) osPriorityNormal,
-    .stack_size = 768 * 4
+    .stack_size = 1536 * 4
 };
 
 static void parse_input(const char *input, ParsedInput *out_parsed) {
@@ -53,9 +53,13 @@ static void print_legacy_help(void) {
 static void execute_legacy_command(const char *arg1, const char *arg2) {
     if (strcasecmp(arg1, "start") == 0) {
         if (LegacyMode_Start()) {
-            printf("Legacy mode started (reserved timer TIM%u, packet %s)\n",
+            printf("Legacy mode started (reserved timer TIM%u, packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
                    LegacyMode_GetReservedTimer(),
-                   LegacyMode_GetSelectedPacketName());
+                   LegacyMode_GetSelectedPacketName(),
+                   LegacyMode_GetStartupConfigName(),
+                   LegacyMode_GetStartupManual() ? "true" : "false",
+                   LegacyMode_GetStartupDecoderType(),
+                   LegacyMode_GetStartupLogPkts() ? "true" : "false");
         } else {
             printf("Legacy mode failed to start or already running\n");
         }
@@ -68,11 +72,15 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
         }
     }
     else if (strcasecmp(arg1, "status") == 0 || arg1[0] == '\0') {
-        printf("Legacy mode: %s (reserved timer TIM%u, mode %s, packet %s)\n",
+         printf("Legacy mode: %s (reserved timer TIM%u, mode %s, packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
                LegacyMode_IsRunning() ? "running" : "stopped",
                LegacyMode_GetReservedTimer(),
                LegacyMode_GetModeName(),
-               LegacyMode_GetSelectedPacketName());
+             LegacyMode_GetSelectedPacketName(),
+             LegacyMode_GetStartupConfigName(),
+             LegacyMode_GetStartupManual() ? "true" : "false",
+             LegacyMode_GetStartupDecoderType(),
+             LegacyMode_GetStartupLogPkts() ? "true" : "false");
     }
     else if (strcasecmp(arg1, "timer") == 0) {
         uint8_t timer_id = (uint8_t)atoi(arg2);

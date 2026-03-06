@@ -67,6 +67,8 @@ FX_FILE     fx_file;
 /* Define ThreadX global data structures. */
 TX_QUEUE    tx_msg_queue;
 static UINT     media_status;
+static ULONG media_user_count;
+static UINT sd_hw_initialized;
 
 /* USER CODE END PV */
 
@@ -78,6 +80,8 @@ void fx_thread_entry(ULONG thread_input);
 /* USER CODE BEGIN PFP */
 static uint8_t SD_IsDetected(uint32_t Instance);
 static VOID media_close_callback (FX_MEDIA *media_ptr);
+static UINT AppFileX_MediaAcquire(VOID);
+static UINT AppFileX_MediaRelease(VOID);
 /* USER CODE END PFP */
 
 /**
@@ -89,7 +93,8 @@ UINT MX_FileX_Init(VOID *memory_ptr)
 {
   UINT ret = FX_SUCCESS;
   TX_BYTE_POOL *byte_pool = (TX_BYTE_POOL*)memory_ptr;
-  VOID *pointer;
+  VOID *thread_stack_pointer;
+  VOID *queue_buffer_pointer;
 
 /* USER CODE BEGIN MX_FileX_MEM_POOL */
 
@@ -100,7 +105,7 @@ UINT MX_FileX_Init(VOID *memory_ptr)
 /* USER CODE END 0 */
 
 /*Allocate memory for the main thread's stack*/
-  ret = tx_byte_allocate(byte_pool, &pointer, FX_APP_THREAD_STACK_SIZE, TX_NO_WAIT);
+  ret = tx_byte_allocate(byte_pool, &thread_stack_pointer, FX_APP_THREAD_STACK_SIZE, TX_NO_WAIT);
 
 /* Check FX_APP_THREAD_STACK_SIZE allocation*/
   if (ret != FX_SUCCESS)
@@ -109,7 +114,7 @@ UINT MX_FileX_Init(VOID *memory_ptr)
   }
 
 /* Create the main thread.  */
-  ret = tx_thread_create(&fx_app_thread, FX_APP_THREAD_NAME, fx_thread_entry, 0, pointer, FX_APP_THREAD_STACK_SIZE,
+  ret = tx_thread_create(&fx_app_thread, FX_APP_THREAD_NAME, fx_thread_entry, 0, thread_stack_pointer, FX_APP_THREAD_STACK_SIZE,
                          FX_APP_THREAD_PRIO, FX_APP_PREEMPTION_THRESHOLD, FX_APP_THREAD_TIME_SLICE, FX_APP_THREAD_AUTO_START);
 
 /* Check main thread creation */
@@ -120,8 +125,14 @@ UINT MX_FileX_Init(VOID *memory_ptr)
 
 /* USER CODE BEGIN MX_FileX_Init */
 
+  ret = tx_byte_allocate(byte_pool, &queue_buffer_pointer, DEFAULT_QUEUE_LENGTH * sizeof(ULONG), TX_NO_WAIT);
+  if (ret != TX_SUCCESS)
+  {
+    return TX_POOL_ERROR;
+  }
+
   /* Create the message queue */
-  ret = tx_queue_create(&tx_msg_queue, "sd_event_queue", TX_1_ULONG, pointer, DEFAULT_QUEUE_LENGTH * sizeof(ULONG));
+  ret = tx_queue_create(&tx_msg_queue, "sd_event_queue", TX_1_ULONG, queue_buffer_pointer, DEFAULT_QUEUE_LENGTH * sizeof(ULONG));
   /* Check main thread creation */
   if (ret != TX_SUCCESS)
   {
@@ -133,10 +144,135 @@ UINT MX_FileX_Init(VOID *memory_ptr)
   fx_system_initialize();
 
 /* USER CODE BEGIN MX_FileX_Init 1*/
+  media_user_count = 0U;
+  sd_hw_initialized = 0U;
+  media_status = MEDIA_CLOSED;
 
 /* USER CODE END MX_FileX_Init 1*/
 
   return ret;
+}
+
+static UINT AppFileX_MediaAcquire(VOID)
+{
+  UINT fx_status;
+
+  if (media_user_count == 0U)
+  {
+    if (SD_IsDetected(FX_STM32_SD_INSTANCE) != HAL_OK)
+    {
+      return FX_NOT_OPEN;
+    }
+
+    if (sdio_disk.fx_media_id == FX_MEDIA_ID)
+    {
+      media_status = MEDIA_OPENED;
+      (void)fx_media_close_notify_set(&sdio_disk, media_close_callback);
+    }
+    else
+    {
+      if (sd_hw_initialized == 0U)
+      {
+        MX_SDMMC1_SD_Init();
+        sd_hw_initialized = 1U;
+      }
+
+      fx_status = fx_media_open(&sdio_disk,
+                                FX_SD_VOLUME_NAME,
+                                fx_stm32_sd_driver,
+                                (VOID *)FX_NULL,
+                                (VOID *)fx_sd_media_memory,
+                                sizeof(fx_sd_media_memory));
+      if (fx_status != FX_SUCCESS)
+      {
+        return fx_status;
+      }
+
+      media_status = MEDIA_OPENED;
+      (void)fx_media_close_notify_set(&sdio_disk, media_close_callback);
+    }
+  }
+
+  media_user_count++;
+
+  return FX_SUCCESS;
+}
+
+static UINT AppFileX_MediaRelease(VOID)
+{
+  if (media_user_count > 0U) {
+    media_user_count--;
+  }
+
+  return FX_SUCCESS;
+}
+
+UINT AppFileX_FileExistsOnSd(const CHAR *filename)
+{
+  FX_FILE file;
+  UINT status;
+
+  if ((filename == FX_NULL) || (filename[0] == '\0')) {
+    return FX_PTR_ERROR;
+  }
+
+  status = AppFileX_MediaAcquire();
+  if (status != FX_SUCCESS) {
+    return status;
+  }
+
+  status = fx_file_open(&sdio_disk, &file, (CHAR *)filename, FX_OPEN_FOR_READ);
+  if (status == FX_SUCCESS) {
+    (void)fx_file_close(&file);
+  }
+
+  (void)AppFileX_MediaRelease();
+
+  return status;
+}
+
+UINT AppFileX_LoadTextFileOnSd(const CHAR *filename, CHAR *buffer, ULONG buffer_size, ULONG *bytes_read)
+{
+  FX_FILE file;
+  UINT status;
+  ULONG local_read = 0;
+
+  if ((filename == FX_NULL) || (buffer == FX_NULL) || (buffer_size < 2U)) {
+    return FX_PTR_ERROR;
+  }
+
+  if (bytes_read != FX_NULL) {
+    *bytes_read = 0U;
+  }
+  buffer[0] = '\0';
+
+  status = AppFileX_MediaAcquire();
+  if (status != FX_SUCCESS) {
+    return status;
+  }
+
+  status = fx_file_open(&sdio_disk, &file, (CHAR *)filename, FX_OPEN_FOR_READ);
+  if (status != FX_SUCCESS) {
+    (void)AppFileX_MediaRelease();
+    return status;
+  }
+
+  status = fx_file_read(&file, buffer, buffer_size - 1U, &local_read);
+  (void)fx_file_close(&file);
+
+  if (status != FX_SUCCESS) {
+    (void)AppFileX_MediaRelease();
+    return status;
+  }
+
+  buffer[local_read] = '\0';
+  if (bytes_read != FX_NULL) {
+    *bytes_read = local_read;
+  }
+
+  (void)AppFileX_MediaRelease();
+
+  return FX_SUCCESS;
 }
 
 /**
@@ -157,8 +293,6 @@ UINT MX_FileX_Init(VOID *memory_ptr)
   CHAR read_buffer[32];
   CHAR data[] = "This is FileX working on STM32";
   UINT sd_status = FX_SUCCESS;
-
-  fx_media_close_notify_set(&sdio_disk, media_close_callback);
 
 /* USER CODE END fx_thread_entry 0*/
 
@@ -196,23 +330,21 @@ UINT MX_FileX_Init(VOID *memory_ptr)
       if (SD_IsDetected(FX_STM32_SD_INSTANCE) == HAL_OK)
       {
         /* We have a valid SD insertion event, start processing.. */
-        /* Open the SD disk driver */
-        MX_SDMMC1_SD_Init();
-
-        /* Check the media open sd_status */
-        sd_status = fx_media_open(&sdio_disk, FX_SD_VOLUME_NAME, fx_stm32_sd_driver, (VOID *)FX_NULL, (VOID *) fx_sd_media_memory, sizeof(fx_sd_media_memory));
-        if (sd_status != FX_SUCCESS)
-        {
-          Error_Handler();
-        }
-        media_status = MEDIA_OPENED;
         /* Update last known sd_status */
         last_status = CARD_STATUS_CONNECTED;
         printf("SD CARD inserted!!\r\n");
       }
       else
       {
+        media_user_count = 0U;
+        if (sdio_disk.fx_media_id == FX_MEDIA_ID)
+        {
+          (void)fx_media_close(&sdio_disk);
+        }
+
         HAL_SD_DeInit(&hsd1);
+        sd_hw_initialized = 0U;
+        media_status = MEDIA_CLOSED;
         /* Update last known sd_status */
         last_status = CARD_STATUS_DISCONNECTED;
         printf("SD CARD ejected!!\r\n");
@@ -223,19 +355,13 @@ UINT MX_FileX_Init(VOID *memory_ptr)
       continue;
     }
 
-    /* Create a file called STM32.TXT in the root directory. */
-    if (media_status == MEDIA_CLOSED)
+    sd_status = AppFileX_MediaAcquire();
+    if (sd_status != FX_SUCCESS)
     {
-      sd_status = fx_media_open(&sdio_disk, FX_SD_VOLUME_NAME, fx_stm32_sd_driver, (VOID *)FX_NULL, (VOID *) fx_sd_media_memory, sizeof(fx_sd_media_memory));
-      /* Check the media open sd_status */
-      if (sd_status != FX_SUCCESS)
-      {
-        /* USER CODE BEGIN SD DRIVER get info error */
-        Error_Handler();
-        /* USER CODE END SD DRIVER get info error */
-      }
-      media_status = MEDIA_OPENED;
+      Error_Handler();
     }
+
+    /* Create a file called STM32.TXT in the root directory. */
 
     sd_status =  fx_file_create(&sdio_disk, "STM32.TXT");
 
@@ -340,8 +466,8 @@ UINT MX_FileX_Init(VOID *memory_ptr)
       Error_Handler();
     }
 
-    /* Close the media. */
-    sd_status =  fx_media_close(&sdio_disk);
+    /* Release media ownership for this thread. */
+    sd_status = AppFileX_MediaRelease();
 
     /* Check the media close sd_status. */
     if (sd_status != FX_SUCCESS)

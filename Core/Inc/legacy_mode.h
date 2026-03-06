@@ -25,6 +25,10 @@ bool LegacyMode_SelectPacket(uint8_t packet_id);
 uint8_t LegacyMode_GetSelectedPacket(void);
 const char* LegacyMode_GetSelectedPacketName(void);
 const char* LegacyMode_GetModeName(void);
+const char* LegacyMode_GetStartupConfigName(void);
+bool LegacyMode_GetStartupManual(void);
+bool LegacyMode_GetStartupLogPkts(void);
+char LegacyMode_GetStartupDecoderType(void);
 
 bool LegacyMode_ApplyCompatKey(char key_cmd);
 
