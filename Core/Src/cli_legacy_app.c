@@ -42,6 +42,7 @@ static void print_legacy_help(void) {
     printf("  start\n");
     printf("  stop\n");
     printf("  status\n");
+    printf("  cfg\n");
     printf("  send <reset|idle|hard|base>\n");
     printf("  profile <sender_v3|sender_v3_test>\n");
     printf("  key <r|R|i|d|D|a|b|o|w|0|1|c|C|S|e|f|k|q|h>\n");
@@ -78,6 +79,9 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
              LegacyMode_GetStartupManual() ? "true" : "false",
              LegacyMode_GetStartupDecoderType(),
              LegacyMode_GetStartupLogPkts() ? "true" : "false");
+    }
+    else if (strcasecmp(arg1, "cfg") == 0) {
+        LegacyMode_PrintStartupConfigStub();
     }
     else if (strcasecmp(arg1, "send") == 0) {
         uint8_t packet_id;

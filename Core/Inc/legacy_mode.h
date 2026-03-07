@@ -26,6 +26,7 @@ const char* LegacyMode_GetStartupConfigName(void);
 bool LegacyMode_GetStartupManual(void);
 bool LegacyMode_GetStartupLogPkts(void);
 char LegacyMode_GetStartupDecoderType(void);
+void LegacyMode_PrintStartupConfigStub(void);
 
 bool LegacyMode_ApplyCompatKey(char key_cmd);
 

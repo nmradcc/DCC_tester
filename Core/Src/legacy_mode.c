@@ -3,6 +3,7 @@
 #include "app_filex.h"
 
 #include <stddef.h>
+#include <stdio.h>
 #include <ctype.h>
 #include <string.h>
 
@@ -63,7 +64,82 @@ typedef struct {
     char decoder_type;
 } legacy_startup_cfg_values_t;
 
+typedef struct {
+    bool loaded;
+    uint32_t overrides;
+    uint8_t address;
+    uint32_t port;
+    char decoder_type;
+    bool manual;
+    bool lamp;
+    uint8_t preset;
+    uint8_t trigger;
+    bool critical;
+    bool repeat;
+    uint32_t tests_mask;
+    uint32_t clocks_mask;
+    uint32_t funcs_mask;
+    uint8_t extra_pre;
+    bool trig_rev;
+    uint32_t fill_msec;
+    uint8_t test_reps;
+    bool log_pkts;
+    bool no_abort;
+    bool late_scope;
+    bool fragment;
+    bool same_ambig_addr;
+} legacy_send_cfg_stub_t;
+
+enum {
+    LEGACY_CFG_OVR_ADDRESS = (1UL << 0),
+    LEGACY_CFG_OVR_PORT = (1UL << 1),
+    LEGACY_CFG_OVR_TYPE = (1UL << 2),
+    LEGACY_CFG_OVR_MANUAL = (1UL << 3),
+    LEGACY_CFG_OVR_LAMP = (1UL << 4),
+    LEGACY_CFG_OVR_PRESET = (1UL << 5),
+    LEGACY_CFG_OVR_TRIGGER = (1UL << 6),
+    LEGACY_CFG_OVR_CRITICAL = (1UL << 7),
+    LEGACY_CFG_OVR_REPEAT = (1UL << 8),
+    LEGACY_CFG_OVR_TESTS = (1UL << 9),
+    LEGACY_CFG_OVR_CLOCKS = (1UL << 10),
+    LEGACY_CFG_OVR_FUNCS = (1UL << 11),
+    LEGACY_CFG_OVR_EXTRA_PRE = (1UL << 12),
+    LEGACY_CFG_OVR_TRIG_REV = (1UL << 13),
+    LEGACY_CFG_OVR_FILL_MSEC = (1UL << 14),
+    LEGACY_CFG_OVR_TEST_REPS = (1UL << 15),
+    LEGACY_CFG_OVR_LOG_PKTS = (1UL << 16),
+    LEGACY_CFG_OVR_NO_ABORT = (1UL << 17),
+    LEGACY_CFG_OVR_LATE_SCOPE = (1UL << 18),
+    LEGACY_CFG_OVR_FRAGMENT = (1UL << 19),
+    LEGACY_CFG_OVR_SAME_AMBIG_ADDR = (1UL << 20)
+};
+
 static legacy_startup_cfg_values_t legacy_startup_cfg_values = {false, false, false, 'l'};
+static legacy_send_cfg_stub_t legacy_send_cfg_stub = {
+    false,
+    0U,
+    3U,
+    0x340U,
+    'l',
+    false,
+    false,
+    0U,
+    8U,
+    false,
+    false,
+    0x00000080U,
+    0x0000007fU,
+    0x1fU,
+    2U,
+    false,
+    1000U,
+    4U,
+    false,
+    false,
+    false,
+    false,
+    false
+};
 static char legacy_cfg_text_buffer[2048];
 
 static void legacy_trim_spaces(char** start_ptr, char** end_ptr)
@@ -87,6 +163,101 @@ static bool legacy_token_equals(const char* token_start, size_t token_len, const
     return (i == token_len) && (word[i] == '\0');
 }
 
+static bool legacy_parse_bool_token(const char* start, size_t len, bool* out_value)
+{
+    if ((start == NULL) || (out_value == NULL) || (len == 0U)) {
+        return false;
+    }
+
+    if (legacy_token_equals(start, len, "1") ||
+        legacy_token_equals(start, len, "TRUE") ||
+        legacy_token_equals(start, len, "YES") ||
+        legacy_token_equals(start, len, "ON")) {
+        *out_value = true;
+        return true;
+    }
+
+    if (legacy_token_equals(start, len, "0") ||
+        legacy_token_equals(start, len, "FALSE") ||
+        legacy_token_equals(start, len, "NO") ||
+        legacy_token_equals(start, len, "OFF")) {
+        *out_value = false;
+        return true;
+    }
+
+    return false;
+}
+
+static bool legacy_parse_decoder_type_token(const char* start, size_t len, char* out_type)
+{
+    if ((start == NULL) || (out_type == NULL) || (len == 0U)) {
+        return false;
+    }
+
+    if (legacy_token_equals(start, len, "L") || legacy_token_equals(start, len, "LEGACY")) {
+        *out_type = 'l';
+        return true;
+    }
+    if (legacy_token_equals(start, len, "F") || legacy_token_equals(start, len, "FX")) {
+        *out_type = 'f';
+        return true;
+    }
+    if (legacy_token_equals(start, len, "A") || legacy_token_equals(start, len, "ACCESSORY")) {
+        *out_type = 'a';
+        return true;
+    }
+    if (legacy_token_equals(start, len, "S") || legacy_token_equals(start, len, "SENDER")) {
+        *out_type = 's';
+        return true;
+    }
+
+    return false;
+}
+
+static bool legacy_parse_u32_token(const char* start, size_t len, uint32_t* out_value)
+{
+    size_t i = 0U;
+    uint32_t value = 0U;
+    uint32_t base = 10U;
+
+    if ((start == NULL) || (out_value == NULL) || (len == 0U)) {
+        return false;
+    }
+
+    if ((len > 2U) && (start[0] == '0') && ((start[1] == 'x') || (start[1] == 'X'))) {
+        base = 16U;
+        i = 2U;
+        if (i >= len) {
+            return false;
+        }
+    }
+
+    for (; i < len; ++i) {
+        unsigned char c = (unsigned char)start[i];
+        uint32_t digit;
+
+        if ((c >= '0') && (c <= '9')) {
+            digit = (uint32_t)(c - '0');
+        } else if ((base == 16U) && (c >= 'a') && (c <= 'f')) {
+            digit = 10U + (uint32_t)(c - 'a');
+        } else if ((base == 16U) && (c >= 'A') && (c <= 'F')) {
+            digit = 10U + (uint32_t)(c - 'A');
+        } else {
+            return false;
+        }
+
+        value = (value * base) + digit;
+    }
+
+    *out_value = value;
+    return true;
+}
+
+static inline const char* legacy_cfg_mark(uint32_t mask)
+{
+    return ((legacy_send_cfg_stub.overrides & mask) != 0U) ? "*" : "";
+}
+
 static void legacy_parse_startup_cfg_text(char* cfg_text)
 {
     char* line = cfg_text;
@@ -96,37 +267,261 @@ static void legacy_parse_startup_cfg_text(char* cfg_text)
     legacy_startup_cfg_values.log_pkts = false;
     legacy_startup_cfg_values.decoder_type = 'l';
 
+    legacy_send_cfg_stub.loaded = true;
+    legacy_send_cfg_stub.overrides = 0U;
+    legacy_send_cfg_stub.address = 3U;
+    legacy_send_cfg_stub.port = 0x340U;
+    legacy_send_cfg_stub.decoder_type = 'l';
+    legacy_send_cfg_stub.manual = false;
+    legacy_send_cfg_stub.lamp = false;
+    legacy_send_cfg_stub.preset = 0U;
+    legacy_send_cfg_stub.trigger = 8U;
+    legacy_send_cfg_stub.critical = false;
+    legacy_send_cfg_stub.repeat = false;
+    legacy_send_cfg_stub.tests_mask = 0x00000080U;
+    legacy_send_cfg_stub.clocks_mask = 0x0000007fU;
+    legacy_send_cfg_stub.funcs_mask = 0x1fU;
+    legacy_send_cfg_stub.extra_pre = 2U;
+    legacy_send_cfg_stub.trig_rev = false;
+    legacy_send_cfg_stub.fill_msec = 1000U;
+    legacy_send_cfg_stub.test_reps = 4U;
+    legacy_send_cfg_stub.log_pkts = false;
+    legacy_send_cfg_stub.no_abort = false;
+    legacy_send_cfg_stub.late_scope = false;
+    legacy_send_cfg_stub.fragment = false;
+    legacy_send_cfg_stub.same_ambig_addr = false;
+
     while ((line != NULL) && (*line != '\0')) {
         char* next = strpbrk(line, "\r\n");
         if (next != NULL) {
             *next = '\0';
         }
 
+        /* Search comments only within this logical line. */
+        char* hash = strchr(line, '#');
+
+        /* Ignore inline comments: anything after '#' is comment text. */
+        if (hash != NULL) {
+            *hash = '\0';
+        }
+
+        /* SEND.CFG comment: ignore when ';' is the first character on the line. */
+        if (*line == ';') {
+            if (next == NULL) {
+                break;
+            }
+            line = next + 1;
+            if ((*line == '\n') || (*line == '\r')) {
+                ++line;
+            }
+            continue;
+        }
+
         char* start = line;
         char* end = line + strlen(line);
         legacy_trim_spaces(&start, &end);
 
-        if ((start < end) && (*start != ';') && (*start != '#')) {
-            char* token_end = start;
-            while ((token_end < end) && !isspace((unsigned char)*token_end)) {
-                ++token_end;
+        if ((start < end) && (*start != '#')) {
+            char* key_start = start;
+            char* key_end = key_start;
+            char* value_start = NULL;
+            char* value_end = NULL;
+
+            while ((key_end < end) &&
+                   !isspace((unsigned char)*key_end) &&
+                   (*key_end != '=') &&
+                     (*key_end != ':') &&
+                     (*key_end != ';') &&
+                     (*key_end != '#')) {
+                ++key_end;
             }
 
-            if (legacy_token_equals(start, (size_t)(token_end - start), "MANUAL")) {
-                legacy_startup_cfg_values.manual = true;
-            } else if (legacy_token_equals(start, (size_t)(token_end - start), "LOG_PKTS")) {
-                legacy_startup_cfg_values.log_pkts = true;
-            } else if (legacy_token_equals(start, (size_t)(token_end - start), "TYPE")) {
-                char* value = token_end;
-                while ((value < end) && isspace((unsigned char)*value)) {
-                    ++value;
+            value_start = key_end;
+            while ((value_start < end) && isspace((unsigned char)*value_start)) {
+                ++value_start;
+            }
+
+            if ((value_start < end) && ((*value_start == '=') || (*value_start == ':'))) {
+                ++value_start;
+            }
+
+            while ((value_start < end) && isspace((unsigned char)*value_start)) {
+                ++value_start;
+            }
+
+            value_end = value_start;
+            while ((value_end < end) && !isspace((unsigned char)*value_end)) {
+                ++value_end;
+            }
+
+            if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "MANUAL")) {
+                bool parsed_bool = false;
+                bool parsed_value = true;
+
+                if (value_start < end) {
+                    parsed_bool = legacy_parse_bool_token(value_start, (size_t)(value_end - value_start), &parsed_value);
                 }
-                if (value < end) {
-                    const char type_char = (char)tolower((unsigned char)*value);
-                    if ((type_char == 'l') || (type_char == 'f') || (type_char == 'a') || (type_char == 's')) {
-                        legacy_startup_cfg_values.decoder_type = type_char;
-                    }
+
+                legacy_send_cfg_stub.manual = parsed_bool ? parsed_value : true;
+                legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_MANUAL;
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "LOG_PKTS") ||
+                       legacy_token_equals(key_start, (size_t)(key_end - key_start), "LOGPKTS")) {
+                bool parsed_bool = false;
+                bool parsed_value = true;
+
+                if (value_start < end) {
+                    parsed_bool = legacy_parse_bool_token(value_start, (size_t)(value_end - value_start), &parsed_value);
                 }
+
+                legacy_send_cfg_stub.log_pkts = parsed_bool ? parsed_value : true;
+                legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_LOG_PKTS;
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "TYPE") ||
+                       legacy_token_equals(key_start, (size_t)(key_end - key_start), "DECODER_TYPE")) {
+                char parsed_type = '\0';
+                if ((value_start < end) &&
+                    legacy_parse_decoder_type_token(value_start, (size_t)(value_end - value_start), &parsed_type)) {
+                    legacy_send_cfg_stub.decoder_type = parsed_type;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_TYPE;
+                }
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "ADDRESS")) {
+                uint32_t v;
+                if ((value_start < end) &&
+                    legacy_parse_u32_token(value_start, (size_t)(value_end - value_start), &v) &&
+                    (v <= 255U)) {
+                    legacy_send_cfg_stub.address = (uint8_t)v;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_ADDRESS;
+                }
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "PORT")) {
+                uint32_t v;
+                if ((value_start < end) &&
+                    legacy_parse_u32_token(value_start, (size_t)(value_end - value_start), &v)) {
+                    legacy_send_cfg_stub.port = v;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_PORT;
+                }
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "LAMP")) {
+                bool parsed_bool = false;
+                bool parsed_value = true;
+                if (value_start < end) {
+                    parsed_bool = legacy_parse_bool_token(value_start, (size_t)(value_end - value_start), &parsed_value);
+                }
+                legacy_send_cfg_stub.lamp = parsed_bool ? parsed_value : true;
+                legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_LAMP;
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "PRESET")) {
+                uint32_t v;
+                if ((value_start < end) &&
+                    legacy_parse_u32_token(value_start, (size_t)(value_end - value_start), &v) &&
+                    (v <= 255U)) {
+                    legacy_send_cfg_stub.preset = (uint8_t)v;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_PRESET;
+                }
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "TRIGGER")) {
+                uint32_t v;
+                if ((value_start < end) &&
+                    legacy_parse_u32_token(value_start, (size_t)(value_end - value_start), &v) &&
+                    (v <= 255U)) {
+                    legacy_send_cfg_stub.trigger = (uint8_t)v;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_TRIGGER;
+                }
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "CRITICAL")) {
+                bool parsed_bool = false;
+                bool parsed_value = true;
+                if (value_start < end) {
+                    parsed_bool = legacy_parse_bool_token(value_start, (size_t)(value_end - value_start), &parsed_value);
+                }
+                legacy_send_cfg_stub.critical = parsed_bool ? parsed_value : true;
+                legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_CRITICAL;
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "REPEAT")) {
+                bool parsed_bool = false;
+                bool parsed_value = true;
+                if (value_start < end) {
+                    parsed_bool = legacy_parse_bool_token(value_start, (size_t)(value_end - value_start), &parsed_value);
+                }
+                legacy_send_cfg_stub.repeat = parsed_bool ? parsed_value : true;
+                legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_REPEAT;
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "TESTS")) {
+                uint32_t v;
+                if ((value_start < end) &&
+                    legacy_parse_u32_token(value_start, (size_t)(value_end - value_start), &v)) {
+                    legacy_send_cfg_stub.tests_mask = v;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_TESTS;
+                }
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "CLOCKS")) {
+                uint32_t v;
+                if ((value_start < end) &&
+                    legacy_parse_u32_token(value_start, (size_t)(value_end - value_start), &v)) {
+                    legacy_send_cfg_stub.clocks_mask = v;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_CLOCKS;
+                }
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "FUNCS")) {
+                uint32_t v;
+                if ((value_start < end) &&
+                    legacy_parse_u32_token(value_start, (size_t)(value_end - value_start), &v)) {
+                    legacy_send_cfg_stub.funcs_mask = v;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_FUNCS;
+                }
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "EXTRA_PRE")) {
+                uint32_t v;
+                if ((value_start < end) &&
+                    legacy_parse_u32_token(value_start, (size_t)(value_end - value_start), &v) &&
+                    (v <= 255U)) {
+                    legacy_send_cfg_stub.extra_pre = (uint8_t)v;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_EXTRA_PRE;
+                }
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "TRIG_REV")) {
+                bool parsed_bool = false;
+                bool parsed_value = true;
+                if (value_start < end) {
+                    parsed_bool = legacy_parse_bool_token(value_start, (size_t)(value_end - value_start), &parsed_value);
+                }
+                legacy_send_cfg_stub.trig_rev = parsed_bool ? parsed_value : true;
+                legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_TRIG_REV;
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "FILL_MSEC")) {
+                uint32_t v;
+                if ((value_start < end) &&
+                    legacy_parse_u32_token(value_start, (size_t)(value_end - value_start), &v)) {
+                    legacy_send_cfg_stub.fill_msec = v;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_FILL_MSEC;
+                }
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "TEST_REPS")) {
+                uint32_t v;
+                if ((value_start < end) &&
+                    legacy_parse_u32_token(value_start, (size_t)(value_end - value_start), &v) &&
+                    (v <= 255U)) {
+                    legacy_send_cfg_stub.test_reps = (uint8_t)v;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_TEST_REPS;
+                }
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "NO_ABORT")) {
+                bool parsed_bool = false;
+                bool parsed_value = true;
+                if (value_start < end) {
+                    parsed_bool = legacy_parse_bool_token(value_start, (size_t)(value_end - value_start), &parsed_value);
+                }
+                legacy_send_cfg_stub.no_abort = parsed_bool ? parsed_value : true;
+                legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_NO_ABORT;
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "LATE_SCOPE")) {
+                bool parsed_bool = false;
+                bool parsed_value = true;
+                if (value_start < end) {
+                    parsed_bool = legacy_parse_bool_token(value_start, (size_t)(value_end - value_start), &parsed_value);
+                }
+                legacy_send_cfg_stub.late_scope = parsed_bool ? parsed_value : true;
+                legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_LATE_SCOPE;
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "FRAGMENT")) {
+                bool parsed_bool = false;
+                bool parsed_value = true;
+                if (value_start < end) {
+                    parsed_bool = legacy_parse_bool_token(value_start, (size_t)(value_end - value_start), &parsed_value);
+                }
+                legacy_send_cfg_stub.fragment = parsed_bool ? parsed_value : true;
+                legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_FRAGMENT;
+            } else if (legacy_token_equals(key_start, (size_t)(key_end - key_start), "SAME_AMBIG_ADDR")) {
+                bool parsed_bool = false;
+                bool parsed_value = true;
+                if (value_start < end) {
+                    parsed_bool = legacy_parse_bool_token(value_start, (size_t)(value_end - value_start), &parsed_value);
+                }
+                legacy_send_cfg_stub.same_ambig_addr = parsed_bool ? parsed_value : true;
+                legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_SAME_AMBIG_ADDR;
             }
         }
 
@@ -139,6 +534,11 @@ static void legacy_parse_startup_cfg_text(char* cfg_text)
             ++line;
         }
     }
+
+    /* Preserve current runtime behavior through the reduced effective fields. */
+    legacy_startup_cfg_values.manual = legacy_send_cfg_stub.manual;
+    legacy_startup_cfg_values.log_pkts = legacy_send_cfg_stub.log_pkts;
+    legacy_startup_cfg_values.decoder_type = legacy_send_cfg_stub.decoder_type;
 }
 
 static void legacy_apply_startup_cfg_defaults(void)
@@ -172,6 +572,8 @@ static void legacy_probe_startup_cfg_on_sd(void)
     legacy_startup_cfg_values.manual = false;
     legacy_startup_cfg_values.log_pkts = false;
     legacy_startup_cfg_values.decoder_type = 'l';
+    legacy_send_cfg_stub.loaded = false;
+    legacy_send_cfg_stub.overrides = 0U;
 
     if (AppFileX_FileExistsOnSd("SEND.CFG") == FX_SUCCESS) {
         legacy_startup_cfg = LEGACY_STARTUP_CFG_SEND_CFG;
@@ -557,6 +959,77 @@ bool LegacyMode_GetStartupLogPkts(void)
 char LegacyMode_GetStartupDecoderType(void)
 {
     return legacy_startup_cfg_values.loaded ? legacy_startup_cfg_values.decoder_type : '?';
+}
+
+void LegacyMode_PrintStartupConfigStub(void)
+{
+    printf("Startup cfg:\n");
+    printf("  (* = overridden by SEND.CFG/SEND.INI)\n");
+    printf("  source=%s\n", LegacyMode_GetStartupConfigName());
+    printf("  loaded=%s\n", legacy_send_cfg_stub.loaded ? "true" : "false");
+    printf("  %sADDRESS=%u\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_ADDRESS),
+        (unsigned int)legacy_send_cfg_stub.address);
+    printf("  %sPORT=0x%08lX\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_PORT),
+        (unsigned long)legacy_send_cfg_stub.port);
+    printf("  %sTYPE=%c\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_TYPE),
+        legacy_send_cfg_stub.decoder_type);
+    printf("  %sMANUAL=%s\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_MANUAL),
+        legacy_send_cfg_stub.manual ? "true" : "false");
+    printf("  %sLAMP=%s\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_LAMP),
+        legacy_send_cfg_stub.lamp ? "true" : "false");
+    printf("  %sPRESET=%u\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_PRESET),
+        (unsigned int)legacy_send_cfg_stub.preset);
+    printf("  %sTRIGGER=%u\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_TRIGGER),
+        (unsigned int)legacy_send_cfg_stub.trigger);
+    printf("  %sCRITICAL=%s\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_CRITICAL),
+        legacy_send_cfg_stub.critical ? "true" : "false");
+    printf("  %sREPEAT=%s\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_REPEAT),
+        legacy_send_cfg_stub.repeat ? "true" : "false");
+    printf("  %sTRIG_REV=%s\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_TRIG_REV),
+        legacy_send_cfg_stub.trig_rev ? "true" : "false");
+    printf("  %sLOG_PKTS=%s\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_LOG_PKTS),
+        legacy_send_cfg_stub.log_pkts ? "true" : "false");
+    printf("  %sTESTS=0x%08lX\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_TESTS),
+        (unsigned long)legacy_send_cfg_stub.tests_mask);
+    printf("  %sCLOCKS=0x%08lX\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_CLOCKS),
+        (unsigned long)legacy_send_cfg_stub.clocks_mask);
+    printf("  %sFUNCS=0x%08lX\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_FUNCS),
+        (unsigned long)legacy_send_cfg_stub.funcs_mask);
+    printf("  %sEXTRA_PRE=%u\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_EXTRA_PRE),
+        (unsigned int)legacy_send_cfg_stub.extra_pre);
+    printf("  %sFILL_MSEC=%lu\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_FILL_MSEC),
+        (unsigned long)legacy_send_cfg_stub.fill_msec);
+    printf("  %sTEST_REPS=%u\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_TEST_REPS),
+        (unsigned int)legacy_send_cfg_stub.test_reps);
+    printf("  %sNO_ABORT=%s\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_NO_ABORT),
+        legacy_send_cfg_stub.no_abort ? "true" : "false");
+    printf("  %sLATE_SCOPE=%s\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_LATE_SCOPE),
+        legacy_send_cfg_stub.late_scope ? "true" : "false");
+    printf("  %sFRAGMENT=%s\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_FRAGMENT),
+        legacy_send_cfg_stub.fragment ? "true" : "false");
+    printf("  %sSAME_AMBIG_ADDR=%s\n",
+        legacy_cfg_mark(LEGACY_CFG_OVR_SAME_AMBIG_ADDR),
+        legacy_send_cfg_stub.same_ambig_addr ? "true" : "false");
 }
 
 bool LegacyMode_ApplyCompatKey(char key_cmd)
