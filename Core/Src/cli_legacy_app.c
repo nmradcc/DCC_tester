@@ -42,7 +42,6 @@ static void print_legacy_help(void) {
     printf("  start\n");
     printf("  stop\n");
     printf("  status\n");
-    printf("  timer <14>\n");
     printf("  send <reset|idle|hard|base>\n");
     printf("  profile <sender_v3|sender_v3_test>\n");
     printf("  key <r|R|i|d|D|a|b|o|w|0|1|c|C|S|e|f|k|q|h>\n");
@@ -53,8 +52,7 @@ static void print_legacy_help(void) {
 static void execute_legacy_command(const char *arg1, const char *arg2) {
     if (strcasecmp(arg1, "start") == 0) {
         if (LegacyMode_Start()) {
-            printf("Legacy mode started (reserved timer TIM%u, packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
-                   LegacyMode_GetReservedTimer(),
+            printf("Legacy mode started (timer TIM14, packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
                    LegacyMode_GetSelectedPacketName(),
                    LegacyMode_GetStartupConfigName(),
                    LegacyMode_GetStartupManual() ? "true" : "false",
@@ -72,23 +70,14 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
         }
     }
     else if (strcasecmp(arg1, "status") == 0 || arg1[0] == '\0') {
-         printf("Legacy mode: %s (reserved timer TIM%u, mode %s, packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
+         printf("Legacy mode: %s (timer TIM14, mode %s, packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
                LegacyMode_IsRunning() ? "running" : "stopped",
-               LegacyMode_GetReservedTimer(),
                LegacyMode_GetModeName(),
              LegacyMode_GetSelectedPacketName(),
              LegacyMode_GetStartupConfigName(),
              LegacyMode_GetStartupManual() ? "true" : "false",
              LegacyMode_GetStartupDecoderType(),
              LegacyMode_GetStartupLogPkts() ? "true" : "false");
-    }
-    else if (strcasecmp(arg1, "timer") == 0) {
-        uint8_t timer_id = (uint8_t)atoi(arg2);
-        if (LegacyMode_SetReservedTimer(timer_id)) {
-            printf("Legacy mode reserved timer set to TIM%u\n", LegacyMode_GetReservedTimer());
-        } else {
-            printf("Unsupported timer TIM%u. Allowed for now: TIM14\n", timer_id);
-        }
     }
     else if (strcasecmp(arg1, "send") == 0) {
         uint8_t packet_id;
@@ -115,35 +104,23 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
         if (strcasecmp(arg2, "sender_v3") == 0) {
             (void)LegacyMode_Stop();
 
-            if (!LegacyMode_SetReservedTimer(14)) {
-                printf("Failed to apply sender_v3 profile (timer)\n");
-                return;
-            }
-
             if (!LegacyMode_SelectPacket(LEGACY_PACKET_IDLE)) {
                 printf("Failed to apply sender_v3 profile (packet)\n");
                 return;
             }
 
-            printf("Applied profile sender_v3: timer TIM%u, mode %s, packet %s, state stopped\n",
-                   LegacyMode_GetReservedTimer(),
+            printf("Applied profile sender_v3: timer TIM14, mode %s, packet %s, state stopped\n",
                    LegacyMode_GetModeName(),
                    LegacyMode_GetSelectedPacketName());
         } else if (strcasecmp(arg2, "sender_v3_test") == 0) {
             (void)LegacyMode_Stop();
-
-            if (!LegacyMode_SetReservedTimer(14)) {
-                printf("Failed to apply sender_v3_test profile (timer)\n");
-                return;
-            }
 
             if (!LegacyMode_ApplyCompatKey('w')) {
                 printf("Failed to apply sender_v3_test profile (warble start)\n");
                 return;
             }
 
-            printf("Applied profile sender_v3_test: timer TIM%u, mode %s, packet %s, state %s\n",
-                   LegacyMode_GetReservedTimer(),
+            printf("Applied profile sender_v3_test: timer TIM14, mode %s, packet %s, state %s\n",
                    LegacyMode_GetModeName(),
                    LegacyMode_GetSelectedPacketName(),
                    LegacyMode_IsRunning() ? "running" : "stopped");

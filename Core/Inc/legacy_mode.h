@@ -18,9 +18,6 @@ bool LegacyMode_Start(void);
 bool LegacyMode_Stop(void);
 bool LegacyMode_IsRunning(void);
 
-bool LegacyMode_SetReservedTimer(uint8_t timer_id);
-uint8_t LegacyMode_GetReservedTimer(void);
-
 bool LegacyMode_SelectPacket(uint8_t packet_id);
 uint8_t LegacyMode_GetSelectedPacket(void);
 const char* LegacyMode_GetSelectedPacketName(void);

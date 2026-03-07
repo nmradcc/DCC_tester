@@ -9,7 +9,6 @@
 #include "command_station.h"
 
 static bool legacy_mode_running = false;
-static uint8_t legacy_reserved_timer = 14;
 static uint8_t selected_packet_id = LEGACY_PACKET_IDLE;
 
 typedef enum {
@@ -360,12 +359,8 @@ static inline uint16_t legacy_get_ticks_for_bit(uint8_t bit)
     return (bit != 0U) ? legacy_bit1_ticks : legacy_bit0_ticks;
 }
 
-static inline void legacy_track_outputs(bool n, bool p)
+static inline void legacy_track_output(bool p)
 {
-    TR_P_GPIO_Port->BSRR = ((uint32_t)(!n) << TR_N_BR_Pos) |
-                           ((uint32_t)(!p) << TR_P_BR_Pos) |
-                           ((uint32_t)(n) << TR_N_BS_Pos) |
-                           ((uint32_t)(p) << TR_P_BS_Pos);
     TRACK_P_GPIO_Port->BSRR = ((uint32_t)(!p) << TRACK_P_BR_Pos) |
                               ((uint32_t)(p) << TRACK_P_BS_Pos);
 }
@@ -393,7 +388,7 @@ void TIM14_IRQHandler(void)
             const uint8_t bit = legacy_get_current_bit();
             const uint16_t ticks = legacy_get_ticks_for_bit(bit);
 
-            legacy_track_outputs(!phase_p, phase_p);
+            legacy_track_output(phase_p);
             phase_p = !phase_p;
 
             half_phase++;
@@ -436,7 +431,6 @@ void TIM14_IRQHandler(void)
 void LegacyMode_Init(void)
 {
     legacy_mode_running = false;
-    legacy_reserved_timer = 14;
     selected_packet_id = LEGACY_PACKET_IDLE;
     legacy_wave_mode = LEGACY_MODE_PACKET;
     legacy_scope_o_index = 0;
@@ -459,15 +453,15 @@ bool LegacyMode_Start(void)
         return false;
     }
 
-    if (legacy_reserved_timer != 14U) {
-        return false;
-    }
-
     CommandStation_Stop();
 
     bit_index = 0;
     half_phase = 0;
     phase_p = true;
+
+    /* Set initial polarity then enable bridge before starting timer IRQ cadence. */
+    legacy_track_output(phase_p);
+    BR_ENABLE_GPIO_Port->BSRR = BR_ENABLE_Pin;
 
     htim14.Instance->CR1 &= ~TIM_CR1_OPM;
     htim14.Instance->CNT = 0U;
@@ -476,6 +470,7 @@ bool LegacyMode_Start(void)
     __HAL_TIM_ENABLE_IT(&htim14, TIM_IT_UPDATE);
 
     if (HAL_TIM_Base_Start_IT(&htim14) != HAL_OK) {
+        BR_ENABLE_GPIO_Port->BSRR = ((uint32_t)BR_ENABLE_Pin << 16U);
         __HAL_TIM_DISABLE_IT(&htim14, TIM_IT_UPDATE);
         return false;
     }
@@ -494,28 +489,14 @@ bool LegacyMode_Stop(void)
 
     legacy_mode_running = false;
     legacy_stop_timer();
-    legacy_track_outputs(false, false);
+    BR_ENABLE_GPIO_Port->BSRR = ((uint32_t)BR_ENABLE_Pin << 16U);
+    legacy_track_output(false);
     return true;
 }
 
 bool LegacyMode_IsRunning(void)
 {
     return legacy_mode_running;
-}
-
-bool LegacyMode_SetReservedTimer(uint8_t timer_id)
-{
-    if (timer_id != 14) {
-        return false;
-    }
-
-    legacy_reserved_timer = timer_id;
-    return true;
-}
-
-uint8_t LegacyMode_GetReservedTimer(void)
-{
-    return legacy_reserved_timer;
 }
 
 bool LegacyMode_SelectPacket(uint8_t packet_id)
