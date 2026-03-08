@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -272,6 +273,74 @@ UINT AppFileX_LoadTextFileOnSd(const CHAR *filename, CHAR *buffer, ULONG buffer_
 
   (void)AppFileX_MediaRelease();
 
+  return FX_SUCCESS;
+}
+
+UINT AppFileX_AppendTextFileOnSd(const CHAR *filename, const CHAR *text, ULONG text_length)
+{
+  FX_FILE file;
+  UINT status;
+
+  if ((filename == FX_NULL) || (text == FX_NULL) || (filename[0] == '\0')) {
+    return FX_PTR_ERROR;
+  }
+
+  if (text_length == 0U) {
+    text_length = (ULONG)strlen((const char *)text);
+  }
+
+  if (text_length == 0U) {
+    return FX_SUCCESS;
+  }
+
+  status = AppFileX_MediaAcquire();
+  if (status != FX_SUCCESS) {
+    return status;
+  }
+
+  status = fx_file_open(&sdio_disk, &file, (CHAR *)filename, FX_OPEN_FOR_WRITE);
+  if (status == FX_NOT_FOUND) {
+    status = fx_file_create(&sdio_disk, (CHAR *)filename);
+    if (status != FX_SUCCESS) {
+      (void)AppFileX_MediaRelease();
+      return status;
+    }
+    status = fx_file_open(&sdio_disk, &file, (CHAR *)filename, FX_OPEN_FOR_WRITE);
+  }
+
+  if (status != FX_SUCCESS) {
+    (void)AppFileX_MediaRelease();
+    return status;
+  }
+
+  status = fx_file_seek(&file, file.fx_file_current_file_size);
+  if (status == FX_SUCCESS) {
+    status = fx_file_write(&file, (VOID *)text, text_length);
+    if (status == FX_SUCCESS) {
+      status = fx_media_flush(&sdio_disk);
+    }
+  }
+
+  (void)fx_file_close(&file);
+  (void)AppFileX_MediaRelease();
+
+  return status;
+}
+
+UINT AppFileX_CloseMediaIfIdleOnSd(void)
+{
+  if (media_user_count != 0U) {
+    return FX_SUCCESS;
+  }
+
+  if (sdio_disk.fx_media_id == FX_MEDIA_ID) {
+    UINT status = fx_media_close(&sdio_disk);
+    if (status != FX_SUCCESS) {
+      return status;
+    }
+  }
+
+  media_status = MEDIA_CLOSED;
   return FX_SUCCESS;
 }
 

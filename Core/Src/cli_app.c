@@ -18,6 +18,7 @@
 #include "command_station.h"
 #include "decoder.h"
 #include "susi.h"
+#include "app_filex.h"
 
 int _write(int file, char *ptr, int len);
 
@@ -245,6 +246,18 @@ void date_time_command(const char *arg1, const char *arg2) {
            sTime.Hours, sTime.Minutes, sTime.Seconds);
 }
 
+void sd_eject_command(const char *arg1, const char *arg2) {
+    (void)arg1;
+    (void)arg2;
+
+    UINT status = AppFileX_CloseMediaIfIdleOnSd();
+    if (status == FX_SUCCESS) {
+        printf("SD media closed. Card can be removed safely.\n");
+    } else {
+        printf("SD eject failed (FileX status=%u).\n", (unsigned int)status);
+    }
+}
+
 Command cmd_help = {
     .name = "help",
     .execute = help_command,
@@ -330,8 +343,14 @@ Command cmd_enter_legacy = {
     .help = "Enter legacy mode CLI (no return except reset)",
     .next = &cmd_reset
 };
+Command cmd_sd_eject = {
+    .name = "sd_eject",
+    .execute = sd_eject_command,
+    .help = "Flush/close SD media for safe card removal",
+    .next = &cmd_enter_legacy
+};
 
-Command *command_list = &cmd_enter_legacy;
+Command *command_list = &cmd_sd_eject;
 
 static void print_help(void) {
     Command *current = command_list;

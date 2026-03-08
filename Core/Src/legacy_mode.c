@@ -4,6 +4,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <ctype.h>
 #include <string.h>
 
@@ -141,6 +142,9 @@ static legacy_send_cfg_stub_t legacy_send_cfg_stub = {
     false
 };
 static char legacy_cfg_text_buffer[2048];
+static const CHAR legacy_packet_log_filename[] = "PKTS.LOG";
+
+static inline const uint8_t* legacy_packet_data(uint8_t packet_id, size_t* size);
 
 static void legacy_trim_spaces(char** start_ptr, char** end_ptr)
 {
@@ -609,6 +613,80 @@ static const char* legacy_packet_name(uint8_t packet_id)
     }
 }
 
+static void legacy_log_text_line(const char* text)
+{
+    if (!LegacyMode_GetStartupLogPkts() || (text == NULL)) {
+        return;
+    }
+
+    (void)AppFileX_AppendTextFileOnSd(legacy_packet_log_filename, (const CHAR*)text, 0U);
+}
+
+static void legacy_log_printf(const char* fmt, ...)
+{
+    char line[192];
+    int written;
+    va_list args;
+
+    if (!LegacyMode_GetStartupLogPkts() || (fmt == NULL)) {
+        return;
+    }
+
+    va_start(args, fmt);
+    written = vsnprintf(line, sizeof(line), fmt, args);
+    va_end(args);
+
+    if (written <= 0) {
+        return;
+    }
+
+    if ((size_t)written >= sizeof(line) - 1U) {
+        line[sizeof(line) - 2U] = '\n';
+        line[sizeof(line) - 1U] = '\0';
+    } else if ((written > 0) && (line[written - 1] != '\n')) {
+        line[written] = '\n';
+        line[written + 1] = '\0';
+    }
+
+    legacy_log_text_line(line);
+}
+
+static void legacy_log_selected_packet(const char* context)
+{
+    size_t size = 0U;
+    const uint8_t* data = legacy_packet_data(selected_packet_id, &size);
+    char bytes[80];
+    size_t pos = 0U;
+    size_t i;
+
+    if (!LegacyMode_GetStartupLogPkts()) {
+        return;
+    }
+
+    if ((data != NULL) && (size > 0U)) {
+        for (i = 0U; i < size; ++i) {
+            int n = snprintf(&bytes[pos], sizeof(bytes) - pos, "%s%02X", (i == 0U) ? "" : " ", data[i]);
+            if ((n <= 0) || ((size_t)n >= (sizeof(bytes) - pos))) {
+                break;
+            }
+            pos += (size_t)n;
+        }
+    }
+
+    if ((context != NULL) && (context[0] != '\0')) {
+        legacy_log_printf("%s mode=%s packet=%s bytes=%s",
+                          context,
+                          LegacyMode_GetModeName(),
+                          LegacyMode_GetSelectedPacketName(),
+                          (pos > 0U) ? bytes : "-");
+    } else {
+        legacy_log_printf("mode=%s packet=%s bytes=%s",
+                          LegacyMode_GetModeName(),
+                          LegacyMode_GetSelectedPacketName(),
+                          (pos > 0U) ? bytes : "-");
+    }
+}
+
 static const char* legacy_mode_name(legacy_wave_mode_t mode)
 {
     switch (mode) {
@@ -790,7 +868,9 @@ void TIM14_IRQHandler(void)
             const uint8_t bit = legacy_get_current_bit();
             const uint16_t ticks = legacy_get_ticks_for_bit(bit);
 
-            legacy_track_output(phase_p);
+            if (!LegacyMode_GetStartupLogPkts()) {
+                legacy_track_output(phase_p);
+            }
             phase_p = !phase_p;
 
             half_phase++;
@@ -861,9 +941,17 @@ bool LegacyMode_Start(void)
     half_phase = 0;
     phase_p = true;
 
-    /* Set initial polarity then enable bridge before starting timer IRQ cadence. */
-    legacy_track_output(phase_p);
-    BR_ENABLE_GPIO_Port->BSRR = BR_ENABLE_Pin;
+    // Match sender startup search order on SD: SEND.CFG then SEND.INI.
+    legacy_probe_startup_cfg_on_sd();
+
+    /* In LOG_PKTS mode, keep bridge disabled and log packets instead of driving track hardware. */
+    if (!LegacyMode_GetStartupLogPkts()) {
+        legacy_track_output(phase_p);
+        BR_ENABLE_GPIO_Port->BSRR = BR_ENABLE_Pin;
+    } else {
+        BR_ENABLE_GPIO_Port->BSRR = ((uint32_t)BR_ENABLE_Pin << 16U);
+        legacy_track_output(false);
+    }
 
     htim14.Instance->CR1 &= ~TIM_CR1_OPM;
     htim14.Instance->CNT = 0U;
@@ -878,8 +966,12 @@ bool LegacyMode_Start(void)
     }
 
     legacy_mode_running = true;
-    // Match sender startup search order on SD: SEND.CFG then SEND.INI.
-    legacy_probe_startup_cfg_on_sd();
+    legacy_log_printf("START startup_cfg=%s log_pkts=%s manual=%s type=%c",
+                      LegacyMode_GetStartupConfigName(),
+                      LegacyMode_GetStartupLogPkts() ? "true" : "false",
+                      LegacyMode_GetStartupManual() ? "true" : "false",
+                      LegacyMode_GetStartupDecoderType());
+    legacy_log_selected_packet("SELECT");
     return true;
 }
 
@@ -893,6 +985,8 @@ bool LegacyMode_Stop(void)
     legacy_stop_timer();
     BR_ENABLE_GPIO_Port->BSRR = ((uint32_t)BR_ENABLE_Pin << 16U);
     legacy_track_output(false);
+    legacy_log_printf("STOP");
+    (void)AppFileX_CloseMediaIfIdleOnSd();
     return true;
 }
 
@@ -916,6 +1010,7 @@ bool LegacyMode_SelectPacket(uint8_t packet_id)
     legacy_dcc_mode_active = (packet_id == LEGACY_PACKET_BASE);
     bit_index = 0;
     half_phase = 0;
+    legacy_log_selected_packet("SELECT");
     return true;
 }
 

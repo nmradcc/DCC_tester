@@ -8,6 +8,7 @@
 #include "cmsis_os2.h"
 #include "stm32h5xx_hal.h"
 #include "legacy_mode.h"
+#include "app_filex.h"
 #include "cli_app.h"
 #include "cli_legacy_app.h"
 
@@ -43,6 +44,7 @@ static void print_legacy_help(void) {
     printf("  stop\n");
     printf("  status\n");
     printf("  cfg\n");
+    printf("  sd_eject\n");
     printf("  send <reset|idle|hard|base>\n");
     printf("  profile <sender_v3|sender_v3_test>\n");
     printf("  key <r|R|i|d|D|a|b|o|w|0|1|c|C|S|e|f|k|q|h>\n");
@@ -82,6 +84,14 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
     }
     else if (strcasecmp(arg1, "cfg") == 0) {
         LegacyMode_PrintStartupConfigStub();
+    }
+    else if (strcasecmp(arg1, "sd_eject") == 0) {
+        UINT status = AppFileX_CloseMediaIfIdleOnSd();
+        if (status == FX_SUCCESS) {
+            printf("SD media closed. Card can be removed safely.\n");
+        } else {
+            printf("SD eject failed (FileX status=%u).\n", (unsigned int)status);
+        }
     }
     else if (strcasecmp(arg1, "send") == 0) {
         uint8_t packet_id;
