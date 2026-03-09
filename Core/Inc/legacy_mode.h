@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,6 +16,7 @@ extern "C" {
 
 void LegacyMode_Init(void);
 bool LegacyMode_Start(void);
+bool LegacyMode_SetStartArgs(const char* args_text, char* error_buf, size_t error_buf_size);
 bool LegacyMode_Stop(void);
 bool LegacyMode_IsRunning(void);
 

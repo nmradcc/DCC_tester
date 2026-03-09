@@ -50,13 +50,22 @@ static bool legacy_fw_state = true;
 static uint8_t legacy_kickstart_cycles = 0;
 static bool legacy_dcc_mode_active = false;
 
+static bool legacy_test_active = false;
+static uint8_t legacy_test_packet_plan[4];
+static uint8_t legacy_test_packet_count = 0;
+static uint8_t legacy_test_packet_index = 0;
+static uint16_t legacy_test_packet_cycles = 0;
+
 typedef enum {
     LEGACY_STARTUP_CFG_NONE = 0,
     LEGACY_STARTUP_CFG_SEND_CFG,
-    LEGACY_STARTUP_CFG_SEND_INI
+    LEGACY_STARTUP_CFG_SEND_INI,
+    LEGACY_STARTUP_CFG_CLI
 } legacy_startup_cfg_t;
 
 static legacy_startup_cfg_t legacy_startup_cfg = LEGACY_STARTUP_CFG_NONE;
+static char legacy_start_cli_args[256];
+static bool legacy_start_cli_args_pending = false;
 
 typedef struct {
     bool loaded;
@@ -145,6 +154,45 @@ static char legacy_cfg_text_buffer[2048];
 static const CHAR legacy_packet_log_filename[] = "PKTS.LOG";
 
 static inline const uint8_t* legacy_packet_data(uint8_t packet_id, size_t* size);
+static const char* legacy_packet_name(uint8_t packet_id);
+static void legacy_log_printf(const char* fmt, ...);
+static void legacy_log_selected_packet(const char* context);
+static void legacy_set_error(char* error_buf, size_t error_buf_size, const char* fmt, ...);
+static bool legacy_apply_sender_cli_args(char* args_text, char* error_buf, size_t error_buf_size);
+static void legacy_prepare_test_plan(void);
+static void legacy_advance_test_plan_on_packet_boundary(void);
+
+static void legacy_seed_send_cfg_defaults(void)
+{
+    legacy_send_cfg_stub.loaded = true;
+    legacy_send_cfg_stub.overrides = 0U;
+    legacy_send_cfg_stub.address = 3U;
+    legacy_send_cfg_stub.port = 0x340U;
+    legacy_send_cfg_stub.decoder_type = 'l';
+    legacy_send_cfg_stub.manual = false;
+    legacy_send_cfg_stub.lamp = false;
+    legacy_send_cfg_stub.preset = 0U;
+    legacy_send_cfg_stub.trigger = 8U;
+    legacy_send_cfg_stub.critical = false;
+    legacy_send_cfg_stub.repeat = false;
+    legacy_send_cfg_stub.tests_mask = 0x00000080U;
+    legacy_send_cfg_stub.clocks_mask = 0x0000007fU;
+    legacy_send_cfg_stub.funcs_mask = 0x1fU;
+    legacy_send_cfg_stub.extra_pre = 2U;
+    legacy_send_cfg_stub.trig_rev = false;
+    legacy_send_cfg_stub.fill_msec = 1000U;
+    legacy_send_cfg_stub.test_reps = 4U;
+    legacy_send_cfg_stub.log_pkts = false;
+    legacy_send_cfg_stub.no_abort = false;
+    legacy_send_cfg_stub.late_scope = false;
+    legacy_send_cfg_stub.fragment = false;
+    legacy_send_cfg_stub.same_ambig_addr = false;
+
+    legacy_startup_cfg_values.loaded = true;
+    legacy_startup_cfg_values.manual = false;
+    legacy_startup_cfg_values.log_pkts = false;
+    legacy_startup_cfg_values.decoder_type = 'l';
+}
 
 static void legacy_trim_spaces(char** start_ptr, char** end_ptr)
 {
@@ -262,6 +310,270 @@ static inline const char* legacy_cfg_mark(uint32_t mask)
     return ((legacy_send_cfg_stub.overrides & mask) != 0U) ? "*" : "";
 }
 
+static void legacy_set_error(char* error_buf, size_t error_buf_size, const char* fmt, ...)
+{
+    va_list args;
+
+    if ((error_buf == NULL) || (error_buf_size == 0U) || (fmt == NULL)) {
+        return;
+    }
+
+    va_start(args, fmt);
+    (void)vsnprintf(error_buf, error_buf_size, fmt, args);
+    va_end(args);
+}
+
+static bool legacy_apply_sender_cli_args(char* args_text, char* error_buf, size_t error_buf_size)
+{
+    char* token;
+
+    if ((args_text == NULL) || (args_text[0] == '\0')) {
+        return true;
+    }
+
+    if (!legacy_send_cfg_stub.loaded) {
+        legacy_seed_send_cfg_defaults();
+    }
+
+    token = strtok(args_text, " \t");
+    while (token != NULL) {
+        if (strcmp(token, "-?") == 0 || strcmp(token, "-u") == 0) {
+            legacy_set_error(error_buf, error_buf_size, "%s is not supported in legacy CLI start.", token);
+            return false;
+        } else if (strcmp(token, "-m") == 0) {
+            legacy_send_cfg_stub.manual = !legacy_send_cfg_stub.manual;
+            legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_MANUAL;
+        } else if (strcmp(token, "-l") == 0) {
+            legacy_send_cfg_stub.lamp = !legacy_send_cfg_stub.lamp;
+            legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_LAMP;
+        } else if (strcmp(token, "-f") == 0) {
+            legacy_send_cfg_stub.fragment = !legacy_send_cfg_stub.fragment;
+            legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_FRAGMENT;
+        } else if (strcmp(token, "-x") == 0) {
+            legacy_send_cfg_stub.critical = !legacy_send_cfg_stub.critical;
+            legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_CRITICAL;
+        } else if (strcmp(token, "-r") == 0) {
+            legacy_send_cfg_stub.repeat = !legacy_send_cfg_stub.repeat;
+            legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_REPEAT;
+        } else if (strcmp(token, "-T") == 0) {
+            legacy_send_cfg_stub.trig_rev = !legacy_send_cfg_stub.trig_rev;
+            legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_TRIG_REV;
+        } else if (strcmp(token, "-P") == 0) {
+            legacy_send_cfg_stub.log_pkts = !legacy_send_cfg_stub.log_pkts;
+            legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_LOG_PKTS;
+        } else if (strcmp(token, "-A") == 0) {
+            legacy_send_cfg_stub.no_abort = !legacy_send_cfg_stub.no_abort;
+            legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_NO_ABORT;
+        } else if (strcmp(token, "-s") == 0) {
+            legacy_send_cfg_stub.late_scope = !legacy_send_cfg_stub.late_scope;
+            legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_LATE_SCOPE;
+        } else if (strcmp(token, "-S") == 0) {
+            legacy_send_cfg_stub.same_ambig_addr = !legacy_send_cfg_stub.same_ambig_addr;
+            legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_SAME_AMBIG_ADDR;
+        } else if (strcmp(token, "-L") == 0 || strcmp(token, "-k") == 0 || strcmp(token, "-D") == 0) {
+            /* Accepted for Sender compatibility; currently no runtime effect in legacy mode. */
+        } else {
+            char* value;
+            uint32_t parsed_value;
+
+            if ((strcmp(token, "-a") != 0) && (strcmp(token, "-p") != 0) &&
+                (strcmp(token, "-d") != 0) && (strcmp(token, "-n") != 0) &&
+                (strcmp(token, "-N") != 0) && (strcmp(token, "-t") != 0) &&
+                (strcmp(token, "-c") != 0) && (strcmp(token, "-g") != 0) &&
+                (strcmp(token, "-E") != 0) && (strcmp(token, "-F") != 0) &&
+                (strcmp(token, "-R") != 0) && (strcmp(token, "-o") != 0) &&
+                (strcmp(token, "-e") != 0)) {
+                legacy_set_error(error_buf, error_buf_size, "Unknown sender option '%s'.", token);
+                return false;
+            }
+
+            value = strtok(NULL, " \t");
+            if (value == NULL) {
+                legacy_set_error(error_buf, error_buf_size, "%s requires an argument.", token);
+                return false;
+            }
+
+            if (strcmp(token, "-d") == 0) {
+                char parsed_type;
+                if (!legacy_parse_decoder_type_token(value, strlen(value), &parsed_type)) {
+                    legacy_set_error(error_buf, error_buf_size, "Invalid -d value '%s'.", value);
+                    return false;
+                }
+                legacy_send_cfg_stub.decoder_type = parsed_type;
+                legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_TYPE;
+            } else {
+                if (!legacy_parse_u32_token(value, strlen(value), &parsed_value)) {
+                    legacy_set_error(error_buf, error_buf_size, "Invalid numeric value '%s' for %s.", value, token);
+                    return false;
+                }
+
+                if (strcmp(token, "-a") == 0) {
+                    if (parsed_value > 255U) {
+                        legacy_set_error(error_buf, error_buf_size, "-a value must be <= 255.");
+                        return false;
+                    }
+                    legacy_send_cfg_stub.address = (uint8_t)parsed_value;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_ADDRESS;
+                } else if (strcmp(token, "-p") == 0) {
+                    legacy_send_cfg_stub.port = parsed_value;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_PORT;
+                } else if (strcmp(token, "-n") == 0) {
+                    if (parsed_value > 255U) {
+                        legacy_set_error(error_buf, error_buf_size, "-n value must be <= 255.");
+                        return false;
+                    }
+                    legacy_send_cfg_stub.preset = (uint8_t)parsed_value;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_PRESET;
+                } else if (strcmp(token, "-N") == 0) {
+                    if (parsed_value > 255U) {
+                        legacy_set_error(error_buf, error_buf_size, "-N value must be <= 255.");
+                        return false;
+                    }
+                    legacy_send_cfg_stub.trigger = (uint8_t)parsed_value;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_TRIGGER;
+                } else if (strcmp(token, "-t") == 0) {
+                    legacy_send_cfg_stub.tests_mask = parsed_value;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_TESTS;
+                } else if (strcmp(token, "-c") == 0) {
+                    legacy_send_cfg_stub.clocks_mask = parsed_value;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_CLOCKS;
+                } else if (strcmp(token, "-g") == 0) {
+                    if (parsed_value == 0U) {
+                        legacy_set_error(error_buf, error_buf_size, "-g mask must not be 0.");
+                        return false;
+                    }
+                    legacy_send_cfg_stub.funcs_mask = parsed_value;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_FUNCS;
+                } else if (strcmp(token, "-E") == 0) {
+                    if (parsed_value > 255U) {
+                        legacy_set_error(error_buf, error_buf_size, "-E value must be <= 255.");
+                        return false;
+                    }
+                    legacy_send_cfg_stub.extra_pre = (uint8_t)parsed_value;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_EXTRA_PRE;
+                } else if (strcmp(token, "-F") == 0) {
+                    legacy_send_cfg_stub.fill_msec = parsed_value;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_FILL_MSEC;
+                } else if (strcmp(token, "-R") == 0) {
+                    if ((parsed_value < 1U) || (parsed_value > 255U)) {
+                        legacy_set_error(error_buf, error_buf_size, "-R value must be in range 1..255.");
+                        return false;
+                    }
+                    legacy_send_cfg_stub.test_reps = (uint8_t)parsed_value;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_TEST_REPS;
+                } else if (strcmp(token, "-o") == 0) {
+                    if ((parsed_value < 1U) || (parsed_value > 4U)) {
+                        legacy_set_error(error_buf, error_buf_size, "-o pair must be in range 1..4.");
+                        return false;
+                    }
+
+                    legacy_send_cfg_stub.preset = (uint8_t)((parsed_value * 2U) - 1U);
+                    legacy_send_cfg_stub.trigger = (uint8_t)(legacy_send_cfg_stub.preset + 1U);
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_PRESET;
+                    legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_TRIGGER;
+                } else if (strcmp(token, "-e") == 0) {
+                    /* Accepted for compatibility; reserved for future runtime use. */
+                }
+            }
+        }
+
+        token = strtok(NULL, " \t");
+    }
+
+    legacy_startup_cfg_values.loaded = true;
+    legacy_startup_cfg_values.manual = legacy_send_cfg_stub.manual;
+    legacy_startup_cfg_values.log_pkts = legacy_send_cfg_stub.log_pkts;
+    legacy_startup_cfg_values.decoder_type = legacy_send_cfg_stub.decoder_type;
+    return true;
+}
+
+static void legacy_prepare_test_plan(void)
+{
+    uint32_t tests = legacy_send_cfg_stub.tests_mask;
+
+    legacy_test_active = false;
+    legacy_test_packet_count = 0;
+    legacy_test_packet_index = 0;
+    legacy_test_packet_cycles = 0U;
+
+    if (legacy_startup_cfg_values.manual) {
+        return;
+    }
+
+    if ((tests & 0x01U) != 0U) {
+        legacy_test_packet_plan[legacy_test_packet_count++] = LEGACY_PACKET_RESET;
+    }
+    if ((tests & 0x02U) != 0U) {
+        legacy_test_packet_plan[legacy_test_packet_count++] = LEGACY_PACKET_IDLE;
+    }
+    if ((tests & 0x04U) != 0U) {
+        legacy_test_packet_plan[legacy_test_packet_count++] = LEGACY_PACKET_HARD;
+    }
+    if ((tests & 0x08U) != 0U) {
+        legacy_test_packet_plan[legacy_test_packet_count++] = LEGACY_PACKET_BASE;
+    }
+
+    // Sender default TESTS (0x80) should still run a meaningful packet path.
+    if (legacy_test_packet_count == 0U && tests != 0U) {
+        legacy_test_packet_plan[legacy_test_packet_count++] = LEGACY_PACKET_BASE;
+    }
+
+    if (legacy_test_packet_count == 0U) {
+        return;
+    }
+
+    legacy_test_active = true;
+    selected_packet_id = legacy_test_packet_plan[0];
+    legacy_wave_mode = LEGACY_MODE_PACKET;
+    legacy_dcc_mode_active = (selected_packet_id == LEGACY_PACKET_BASE);
+    bit_index = 0U;
+    half_phase = 0U;
+
+    legacy_log_printf("TEST start tests=0x%08lX reps=%u repeat=%s steps=%u first=%s",
+                      (unsigned long)legacy_send_cfg_stub.tests_mask,
+                      (unsigned int)(legacy_send_cfg_stub.test_reps == 0U ? 1U : legacy_send_cfg_stub.test_reps),
+                      legacy_send_cfg_stub.repeat ? "true" : "false",
+                      (unsigned int)legacy_test_packet_count,
+                      legacy_packet_name(selected_packet_id));
+    legacy_log_selected_packet("TEST_SELECT");
+}
+
+static void legacy_advance_test_plan_on_packet_boundary(void)
+{
+    uint16_t reps_target;
+
+    if (!legacy_test_active || legacy_test_packet_count == 0U) {
+        return;
+    }
+
+    reps_target = (legacy_send_cfg_stub.test_reps == 0U) ? 1U : legacy_send_cfg_stub.test_reps;
+
+    legacy_test_packet_cycles++;
+    if (legacy_test_packet_cycles < reps_target) {
+        return;
+    }
+
+    legacy_test_packet_cycles = 0U;
+    legacy_test_packet_index++;
+
+    if (legacy_test_packet_index >= legacy_test_packet_count) {
+        if (legacy_send_cfg_stub.repeat) {
+            legacy_test_packet_index = 0U;
+        } else {
+            legacy_test_active = false;
+            legacy_log_printf("TEST done steps=%u", (unsigned int)legacy_test_packet_count);
+            return;
+        }
+    }
+
+    selected_packet_id = legacy_test_packet_plan[legacy_test_packet_index];
+    legacy_wave_mode = LEGACY_MODE_PACKET;
+    legacy_dcc_mode_active = (selected_packet_id == LEGACY_PACKET_BASE);
+    bit_index = 0U;
+    half_phase = 0U;
+    legacy_log_selected_packet("TEST_SELECT");
+}
+
 static void legacy_parse_startup_cfg_text(char* cfg_text)
 {
     char* line = cfg_text;
@@ -271,29 +583,7 @@ static void legacy_parse_startup_cfg_text(char* cfg_text)
     legacy_startup_cfg_values.log_pkts = false;
     legacy_startup_cfg_values.decoder_type = 'l';
 
-    legacy_send_cfg_stub.loaded = true;
-    legacy_send_cfg_stub.overrides = 0U;
-    legacy_send_cfg_stub.address = 3U;
-    legacy_send_cfg_stub.port = 0x340U;
-    legacy_send_cfg_stub.decoder_type = 'l';
-    legacy_send_cfg_stub.manual = false;
-    legacy_send_cfg_stub.lamp = false;
-    legacy_send_cfg_stub.preset = 0U;
-    legacy_send_cfg_stub.trigger = 8U;
-    legacy_send_cfg_stub.critical = false;
-    legacy_send_cfg_stub.repeat = false;
-    legacy_send_cfg_stub.tests_mask = 0x00000080U;
-    legacy_send_cfg_stub.clocks_mask = 0x0000007fU;
-    legacy_send_cfg_stub.funcs_mask = 0x1fU;
-    legacy_send_cfg_stub.extra_pre = 2U;
-    legacy_send_cfg_stub.trig_rev = false;
-    legacy_send_cfg_stub.fill_msec = 1000U;
-    legacy_send_cfg_stub.test_reps = 4U;
-    legacy_send_cfg_stub.log_pkts = false;
-    legacy_send_cfg_stub.no_abort = false;
-    legacy_send_cfg_stub.late_scope = false;
-    legacy_send_cfg_stub.fragment = false;
-    legacy_send_cfg_stub.same_ambig_addr = false;
+    legacy_seed_send_cfg_defaults();
 
     while ((line != NULL) && (*line != '\0')) {
         char* next = strpbrk(line, "\r\n");
@@ -883,6 +1173,9 @@ void TIM14_IRQHandler(void)
                     bit_index++;
                     if ((size > 0U) && (bit_index >= (uint32_t)(size * 8U))) {
                         bit_index = 0;
+
+                        legacy_advance_test_plan_on_packet_boundary();
+
                         if (legacy_kickstart_cycles > 0U) {
                             legacy_kickstart_cycles--;
                             if (legacy_kickstart_cycles == 0U) {
@@ -924,6 +1217,10 @@ void LegacyMode_Init(void)
     legacy_startup_cfg_values.manual = false;
     legacy_startup_cfg_values.log_pkts = false;
     legacy_startup_cfg_values.decoder_type = 'l';
+    legacy_test_active = false;
+    legacy_test_packet_count = 0U;
+    legacy_test_packet_index = 0U;
+    legacy_test_packet_cycles = 0U;
     bit_index = 0;
     half_phase = 0;
     phase_p = true;
@@ -931,6 +1228,9 @@ void LegacyMode_Init(void)
 
 bool LegacyMode_Start(void)
 {
+    char cli_args_buf[sizeof(legacy_start_cli_args)];
+    char cli_error[128];
+
     if (legacy_mode_running) {
         return false;
     }
@@ -943,6 +1243,24 @@ bool LegacyMode_Start(void)
 
     // Match sender startup search order on SD: SEND.CFG then SEND.INI.
     legacy_probe_startup_cfg_on_sd();
+
+    if (legacy_start_cli_args_pending) {
+        (void)strncpy(cli_args_buf, legacy_start_cli_args, sizeof(cli_args_buf) - 1U);
+        cli_args_buf[sizeof(cli_args_buf) - 1U] = '\0';
+
+        legacy_start_cli_args_pending = false;
+        legacy_start_cli_args[0] = '\0';
+
+        if (!legacy_apply_sender_cli_args(cli_args_buf, cli_error, sizeof(cli_error))) {
+            printf("Legacy start args error: %s\n", cli_error[0] != '\0' ? cli_error : "invalid args");
+            return false;
+        }
+
+        legacy_startup_cfg = LEGACY_STARTUP_CFG_CLI;
+        legacy_apply_startup_cfg_defaults();
+    }
+
+    legacy_prepare_test_plan();
 
     /* In LOG_PKTS mode, keep bridge disabled and log packets instead of driving track hardware. */
     if (!LegacyMode_GetStartupLogPkts()) {
@@ -971,7 +1289,57 @@ bool LegacyMode_Start(void)
                       LegacyMode_GetStartupLogPkts() ? "true" : "false",
                       LegacyMode_GetStartupManual() ? "true" : "false",
                       LegacyMode_GetStartupDecoderType());
+    legacy_log_printf("CFG tests=0x%08lX clocks=0x%08lX funcs=0x%08lX reps=%u pre=%u trig=%u",
+                      (unsigned long)legacy_send_cfg_stub.tests_mask,
+                      (unsigned long)legacy_send_cfg_stub.clocks_mask,
+                      (unsigned long)legacy_send_cfg_stub.funcs_mask,
+                      (unsigned int)legacy_send_cfg_stub.test_reps,
+                      (unsigned int)legacy_send_cfg_stub.preset,
+                      (unsigned int)legacy_send_cfg_stub.trigger);
     legacy_log_selected_packet("SELECT");
+    return true;
+}
+
+bool LegacyMode_SetStartArgs(const char* args_text, char* error_buf, size_t error_buf_size)
+{
+    size_t len = 0U;
+
+    if ((error_buf != NULL) && (error_buf_size > 0U)) {
+        error_buf[0] = '\0';
+    }
+
+    if (args_text == NULL) {
+        legacy_start_cli_args_pending = false;
+        legacy_start_cli_args[0] = '\0';
+        return true;
+    }
+
+    while (isspace((unsigned char)*args_text)) {
+        ++args_text;
+    }
+
+    len = strlen(args_text);
+    while ((len > 0U) && isspace((unsigned char)args_text[len - 1U])) {
+        --len;
+    }
+
+    if (len == 0U) {
+        legacy_start_cli_args_pending = false;
+        legacy_start_cli_args[0] = '\0';
+        return true;
+    }
+
+    if (len >= sizeof(legacy_start_cli_args)) {
+        legacy_set_error(error_buf, error_buf_size,
+                         "Start argument string too long (%lu > %lu).",
+                         (unsigned long)len,
+                         (unsigned long)(sizeof(legacy_start_cli_args) - 1U));
+        return false;
+    }
+
+    memcpy(legacy_start_cli_args, args_text, len);
+    legacy_start_cli_args[len] = '\0';
+    legacy_start_cli_args_pending = true;
     return true;
 }
 
@@ -1036,6 +1404,8 @@ const char* LegacyMode_GetStartupConfigName(void)
             return "SEND.CFG";
         case LEGACY_STARTUP_CFG_SEND_INI:
             return "SEND.INI";
+        case LEGACY_STARTUP_CFG_CLI:
+            return "CLI";
         default:
             return "none";
     }
@@ -1244,6 +1614,7 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
             }
             return true;
         case 'e':
+        case 'E':
             if (!legacy_dcc_mode_active) {
                 return false;
             }
@@ -1283,6 +1654,30 @@ bool LegacyMode_ApplyCompatKey(char key_cmd)
         case 'q':
             if (LegacyMode_IsRunning()) {
                 return LegacyMode_Stop();
+            }
+            return true;
+        case 'u':
+            // Sender clear-underflow key; no dedicated underflow state in legacy mode.
+            legacy_log_printf("KEY u clear-underflow noop");
+            return true;
+        case 's':
+            // Sender speed/output-step key; emulate by cycling between BASE and IDLE packet.
+            if (!legacy_dcc_mode_active) {
+                (void)LegacyMode_SelectPacket(LEGACY_PACKET_BASE);
+            } else {
+                (void)LegacyMode_SelectPacket(selected_packet_id == LEGACY_PACKET_BASE ? LEGACY_PACKET_IDLE : LEGACY_PACKET_BASE);
+            }
+            if (!LegacyMode_IsRunning()) {
+                return LegacyMode_Start();
+            }
+            return true;
+        case 't':
+        case 'z':
+        case 'g':
+            // Sender test-entry keys; emulate by enabling test-plan execution from current cfg.
+            legacy_prepare_test_plan();
+            if (!LegacyMode_IsRunning()) {
+                return LegacyMode_Start();
             }
             return true;
         default:

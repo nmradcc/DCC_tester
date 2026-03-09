@@ -17,14 +17,41 @@ int _write(int file, char *ptr, int len);
 typedef struct {
     char command[32];
     char arg1[32];
-    char arg2[32];
+    char arg2[96];
 } ParsedInput;
+
+typedef struct {
+    bool active;
+    uint8_t step;
+    char start_args[128];
+    char log_base[32];
+    char answers[6][64];
+} StartPromptState;
 
 static osThreadId_t legacy_cli_task_handle = NULL;
 static osMessageQueueId_t legacy_command_queue = NULL;
-static char input_buffer[64];
+static char input_buffer[192];
 static unsigned int input_index = 0;
 static ParsedInput parsed = {0};
+static StartPromptState start_prompt = {0};
+
+static const char *start_questions[] = {
+    "Enter Manufacturer > ",
+    "Enter Model number > ",
+    "Enter Version number > ",
+    "Enter Modified CVs > ",
+    "Enter Booster type > ",
+    "Enter Track Direction > "
+};
+
+static const char *start_log_labels[] = {
+    "Manufacturer",
+    "Model number",
+    "Version number",
+    "Modified CVs",
+    "Booster type",
+    "Track Direction"
+};
 
 static const osThreadAttr_t legacy_cli_task_attributes = {
     .name = "legacyCliTask",
@@ -33,46 +60,180 @@ static const osThreadAttr_t legacy_cli_task_attributes = {
 };
 
 static void parse_input(const char *input, ParsedInput *out_parsed) {
+    int consumed = 0;
+
     memset(out_parsed, 0, sizeof(*out_parsed));
-    sscanf(input, "%31s %31s %31s", out_parsed->command, out_parsed->arg1, out_parsed->arg2);
+
+    if (sscanf(input, " %31s %31s %n", out_parsed->command, out_parsed->arg1, &consumed) >= 2) {
+        const char* tail = input + consumed;
+        while (*tail == ' ' || *tail == '\t') {
+            ++tail;
+        }
+
+        (void)snprintf(out_parsed->arg2, sizeof(out_parsed->arg2), "%s", tail);
+    } else {
+        (void)sscanf(input, " %31s", out_parsed->command);
+    }
 }
 
 static void print_legacy_help(void) {
     printf("Legacy CLI commands:\n");
     printf("  help\n");
     printf("  start\n");
+    printf("    Sender args: -m -a <addr> -d <l|f|a|s> -n <pre> -N <trig> -l -p <port>\n");
+    printf("                 -f -x -r -t <mask> -c <mask> -g <mask> -E <pre> -T\n");
+    printf("                 -F <fill> -R <reps> -P -A -s -S -o <pair> -L -k -D -e <trg>\n");
     printf("  stop\n");
     printf("  status\n");
     printf("  cfg\n");
     printf("  sd_eject\n");
     printf("  send <reset|idle|hard|base>\n");
     printf("  profile <sender_v3|sender_v3_test>\n");
-    printf("  key <r|R|i|d|D|a|b|o|w|0|1|c|C|S|e|f|k|q|h>\n");
+    printf("  key <r|R|i|d|D|a|b|o|w|0|1|c|C|S|e|E|f|k|q|u|s|t|z|g|h>\n");
     printf("  reset\n");
     printf("Only reset returns to standard CLI.\n");
 }
 
-static void execute_legacy_command(const char *arg1, const char *arg2) {
-    if (strcasecmp(arg1, "start") == 0) {
-        if (LegacyMode_Start()) {
-            printf("Legacy mode started (timer TIM14, packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
-                   LegacyMode_GetSelectedPacketName(),
-                   LegacyMode_GetStartupConfigName(),
-                   LegacyMode_GetStartupManual() ? "true" : "false",
-                   LegacyMode_GetStartupDecoderType(),
-                   LegacyMode_GetStartupLogPkts() ? "true" : "false");
-        } else {
-            printf("Legacy mode failed to start or already running\n");
+static void sanitize_log_base(char *name) {
+    size_t i;
+
+    for (i = 0; name[i] != '\0'; ++i) {
+        const char c = name[i];
+        if ((c == ' ') || (c == '\\') || (c == '/') || (c == ':') || (c == '*') ||
+            (c == '?') || (c == '"') || (c == '<') || (c == '>') || (c == '|')) {
+            name[i] = '_';
         }
     }
-    else if (strcasecmp(arg1, "stop") == 0) {
+}
+
+static bool write_start_questionnaire_files(void) {
+    char log_name[48];
+    char sum_name[48];
+    char line[160];
+    UINT status;
+    uint8_t i;
+
+    (void)snprintf(log_name, sizeof(log_name), "%s.log", start_prompt.log_base);
+    (void)snprintf(sum_name, sizeof(sum_name), "%s.sum", start_prompt.log_base);
+
+    status = AppFileX_AppendTextFileOnSd((const CHAR *)log_name, (const CHAR *)"Legacy Sender startup\n", 0U);
+    if (status != FX_SUCCESS) {
+        printf("Failed to write log file '%s' (status=%u)\n", log_name, (unsigned int)status);
+        return false;
+    }
+
+    status = AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)"Legacy Sender startup summary\n", 0U);
+    if (status != FX_SUCCESS) {
+        printf("Failed to write summary file '%s' (status=%u)\n", sum_name, (unsigned int)status);
+        return false;
+    }
+
+    for (i = 0U; i < (uint8_t)(sizeof(start_log_labels) / sizeof(start_log_labels[0])); ++i) {
+        (void)snprintf(line, sizeof(line), "%s: %s\n", start_log_labels[i], start_prompt.answers[i]);
+        (void)AppFileX_AppendTextFileOnSd((const CHAR *)log_name, (const CHAR *)line, 0U);
+        (void)AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)line, 0U);
+    }
+
+    return true;
+}
+
+static void begin_start_questionnaire(const char *start_args) {
+    memset(&start_prompt, 0, sizeof(start_prompt));
+    start_prompt.active = true;
+    start_prompt.step = 0U;
+    (void)snprintf(start_prompt.start_args, sizeof(start_prompt.start_args), "%s", start_args);
+
+    printf("Enter base of log and statistics file name > ");
+    (void)fflush(stdout);
+}
+
+static void finish_start_sequence(void) {
+    char start_arg_error[128];
+
+    start_prompt.active = false;
+
+    start_arg_error[0] = '\0';
+    if (!LegacyMode_SetStartArgs(start_prompt.start_args, start_arg_error, sizeof(start_arg_error))) {
+        printf("Invalid start args: %s\n", start_arg_error[0] != '\0' ? start_arg_error : "parse error");
+        return;
+    }
+
+    if (!write_start_questionnaire_files()) {
+        return;
+    }
+
+    if (LegacyMode_Start()) {
+        printf("Legacy mode started (timer TIM14, packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
+               LegacyMode_GetSelectedPacketName(),
+               LegacyMode_GetStartupConfigName(),
+               LegacyMode_GetStartupManual() ? "true" : "false",
+               LegacyMode_GetStartupDecoderType(),
+               LegacyMode_GetStartupLogPkts() ? "true" : "false");
+    } else {
+        printf("Legacy mode failed to start or already running\n");
+    }
+}
+
+static bool handle_start_questionnaire_line(const char *line) {
+    if (!start_prompt.active) {
+        return false;
+    }
+
+    if (start_prompt.step == 0U) {
+        if (line[0] == '\0') {
+            printf("Base log name cannot be empty. Enter base of log and statistics file name > ");
+            (void)fflush(stdout);
+            return true;
+        }
+
+        (void)snprintf(start_prompt.log_base, sizeof(start_prompt.log_base), "%s", line);
+        sanitize_log_base(start_prompt.log_base);
+        start_prompt.step = 1U;
+        printf("%s", start_questions[0]);
+        (void)fflush(stdout);
+        return true;
+    }
+
+    if (start_prompt.step <= (uint8_t)(sizeof(start_questions) / sizeof(start_questions[0]))) {
+        const uint8_t idx = (uint8_t)(start_prompt.step - 1U);
+        (void)snprintf(start_prompt.answers[idx], sizeof(start_prompt.answers[idx]), "%s", line);
+        start_prompt.step++;
+
+        if (start_prompt.step <= (uint8_t)(sizeof(start_questions) / sizeof(start_questions[0]))) {
+            printf("%s", start_questions[start_prompt.step - 1U]);
+            (void)fflush(stdout);
+        } else {
+            finish_start_sequence();
+        }
+        return true;
+    }
+
+    return true;
+}
+
+static void execute_legacy_command(const char *command, const char *arg1, const char *arg2) {
+    if (strcasecmp(command, "start") == 0) {
+        char start_args[128];
+
+        start_args[0] = '\0';
+        if (arg1[0] != '\0' && arg2[0] != '\0') {
+            (void)snprintf(start_args, sizeof(start_args), "%s %s", arg1, arg2);
+        } else if (arg1[0] != '\0') {
+            (void)snprintf(start_args, sizeof(start_args), "%s", arg1);
+        } else if (arg2[0] != '\0') {
+            (void)snprintf(start_args, sizeof(start_args), "%s", arg2);
+        }
+
+        begin_start_questionnaire(start_args);
+    }
+    else if (strcasecmp(command, "stop") == 0) {
         if (LegacyMode_Stop()) {
             printf("Legacy mode stopped\n");
         } else {
             printf("Legacy mode not running\n");
         }
     }
-    else if (strcasecmp(arg1, "status") == 0 || arg1[0] == '\0') {
+    else if (strcasecmp(command, "status") == 0 || command[0] == '\0') {
          printf("Legacy mode: %s (timer TIM14, mode %s, packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
                LegacyMode_IsRunning() ? "running" : "stopped",
                LegacyMode_GetModeName(),
@@ -82,10 +243,10 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
              LegacyMode_GetStartupDecoderType(),
              LegacyMode_GetStartupLogPkts() ? "true" : "false");
     }
-    else if (strcasecmp(arg1, "cfg") == 0) {
+    else if (strcasecmp(command, "cfg") == 0) {
         LegacyMode_PrintStartupConfigStub();
     }
-    else if (strcasecmp(arg1, "sd_eject") == 0) {
+    else if (strcasecmp(command, "sd_eject") == 0) {
         UINT status = AppFileX_CloseMediaIfIdleOnSd();
         if (status == FX_SUCCESS) {
             printf("SD media closed. Card can be removed safely.\n");
@@ -93,18 +254,18 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
             printf("SD eject failed (FileX status=%u).\n", (unsigned int)status);
         }
     }
-    else if (strcasecmp(arg1, "send") == 0) {
+    else if (strcasecmp(command, "send") == 0) {
         uint8_t packet_id;
-        if (strcasecmp(arg2, "reset") == 0) {
+        if (strcasecmp(arg1, "reset") == 0) {
             packet_id = LEGACY_PACKET_RESET;
-        } else if (strcasecmp(arg2, "idle") == 0) {
+        } else if (strcasecmp(arg1, "idle") == 0) {
             packet_id = LEGACY_PACKET_IDLE;
-        } else if (strcasecmp(arg2, "hard") == 0) {
+        } else if (strcasecmp(arg1, "hard") == 0) {
             packet_id = LEGACY_PACKET_HARD;
-        } else if (strcasecmp(arg2, "base") == 0) {
+        } else if (strcasecmp(arg1, "base") == 0) {
             packet_id = LEGACY_PACKET_BASE;
         } else {
-            printf("Unknown legacy packet '%s'. Use reset|idle|hard|base\n", arg2);
+            printf("Unknown legacy packet '%s'. Use reset|idle|hard|base\n", arg1);
             return;
         }
 
@@ -114,8 +275,8 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
             printf("Failed to select legacy packet\n");
         }
     }
-    else if (strcasecmp(arg1, "profile") == 0) {
-        if (strcasecmp(arg2, "sender_v3") == 0) {
+    else if (strcasecmp(command, "profile") == 0) {
+        if (strcasecmp(arg1, "sender_v3") == 0) {
             (void)LegacyMode_Stop();
 
             if (!LegacyMode_SelectPacket(LEGACY_PACKET_IDLE)) {
@@ -126,7 +287,7 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
             printf("Applied profile sender_v3: timer TIM14, mode %s, packet %s, state stopped\n",
                    LegacyMode_GetModeName(),
                    LegacyMode_GetSelectedPacketName());
-        } else if (strcasecmp(arg2, "sender_v3_test") == 0) {
+        } else if (strcasecmp(arg1, "sender_v3_test") == 0) {
             (void)LegacyMode_Stop();
 
             if (!LegacyMode_ApplyCompatKey('w')) {
@@ -139,13 +300,13 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
                    LegacyMode_GetSelectedPacketName(),
                    LegacyMode_IsRunning() ? "running" : "stopped");
         } else {
-            printf("Unknown profile '%s'. Available: sender_v3|sender_v3_test\n", arg2);
+            printf("Unknown profile '%s'. Available: sender_v3|sender_v3_test\n", arg1);
         }
     }
-    else if (strcasecmp(arg1, "key") == 0) {
-        const char key_cmd = arg2[0];
+    else if (strcasecmp(command, "key") == 0) {
+        const char key_cmd = arg1[0];
         if (key_cmd == '\0') {
-            printf("Usage: key <r|R|i|d|D|a|b|o|w|0|1|c|C|S|e|f|k|q|h>\n");
+            printf("Usage: key <r|R|i|d|D|a|b|o|w|0|1|c|C|S|e|E|f|k|q|u|s|t|z|g|h>\n");
             return;
         }
 
@@ -153,7 +314,9 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
             printf("Legacy key map:\n");
             printf("  r=reset, R=hard reset, i=idle, d=base(dcc), D=stretched dcc, w=warble\n");
             printf("  a=scopeA, b=scopeB, o=scope timing, 0=zeros, 1=ones\n");
-            printf("  c/C=clock, S=stretched zeros, e=estop-like, f=fw toggle, k=kickstart-like, q=stop\n");
+            printf("  c/C=clock, S=stretched zeros, e/E=estop-like, f=fw toggle, k=kickstart-like\n");
+            printf("  u=clear underflow(no-op), s=speed/output step, t=self test(run), z=decoder test(run)\n");
+            printf("  g=generic io(run), q=stop\n");
             return;
         }
 
@@ -164,11 +327,11 @@ static void execute_legacy_command(const char *arg1, const char *arg2) {
                    LegacyMode_GetModeName(),
                    LegacyMode_GetSelectedPacketName());
         } else {
-            printf("Unsupported legacy key '%c'. Use r|R|i|d|D|a|b|o|w|0|1|c|C|S|e|f|k|q|h\n", key_cmd);
+            printf("Unsupported legacy key '%c'. Use r|R|i|d|D|a|b|o|w|0|1|c|C|S|e|E|f|k|q|u|s|t|z|g|h\n", key_cmd);
         }
     }
     else {
-        printf("Unknown command: %s\n", arg1);
+        printf("Unknown command: %s\n", command);
         print_legacy_help();
     }
 }
@@ -201,6 +364,13 @@ static void vLegacyCommandConsoleTask(void *pvParameters)
                 input_index = 0;
                 _write(0, &n_char, 1);
 
+                if (handle_start_questionnaire_line(input_buffer)) {
+                    memset(input_buffer, 0, sizeof(input_buffer));
+                    memset(&parsed, 0, sizeof(parsed));
+                    input_index = 0;
+                    continue;
+                }
+
                 parse_input(input_buffer, &parsed);
 
                 if (strcmp(parsed.command, "help") == 0) {
@@ -210,7 +380,7 @@ static void vLegacyCommandConsoleTask(void *pvParameters)
                     osDelay(100);
                     HAL_NVIC_SystemReset();
                 } else if (parsed.command[0] != '\0') {
-                    execute_legacy_command(parsed.command, parsed.arg1);
+                    execute_legacy_command(parsed.command, parsed.arg1, parsed.arg2);
                 }
 
                 memset(input_buffer, 0, sizeof(input_buffer));
