@@ -11,6 +11,7 @@
 #include "app_filex.h"
 #include "cli_app.h"
 #include "cli_legacy_app.h"
+#include "command_station.h"
 
 int _write(int file, char *ptr, int len);
 
@@ -23,9 +24,12 @@ typedef struct {
 typedef struct {
     bool active;
     uint8_t step;
+    bool collecting_comments;
     char start_args[128];
     char log_base[32];
     char answers[6][64];
+    uint8_t comment_count;
+    char comments[16][96];
 } StartPromptState;
 
 static osThreadId_t legacy_cli_task_handle = NULL;
@@ -134,6 +138,16 @@ static bool write_start_questionnaire_files(void) {
         (void)AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)line, 0U);
     }
 
+    (void)AppFileX_AppendTextFileOnSd((const CHAR *)log_name, (const CHAR *)"--------------------------------\n", 0U);
+    (void)AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)"--------------------------------\n", 0U);
+    for (i = 0U; i < start_prompt.comment_count; ++i) {
+        (void)snprintf(line, sizeof(line), "%s\n", start_prompt.comments[i]);
+        (void)AppFileX_AppendTextFileOnSd((const CHAR *)log_name, (const CHAR *)line, 0U);
+        (void)AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)line, 0U);
+    }
+    (void)AppFileX_AppendTextFileOnSd((const CHAR *)log_name, (const CHAR *)"--------------------------------\n", 0U);
+    (void)AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)"--------------------------------\n", 0U);
+
     return true;
 }
 
@@ -159,11 +173,11 @@ static void finish_start_sequence(void) {
     }
 
     if (!write_start_questionnaire_files()) {
-        return;
+        printf("Warning: could not write startup questionnaire files, continuing to start tests.\n");
     }
 
     if (LegacyMode_Start()) {
-        printf("Legacy mode started (timer TIM14, packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
+        printf("Legacy mode started (packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
                LegacyMode_GetSelectedPacketName(),
                LegacyMode_GetStartupConfigName(),
                LegacyMode_GetStartupManual() ? "true" : "false",
@@ -175,18 +189,33 @@ static void finish_start_sequence(void) {
 }
 
 static bool handle_start_questionnaire_line(const char *line) {
+    char line_copy[192];
+    char *trimmed;
+    size_t len;
+
     if (!start_prompt.active) {
         return false;
     }
 
+    (void)snprintf(line_copy, sizeof(line_copy), "%s", line);
+    trimmed = line_copy;
+    while ((*trimmed == ' ') || (*trimmed == '\t')) {
+        ++trimmed;
+    }
+    len = strlen(trimmed);
+    while ((len > 0U) && ((trimmed[len - 1U] == ' ') || (trimmed[len - 1U] == '\t'))) {
+        trimmed[len - 1U] = '\0';
+        --len;
+    }
+
     if (start_prompt.step == 0U) {
-        if (line[0] == '\0') {
+        if (trimmed[0] == '\0') {
             printf("Base log name cannot be empty. Enter base of log and statistics file name > ");
             (void)fflush(stdout);
             return true;
         }
 
-        (void)snprintf(start_prompt.log_base, sizeof(start_prompt.log_base), "%s", line);
+        (void)snprintf(start_prompt.log_base, sizeof(start_prompt.log_base), "%.31s", trimmed);
         sanitize_log_base(start_prompt.log_base);
         start_prompt.step = 1U;
         printf("%s", start_questions[0]);
@@ -196,15 +225,39 @@ static bool handle_start_questionnaire_line(const char *line) {
 
     if (start_prompt.step <= (uint8_t)(sizeof(start_questions) / sizeof(start_questions[0]))) {
         const uint8_t idx = (uint8_t)(start_prompt.step - 1U);
-        (void)snprintf(start_prompt.answers[idx], sizeof(start_prompt.answers[idx]), "%s", line);
+        (void)snprintf(start_prompt.answers[idx], sizeof(start_prompt.answers[idx]), "%.63s", trimmed);
         start_prompt.step++;
 
         if (start_prompt.step <= (uint8_t)(sizeof(start_questions) / sizeof(start_questions[0]))) {
             printf("%s", start_questions[start_prompt.step - 1U]);
             (void)fflush(stdout);
         } else {
-            finish_start_sequence();
+            start_prompt.collecting_comments = true;
+            puts("Enter comments.  Begin line with '.' to end input");
+            puts("--------------------------------");
+            printf("comments> ");
+            (void)fflush(stdout);
         }
+        return true;
+    }
+
+    if (start_prompt.collecting_comments) {
+        if (strcmp(trimmed, ".") == 0) {
+            puts("--------------------------------");
+            (void)fflush(stdout);
+            finish_start_sequence();
+            return true;
+        }
+
+        if (start_prompt.comment_count < (uint8_t)(sizeof(start_prompt.comments) / sizeof(start_prompt.comments[0]))) {
+            (void)snprintf(start_prompt.comments[start_prompt.comment_count],
+                           sizeof(start_prompt.comments[start_prompt.comment_count]),
+                           "%.95s",
+                           trimmed);
+            start_prompt.comment_count++;
+        }
+        printf("comments> ");
+        (void)fflush(stdout);
         return true;
     }
 
@@ -234,14 +287,9 @@ static void execute_legacy_command(const char *command, const char *arg1, const 
         }
     }
     else if (strcasecmp(command, "status") == 0 || command[0] == '\0') {
-         printf("Legacy mode: %s (timer TIM14, mode %s, packet %s, startup cfg %s, manual %s, type %c, log_pkts %s)\n",
+           printf("Legacy mode: %s, manual: %s\n",
                LegacyMode_IsRunning() ? "running" : "stopped",
-               LegacyMode_GetModeName(),
-             LegacyMode_GetSelectedPacketName(),
-             LegacyMode_GetStartupConfigName(),
-             LegacyMode_GetStartupManual() ? "true" : "false",
-             LegacyMode_GetStartupDecoderType(),
-             LegacyMode_GetStartupLogPkts() ? "true" : "false");
+               LegacyMode_GetStartupManual() ? "true" : "false");
     }
     else if (strcasecmp(command, "cfg") == 0) {
         LegacyMode_PrintStartupConfigStub();
@@ -284,7 +332,7 @@ static void execute_legacy_command(const char *command, const char *arg1, const 
                 return;
             }
 
-            printf("Applied profile sender_v3: timer TIM14, mode %s, packet %s, state stopped\n",
+                 printf("Applied profile sender_v3: mode %s, packet %s, state stopped\n",
                    LegacyMode_GetModeName(),
                    LegacyMode_GetSelectedPacketName());
         } else if (strcasecmp(arg1, "sender_v3_test") == 0) {
@@ -295,7 +343,7 @@ static void execute_legacy_command(const char *command, const char *arg1, const 
                 return;
             }
 
-            printf("Applied profile sender_v3_test: timer TIM14, mode %s, packet %s, state %s\n",
+                 printf("Applied profile sender_v3_test: mode %s, packet %s, state %s\n",
                    LegacyMode_GetModeName(),
                    LegacyMode_GetSelectedPacketName(),
                    LegacyMode_IsRunning() ? "running" : "stopped");
@@ -392,6 +440,9 @@ static void vLegacyCommandConsoleTask(void *pvParameters)
 }
 
 void CliLegacyApp_Start(void) {
+    // Entering legacy mode should immediately stop command station activity.
+    (void)CommandStation_Stop();
+
     if (legacy_command_queue == NULL) {
         legacy_command_queue = osMessageQueueNew(5, sizeof(uint32_t), NULL);
     }

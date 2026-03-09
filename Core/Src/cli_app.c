@@ -201,10 +201,9 @@ void trigger_command(const char *arg1, const char *arg2) {
 void enter_legacy_mode_command(const char *arg1, const char *arg2) {
     (void)arg1;
     (void)arg2;
-    printf("Switching to legacy CLI...\n");
     CliLegacyApp_Start();
     osDelay(20);
-    printf("Standard CLI stopped. Legacy CLI is now active. Reset to return.\n");
+    printf("Reset to return.\n");
     osThreadTerminate(osThreadGetId());
 }
 
