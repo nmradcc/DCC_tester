@@ -292,7 +292,12 @@ static void execute_legacy_command(const char *command, const char *arg1, const 
                LegacyMode_GetStartupManual() ? "true" : "false");
     }
     else if (strcasecmp(command, "cfg") == 0) {
+        LegacyMode_RefreshStartupConfigFromSd();
         LegacyMode_PrintStartupConfigStub();
+        if ((strcmp(LegacyMode_GetStartupConfigName(), "none") != 0) && !LegacyMode_IsStartupConfigLoaded()) {
+            printf("Warning: %s found on SD but could not be loaded/parsed. Check SD mount and file readability.\n",
+                   LegacyMode_GetStartupConfigName());
+        }
     }
     else if (strcasecmp(command, "sd_eject") == 0) {
         UINT status = AppFileX_CloseMediaIfIdleOnSd();

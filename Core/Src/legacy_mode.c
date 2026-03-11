@@ -150,7 +150,7 @@ static legacy_send_cfg_stub_t legacy_send_cfg_stub = {
     false,
     false
 };
-static char legacy_cfg_text_buffer[2048];
+static char legacy_cfg_text_buffer[8192];
 static const CHAR legacy_packet_log_filename[] = "PKTS.LOG";
 
 static inline const uint8_t* legacy_packet_data(uint8_t packet_id, size_t* size);
@@ -887,6 +887,11 @@ static void legacy_probe_startup_cfg_on_sd(void)
     legacy_apply_startup_cfg_defaults();
 }
 
+void LegacyMode_RefreshStartupConfigFromSd(void)
+{
+    legacy_probe_startup_cfg_on_sd();
+}
+
 static const char* legacy_packet_name(uint8_t packet_id)
 {
     switch (packet_id) {
@@ -1409,6 +1414,11 @@ const char* LegacyMode_GetStartupConfigName(void)
         default:
             return "none";
     }
+}
+
+bool LegacyMode_IsStartupConfigLoaded(void)
+{
+    return legacy_startup_cfg_values.loaded;
 }
 
 bool LegacyMode_GetStartupManual(void)
