@@ -80,13 +80,45 @@ static void parse_input(const char *input, ParsedInput *out_parsed) {
     }
 }
 
+static bool start_args_has_option(const char *args, const char *option) {
+    const char *p;
+    size_t opt_len;
+
+    if ((args == NULL) || (option == NULL) || (option[0] == '\0')) {
+        return false;
+    }
+
+    opt_len = strlen(option);
+    p = args;
+    while (*p != '\0') {
+        while ((*p == ' ') || (*p == '\t')) {
+            ++p;
+        }
+
+        if (*p == '\0') {
+            break;
+        }
+
+        if ((strncmp(p, option, opt_len) == 0) &&
+            ((p[opt_len] == '\0') || (p[opt_len] == ' ') || (p[opt_len] == '\t'))) {
+            return true;
+        }
+
+        while ((*p != '\0') && (*p != ' ') && (*p != '\t')) {
+            ++p;
+        }
+    }
+
+    return false;
+}
+
 static void print_legacy_help(void) {
     printf("Legacy CLI commands:\n");
     printf("  help\n");
     printf("  start\n");
     printf("    Sender args: -m -a <addr> -d <l|f|a|s> -n <pre> -N <trig> -l -p <port>\n");
     printf("                 -f -x -r -t <mask> -c <mask> -g <mask> -E <pre> -T\n");
-    printf("                 -F <fill> -R <reps> -P -A -s -S -o <pair> -L -k -D -e <trg>\n");
+    printf("                 -F <fill> -R <reps> -P -A -s -S -o <pair> -L -k -D -u -e <trg>\n");
     printf("  stop\n");
     printf("  status\n");
     printf("  cfg\n");
@@ -275,6 +307,15 @@ static void execute_legacy_command(const char *command, const char *arg1, const 
             (void)snprintf(start_args, sizeof(start_args), "%s", arg1);
         } else if (arg2[0] != '\0') {
             (void)snprintf(start_args, sizeof(start_args), "%s", arg2);
+        }
+
+        if (start_args_has_option(start_args, "-u")) {
+            if (LegacyMode_WriteUserDocsToSd()) {
+                printf("Wrote sender user documentation to s_user.txt\n");
+            } else {
+                printf("Failed to write s_user.txt\n");
+            }
+            return;
         }
 
         begin_start_questionnaire(start_args);

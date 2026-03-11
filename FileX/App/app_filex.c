@@ -276,6 +276,56 @@ UINT AppFileX_LoadTextFileOnSd(const CHAR *filename, CHAR *buffer, ULONG buffer_
   return FX_SUCCESS;
 }
 
+UINT AppFileX_WriteTextFileOnSd(const CHAR *filename, const CHAR *text, ULONG text_length)
+{
+  FX_FILE file;
+  UINT status;
+
+  if ((filename == FX_NULL) || (text == FX_NULL) || (filename[0] == '\0')) {
+    return FX_PTR_ERROR;
+  }
+
+  if (text_length == 0U) {
+    text_length = (ULONG)strlen((const char *)text);
+  }
+
+  status = AppFileX_MediaAcquire();
+  if (status != FX_SUCCESS) {
+    return status;
+  }
+
+  status = fx_file_open(&sdio_disk, &file, (CHAR *)filename, FX_OPEN_FOR_WRITE);
+  if (status == FX_NOT_FOUND) {
+    status = fx_file_create(&sdio_disk, (CHAR *)filename);
+    if (status != FX_SUCCESS) {
+      (void)AppFileX_MediaRelease();
+      return status;
+    }
+    status = fx_file_open(&sdio_disk, &file, (CHAR *)filename, FX_OPEN_FOR_WRITE);
+  }
+
+  if (status != FX_SUCCESS) {
+    (void)AppFileX_MediaRelease();
+    return status;
+  }
+
+  status = fx_file_truncate(&file, 0U);
+  if (status == FX_SUCCESS) {
+    status = fx_file_seek(&file, 0U);
+  }
+  if ((status == FX_SUCCESS) && (text_length > 0U)) {
+    status = fx_file_write(&file, (VOID *)text, text_length);
+  }
+  if (status == FX_SUCCESS) {
+    status = fx_media_flush(&sdio_disk);
+  }
+
+  (void)fx_file_close(&file);
+  (void)AppFileX_MediaRelease();
+
+  return status;
+}
+
 UINT AppFileX_AppendTextFileOnSd(const CHAR *filename, const CHAR *text, ULONG text_length)
 {
   FX_FILE file;

@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "command_station.h"
+#include "version.h"
 
 static bool legacy_mode_running = false;
 static uint8_t selected_packet_id = LEGACY_PACKET_IDLE;
@@ -151,6 +152,7 @@ static legacy_send_cfg_stub_t legacy_send_cfg_stub = {
     false
 };
 static char legacy_cfg_text_buffer[8192];
+static char legacy_user_docs_buffer[8192];
 static const CHAR legacy_packet_log_filename[] = "PKTS.LOG";
 
 static inline const uint8_t* legacy_packet_data(uint8_t packet_id, size_t* size);
@@ -337,7 +339,7 @@ static bool legacy_apply_sender_cli_args(char* args_text, char* error_buf, size_
 
     token = strtok(args_text, " \t");
     while (token != NULL) {
-        if (strcmp(token, "-?") == 0 || strcmp(token, "-u") == 0) {
+        if (strcmp(token, "-?") == 0) {
             legacy_set_error(error_buf, error_buf_size, "%s is not supported in legacy CLI start.", token);
             return false;
         } else if (strcmp(token, "-m") == 0) {
@@ -370,7 +372,7 @@ static bool legacy_apply_sender_cli_args(char* args_text, char* error_buf, size_
         } else if (strcmp(token, "-S") == 0) {
             legacy_send_cfg_stub.same_ambig_addr = !legacy_send_cfg_stub.same_ambig_addr;
             legacy_send_cfg_stub.overrides |= LEGACY_CFG_OVR_SAME_AMBIG_ADDR;
-        } else if (strcmp(token, "-L") == 0 || strcmp(token, "-k") == 0 || strcmp(token, "-D") == 0) {
+        } else if (strcmp(token, "-L") == 0 || strcmp(token, "-k") == 0 || strcmp(token, "-D") == 0 || strcmp(token, "-u") == 0) {
             /* Accepted for Sender compatibility; currently no runtime effect in legacy mode. */
         } else {
             char* value;
@@ -1434,6 +1436,158 @@ bool LegacyMode_GetStartupLogPkts(void)
 char LegacyMode_GetStartupDecoderType(void)
 {
     return legacy_startup_cfg_values.loaded ? legacy_startup_cfg_values.decoder_type : '?';
+}
+
+bool LegacyMode_WriteUserDocsToSd(void)
+{
+    char *doc = legacy_user_docs_buffer;
+    size_t used;
+    uint8_t acc_pair = 1U;
+    static const char docs_tail[] =
+        "\nSummary of decoder tests and clocks:\n\n"
+        "List of tests to run and their corresponding '-t'  parameter:\n\n"
+        "PARAMETER   VARIANT                          TEST\n"
+        "----------------------------------------------------------------------------\n"
+        "0x00000001                                1: 1T margin test.\n"
+        "0x00000002                                2: 1H duty cycle test.\n"
+        "0x00000004                                3: Ramp test.\n"
+        "0x00000008  Pre 12 Idle 1                 4: Packet acceptance test.\n"
+        "0x00000010  Pre 12 Idle 2                 5: Packet acceptance test.\n"
+        "0x00000020  Pre 13 Idle 1                 6: Packet acceptance test.\n"
+        "0x00000040  Pre 15 Idle 1                 7: Packet acceptance test.\n"
+        "0x00000080  Pre 15 Idle 2                 8: Packet acceptance test.\n"
+        "0x00000100                                9: Bad address test.\n"
+        "0x00000200                               10: Bad bit test.\n"
+        "0x00000400  No stretch                   11: Single stretched 0 test.\n"
+        "0x00000800  Long negative stretch        12: Single stretched 0 test.\n"
+        "0x00001000  Long positive stretch        13: Single stretched 0 test.\n"
+        "0x00002000  Maximum negative stretch     14: Single stretched 0 test.\n"
+        "0x00004000  Maximum positive stretch     15: Single stretched 0 test.\n"
+        "0x00008000                               16: Truncated packet test.\n"
+        "0x00010000                               17: Prior packet test.\n"
+        "0x00020000                               18: 6 prior byte test.\n"
+        "0x00040000                               19: 1 ambiguous bit test.\n"
+        "0x00080000                               20: 2 ambiguous bits test.\n\n"
+        "List of clocks to use and their corresponding '-c'  parameters:\n\n"
+        "PARAMETER   CLK0T  CLK0H  CLK1T        CLOCK NAME\n"
+        "----------------------------------------------------------------------------\n"
+        "0x00000001    200    100    116     1: All nominal.\n"
+        "0x00000002    196     98    113     2: All 1/4 fast.\n"
+        "0x00000004    190     95    110     3: Command station min.\n"
+        "0x00000008    184     92    106     4: Minimum + 2.\n"
+        "0x00000010    182     91    105     5: Minimum + 1.\n"
+        "0x00000020    180     90    104     6: Decoder minimum.\n"
+        "0x00000040    204    102    119     7: All 1/4 slow.\n"
+        "0x00000080    210    105    122     8: Command station max.\n"
+        "0x00000100    216    108    126     9: Maximum - 2.\n"
+        "0x00000200    218    109    127    10: Maximum - 1.\n"
+        "0x00000400    220    110    128    11: Decoder maximum.\n"
+        "0x00000800    300    100    116    12: Negative stretched 0.\n"
+        "0x00001000    300    200    116    13: Positive stretched 0.\n"
+        "0x00002000   2560    100    116    14: Very negative 0.\n"
+        "0x00004000   2560   2460    116    15: Very positive 0.\n"
+        "0x00008000  12000   2000    116    16: Max Decoder Neg 0.\n"
+        "0x00010000  12000  10000    116    17: Max Decoder Pos 0.\n";
+
+    LegacyMode_RefreshStartupConfigFromSd();
+
+    if ((legacy_send_cfg_stub.preset >= 1U) &&
+        (legacy_send_cfg_stub.preset <= 7U) &&
+        (legacy_send_cfg_stub.trigger == (uint8_t)(legacy_send_cfg_stub.preset + 1U))) {
+        acc_pair = (uint8_t)((legacy_send_cfg_stub.preset + 1U) / 2U);
+        if ((acc_pair < 1U) || (acc_pair > 4U)) {
+            acc_pair = 1U;
+        }
+    }
+
+    used = (size_t)snprintf(
+        doc,
+        sizeof(legacy_user_docs_buffer),
+        "User documenation summary for test software version %s\n\n"
+        "Summary of command line and 'SEND.CFG' switches:\n\n"
+        "Usage:     send [-?] [-u] [-m] [-a addr] [-d l|f|a|s] [-n pre] [-N trig]\n"
+        "                [-l] [-p port] [-f] [-x] [-r] [-t mask] [-c mask] [-E pre]\n"
+        "                [-T] [-F fill] [-R reps] [-P] [-A] [-s] [-S] [-g mask]\n"
+        "                [-o pair] [-k] [-D] [-e trg]\n\n"
+        "  -?                    Print usage message and exit\n"
+        "  -u                    Print user information to 's_user.txt' and exit\n"
+        "  -m         MANUAL     Start in manual mode                 <value %s>\n"
+        "  -a <addr>  ADDRESS    Decoder address                      <value %u>\n"
+        "  -d l|f|a|s TYPE       Dec. type(l-LOC,f-FUNC,a-ACC,s-SIG)  <value %c>\n"
+        "  -l         LAMP       Use rear lamp for function tests     <value %s>\n"
+        "  -n <pre>   PRESET     Signal decoder preset aspect         <value %u>\n"
+        "  -N <trig>  TRIGGER    Signal decoder trigger aspect        <value %u>\n"
+        "  -p <port>  PORT       I/O Port                             <value 0x%04lx>\n"
+        "  -f         FRAGMENT   Test all fragments                   <value %s>\n"
+        "  -x         CRITICAL   Protect critical regions             <value %s>\n"
+        "  -r         REPEAT     Repeat decoder tests                 <value %s>\n"
+        "  -t <mask>  TESTS      Bit mask of tests to run             <value 0x%08lx>\n"
+        "  -c <mask>  CLOCKS     Bit mask of clocks to try            <value 0x%08lx>\n"
+        "  -g <mask>  FUNCS      Bit mask of active functions         <value 0x%02lx>\n"
+        "  -E <pre>   EXTRA_PRE  Extra margin test preamble bits      <value %u>\n"
+        "  -T         TRIG_REV   Use loco reverse as trigger packet   <value %s>\n"
+        "  -L         LOCO_FIRST Put loco packet before func packet   <value false>\n"
+        "  -F <fill>  FILL_MSEC  Fill time in milliseconds            <value %lu>\n"
+        "  -R <reps>  TEST_REPS  Non packet acceptance test repeats   <value %u>\n"
+        "  -P         LOG_PKTS   Send packets to log, not hardware    <value %s>\n"
+        "  -A         NO_ABORT   Do not stop program on an error      <value %s>\n"
+        "  -s         LATE_SCOPE Put scope trigger after trigger      <value %s>\n"
+        "  -S    SAME_AMBIG_ADDR Use same address for ambig tests     <value %s>\n"
+        "  -o        ACC_PAIR    Accessory output pair (1-4)          <value %u>\n"
+        "                            output {preset, trigger}         <value {%u, %u}>\n"
+        "  -k        KICK_START  Kick start motor for function tests  <value false>\n"
+        "  -e <trg>   EXTRA_TRG  Extra Ames test trigger packets      <value 0>\n"
+        "  -D        DEBUG_ON    Log debug messages                   <value false>\n\n"
+        "Manual keyboard commands >\n\n"
+        "ESC - Return to command line       h - Print header\n"
+        "  c - Send single clock phase      C - Send series of clock phases\n"
+        "  u - Clear underflow              0 - Send zeros\n"
+        "  1 - Send ones                    a - Send scope A pattern\n"
+        "  b - Send scope B pattern         o - Send scope timing packet\n"
+        "  w - Send warble packets          S - Send stretched 0 pattern\n"
+        "  r - Send DCC reset packets       d - Send DCC packets\n"
+        "  D - Send stretched DCC packets   s - Change loco speed, acc. output\n"
+        "  e - Set speed to E-STOP          f - Change loco direction, acc. on/off\n"
+        "  E - Set speed to E_STOP(I)       t - Run self tests repeatedly\n"
+        "  k - Kickstart loco for funcs     i - Send DCC idle packets\n"
+        "  R - Send hard resets             g - Test generic I/O\n"
+        "  z - Run decoder tests            q - Quit program\n",
+        FW_VERSION_STRING,
+        legacy_send_cfg_stub.manual ? "true" : "false",
+        (unsigned int)legacy_send_cfg_stub.address,
+        legacy_send_cfg_stub.decoder_type,
+        legacy_send_cfg_stub.lamp ? "true" : "false",
+        (unsigned int)legacy_send_cfg_stub.preset,
+        (unsigned int)legacy_send_cfg_stub.trigger,
+        (unsigned long)legacy_send_cfg_stub.port,
+        legacy_send_cfg_stub.fragment ? "true" : "false",
+        legacy_send_cfg_stub.critical ? "true" : "false",
+        legacy_send_cfg_stub.repeat ? "true" : "false",
+        (unsigned long)legacy_send_cfg_stub.tests_mask,
+        (unsigned long)legacy_send_cfg_stub.clocks_mask,
+        (unsigned long)legacy_send_cfg_stub.funcs_mask,
+        (unsigned int)legacy_send_cfg_stub.extra_pre,
+        legacy_send_cfg_stub.trig_rev ? "true" : "false",
+        (unsigned long)legacy_send_cfg_stub.fill_msec,
+        (unsigned int)legacy_send_cfg_stub.test_reps,
+        legacy_send_cfg_stub.log_pkts ? "true" : "false",
+        legacy_send_cfg_stub.no_abort ? "true" : "false",
+        legacy_send_cfg_stub.late_scope ? "true" : "false",
+        legacy_send_cfg_stub.same_ambig_addr ? "true" : "false",
+        (unsigned int)acc_pair,
+        (unsigned int)legacy_send_cfg_stub.preset,
+        (unsigned int)legacy_send_cfg_stub.trigger);
+
+    if ((used == 0U) || (used >= sizeof(legacy_user_docs_buffer))) {
+        return false;
+    }
+
+    used += (size_t)snprintf(doc + used, sizeof(legacy_user_docs_buffer) - used, "%s", docs_tail);
+    if (used >= sizeof(legacy_user_docs_buffer)) {
+        return false;
+    }
+
+    return (AppFileX_WriteTextFileOnSd("s_user.txt", doc, (ULONG)used) == FX_SUCCESS);
 }
 
 void LegacyMode_PrintStartupConfigStub(void)

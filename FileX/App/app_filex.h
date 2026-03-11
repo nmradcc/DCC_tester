@@ -55,6 +55,7 @@ UINT MX_FileX_Init(VOID *memory_ptr);
 /* USER CODE BEGIN EFP */
 UINT AppFileX_FileExistsOnSd(const CHAR *filename);
 UINT AppFileX_LoadTextFileOnSd(const CHAR *filename, CHAR *buffer, ULONG buffer_size, ULONG *bytes_read);
+UINT AppFileX_WriteTextFileOnSd(const CHAR *filename, const CHAR *text, ULONG text_length);
 UINT AppFileX_AppendTextFileOnSd(const CHAR *filename, const CHAR *text, ULONG text_length);
 UINT AppFileX_CloseMediaIfIdleOnSd(void);
 
