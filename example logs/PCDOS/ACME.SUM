@@ -1,0 +1,107 @@
+<Thu Mar 12 11:31:12 2026> STATUS  BEGINNING decoder test log
+<Thu Mar 12 11:31:12 2026> STATUS  Test software version B.5.11.5
+<Thu Mar 12 11:31:12 2026> STATUS  File <C:\SEND.EXE>
+<Thu Mar 12 11:31:12 2026> STATUS  CRC 373835479, Length 182160
+Manufacturer: acmedos
+Model number: 1
+Version number: 2
+Modified CVs: 
+Booster type: 
+Track Direction: 
+--------------------------------
+my comment
+--------------------------------
+
+Summary of command line and 'SEND.INI' switches:
+
+Usage:     send [-?] [-u] [-m] [-a addr] [-d l|f|a|s] [-n pre] [-N trig]
+                [-l] [-p port] [-f] [-x] [-r] [-t mask] [-c mask] [-E pre]
+                [-T] [-F fill] [-R reps] [-P] [-A] [-s] [-S] [-g mask]
+                [-o pair] [-k] [-D] [-e trg]
+
+Ini file: <C:\\SEND.INI>
+
+  -?                    Print usage message and exit
+  -u                    Print user information to 's_user.txt' and exit
+  -m         MANUAL     Start in manual mode                 <value false>
+  -a <addr>  ADDRESS    Decoder address                      <value 3>
+  -d l|f|a|s TYPE       Dec. type(l-LOC,f-FUNC,a-ACC,s-SIG)  <value L>
+  -l         LAMP       Use rear lamp for function tests     <value false>
+  -n <pre>   PRESET     Signal decoder preset aspect         <value 0>
+  -N <trig>  TRIGGER    Signal decoder trigger aspect        <value 8>
+  -p <port>  PORT       I/O Port                             <value 0x0340>
+  -f         FRAGMENT   Test all fragments                   <value false>
+  -x         CRITICAL   Protect critical regions             <value false>
+  -r         REPEAT     Repeat decoder tests                 <value false>
+  -t <mask>  TESTS      Bit mask of tests to run             <value 0x00000003>
+  -c <mask>  CLOCKS     Bit mask of clocks to try            <value 0xfffffce7>
+  -g <mask>  FUNCS      Bit mask of active functions         <value 0x1f>
+  -E <pre>   EXTRA_PRE  Extra margin test preamble bits      <value 0>
+  -T         TRIG_REV   Use loco reverse as trigger packet   <value false>
+  -L         LOCO_FIRST Put loco packet before func packet   <value false>
+  -F <fill>  FILL_MSEC  Fill time in milliseconds            <value 1000>
+  -R <reps>  TEST_REPS  Non packet acceptance test repeats   <value 2>
+  -P         LOG_PKTS   Send packets to log, not hardware    <value true>
+  -A         NO_ABORT   Do not stop program on an error      <value false>
+  -s         LATE_SCOPE Put scope trigger after trigger      <value false>
+  -S    SAME_AMBIG_ADDR Use same address for ambig tests     <value false>
+  -o        ACC_PAIR    Accessory output pair (1-4)          <value 1>
+                            output {preset, trigger}         <value {1, 0}>
+  -k        KICK_START  Kick start motor for function tests  <value false>
+  -e <trg>   EXTRA_TRG  Extra Ames test trigger packets      <value 0>
+  -D        DEBUG_ON    Log debug messages                   <value false>
+
+Manual keyboard commands >
+
+ESC - Return to command line       h - Print header
+  c - Send single clock phase      C - Send series of clock phases
+  u - Clear underflow              0 - Send zeros
+  1 - Send ones                    a - Send scope A pattern
+  b - Send scope B pattern         o - Send scope timing packet
+  w - Send warble packets          S - Send stretched 0 pattern
+  r - Send DCC reset packets       d - Send DCC packets
+  D - Send stretched DCC packets   s - Change loco speed, acc. output
+  e - Set speed to E-STOP          f - Change loco direction, acc. on/off
+  E - Set speed to E_STOP(I)       t - Run self tests repeatedly
+  k - Kickstart loco for funcs     i - Send DCC idle packets
+  R - Send hard resets             g - Test generic I/O
+  z - Run decoder tests            q - Quit program
+
+
+<Thu Mar 12 11:31:41 2026> STATUS  Starting Decoder test cycle    1
+<Thu Mar 12 11:31:41 2026> STATUS  Deginning booster warm up.
+<Thu Mar 12 11:31:41 2026> STATUS  sending 2 fail safe operation sequences.
+<Thu Mar 12 11:31:42 2026> STATUS  Starting decoder tests.
+<Thu Mar 12 11:31:42 2026> STATUS  Margin test for 1T clock,  12 preambles
+  1T Margin:         Minimum 1T     NONE, Maximum 1T     NONE
+<Thu Mar 12 11:32:00 2026> STATUS  Duty cycle test for 1 clock,  12 preambles
+  1H Duty:           Min 1H     NONE, Max 1H     NONE from  58 nominal
+<Thu Mar 12 11:32:14 2026> STATUS  Starting clock <All nominal>
+- Clock 0T  200, 0H  100, 1T  116
+<Thu Mar 12 11:32:15 2026> STATUS  Starting clock <All 1/4 fast>
+- Clock 0T  196, 0H   98, 1T  113
+<Thu Mar 12 11:32:15 2026> STATUS  Starting clock <Command station min>
+- Clock 0T  190, 0H   95, 1T  110
+<Thu Mar 12 11:32:16 2026> STATUS  Starting clock <Decoder minimum>
+- Clock 0T  180, 0H   90, 1T  104
+<Thu Mar 12 11:32:16 2026> STATUS  Starting clock <All 1/4 slow>
+- Clock 0T  204, 0H  102, 1T  119
+<Thu Mar 12 11:32:17 2026> STATUS  Starting clock <Command station max>
+- Clock 0T  210, 0H  105, 1T  122
+<Thu Mar 12 11:32:18 2026> STATUS  Starting clock <Decoder maximum>
+- Clock 0T  220, 0H  110, 1T  128
+<Thu Mar 12 11:32:18 2026> STATUS  Starting clock <Negative stretched 0>
+- Clock 0T  300, 0H  100, 1T  116
+<Thu Mar 12 11:32:18 2026> STATUS  Starting clock <Positive stretched 0>
+- Clock 0T  300, 0H  200, 1T  116
+<Thu Mar 12 11:32:19 2026> STATUS  Starting clock <Very negative 0>
+- Clock 0T 2560, 0H  100, 1T  116
+<Thu Mar 12 11:32:19 2026> STATUS  Starting clock <Very positive 0>
+- Clock 0T 2560, 0H 2460, 1T  116
+<Thu Mar 12 11:32:19 2026> STATUS  Starting clock <Max Decoder Neg 0>
+- Clock 0T 12000, 0H 2000, 1T  116
+<Thu Mar 12 11:32:19 2026> STATUS  Starting clock <Max Decoder Pos 0>
+- Clock 0T 12000, 0H 10000, 1T  116
+<Thu Mar 12 11:32:19 2026> STATUS  Packets sent 11415, Bytes sent 70218
+<Thu Mar 12 11:32:19 2026> STATUS  Tests COMPLETED, All tests passed
+<Thu Mar 12 11:32:19 2026> STATUS  {SEND_END 0}

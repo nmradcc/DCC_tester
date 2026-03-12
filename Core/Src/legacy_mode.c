@@ -181,12 +181,12 @@ static legacy_send_cfg_stub_t legacy_send_cfg_stub = {
     false,
     false,
     0x00000080U,
-    0x0000007fU,
+    0xfffffce7U,
     0x1fU,
-    2U,
+    0U,
     false,
     1000U,
-    4U,
+    2U,
     false,
     false,
     false,
@@ -476,12 +476,12 @@ static void legacy_seed_send_cfg_defaults(void)
     legacy_send_cfg_stub.critical = false;
     legacy_send_cfg_stub.repeat = false;
     legacy_send_cfg_stub.tests_mask = 0x00000080U;
-    legacy_send_cfg_stub.clocks_mask = 0x0000007fU;
+    legacy_send_cfg_stub.clocks_mask = 0xfffffce7U;
     legacy_send_cfg_stub.funcs_mask = 0x1fU;
-    legacy_send_cfg_stub.extra_pre = 2U;
+    legacy_send_cfg_stub.extra_pre = 0U;
     legacy_send_cfg_stub.trig_rev = false;
     legacy_send_cfg_stub.fill_msec = 1000U;
-    legacy_send_cfg_stub.test_reps = 4U;
+    legacy_send_cfg_stub.test_reps = 2U;
     legacy_send_cfg_stub.log_pkts = false;
     legacy_send_cfg_stub.no_abort = false;
     legacy_send_cfg_stub.late_scope = false;
@@ -1456,10 +1456,17 @@ bool LegacyMode_SetLogBaseName(const char* log_base_name)
 bool LegacyMode_AppendStartupSummaryToLogs(const char* log_filename, const char* sum_filename)
 {
     char *summary = legacy_startup_summary_buffer;
+    const char* cfg_name = "none";
     int n;
 
     if ((log_filename == NULL) || (sum_filename == NULL) || (log_filename[0] == '\0') || (sum_filename[0] == '\0')) {
         return false;
+    }
+
+    if (AppFileX_FileExistsOnSd("SEND.CFG") == FX_SUCCESS) {
+        cfg_name = "SEND.CFG";
+    } else if (AppFileX_FileExistsOnSd("SEND.INI") == FX_SUCCESS) {
+        cfg_name = "SEND.INI";
     }
 
     n = snprintf(
@@ -1514,7 +1521,7 @@ bool LegacyMode_AppendStartupSummaryToLogs(const char* log_filename, const char*
         "  k - Kickstart loco for funcs     i - Send DCC idle packets\n"
         "  R - Send hard resets             g - Test generic I/O\n"
         "  z - Run decoder tests            q - Quit program\n\n",
-        LegacyMode_GetStartupConfigName(),
+        cfg_name,
         legacy_send_cfg_stub.manual ? "true" : "false",
         (unsigned int)legacy_send_cfg_stub.address,
         (char)toupper((unsigned char)legacy_send_cfg_stub.decoder_type),
@@ -2058,6 +2065,7 @@ bool LegacyMode_WriteUserDocsToSd(void)
     char *doc = legacy_user_docs_buffer;
     size_t used;
     uint8_t acc_pair = 1U;
+    const char* cfg_name = "none";
     static const char docs_tail[] =
         "\nSummary of decoder tests and clocks:\n\n"
         "List of tests to run and their corresponding '-t'  parameter:\n\n"
@@ -2106,6 +2114,12 @@ bool LegacyMode_WriteUserDocsToSd(void)
 
     LegacyMode_RefreshStartupConfigFromSd();
 
+    if (AppFileX_FileExistsOnSd("SEND.CFG") == FX_SUCCESS) {
+        cfg_name = "SEND.CFG";
+    } else if (AppFileX_FileExistsOnSd("SEND.INI") == FX_SUCCESS) {
+        cfg_name = "SEND.INI";
+    }
+
     if ((legacy_send_cfg_stub.preset >= 1U) &&
         (legacy_send_cfg_stub.preset <= 7U) &&
         (legacy_send_cfg_stub.trigger == (uint8_t)(legacy_send_cfg_stub.preset + 1U))) {
@@ -2124,6 +2138,7 @@ bool LegacyMode_WriteUserDocsToSd(void)
         "                [-l] [-p port] [-f] [-x] [-r] [-t mask] [-c mask] [-E pre]\n"
         "                [-T] [-F fill] [-R reps] [-P] [-A] [-s] [-S] [-g mask]\n"
         "                [-o pair] [-k] [-D] [-e trg]\n\n"
+        "Cfg file: <%s>\n\n"
         "  -?                    Print usage message and exit\n"
         "  -u                    Print user information to 's_user.txt' and exit\n"
         "  -m         MANUAL     Start in manual mode                 <value %s>\n"
@@ -2168,6 +2183,7 @@ bool LegacyMode_WriteUserDocsToSd(void)
         "  R - Send hard resets             g - Test generic I/O\n"
         "  z - Run decoder tests            q - Quit program\n",
         FW_VERSION_STRING,
+        cfg_name,
         legacy_send_cfg_stub.manual ? "true" : "false",
         (unsigned int)legacy_send_cfg_stub.address,
         legacy_send_cfg_stub.decoder_type,

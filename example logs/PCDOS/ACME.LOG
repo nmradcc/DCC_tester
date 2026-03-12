@@ -1,24 +1,25 @@
-<Wed Mar 11 12:15:38 2026> STATUS  BEGINNING decoder test log
-<Wed Mar 11 12:15:38 2026> STATUS  Test software version B.6.0.0
-<Wed Mar 11 12:15:38 2026> STATUS  File <C:\GitHub\nmradcc\sender\build\Debug\send.exe>
-<Wed Mar 11 12:15:38 2026> STATUS  CRC 3204301686, Length 284160
-Manufacturer: me
+<Thu Mar 12 11:31:12 2026> STATUS  BEGINNING decoder test log
+<Thu Mar 12 11:31:12 2026> STATUS  Test software version B.5.11.5
+<Thu Mar 12 11:31:12 2026> STATUS  File <C:\SEND.EXE>
+<Thu Mar 12 11:31:12 2026> STATUS  CRC 373835479, Length 182160
+Manufacturer: acmedos
 Model number: 1
 Version number: 2
 Modified CVs: 
 Booster type: 
 Track Direction: 
 --------------------------------
+my comment
 --------------------------------
 
-Summary of command line and 'SEND.CFG' switches:
+Summary of command line and 'SEND.INI' switches:
 
 Usage:     send [-?] [-u] [-m] [-a addr] [-d l|f|a|s] [-n pre] [-N trig]
                 [-l] [-p port] [-f] [-x] [-r] [-t mask] [-c mask] [-E pre]
                 [-T] [-F fill] [-R reps] [-P] [-A] [-s] [-S] [-g mask]
                 [-o pair] [-k] [-D] [-e trg]
 
-Cfg file: <C:\GitHub\nmradcc\sender\build\Debug\SEND.CFG>
+Ini file: <C:\\SEND.INI>
 
   -?                    Print usage message and exit
   -u                    Print user information to 's_user.txt' and exit
@@ -71,8 +72,8 @@ ESC - Return to command line       h - Print header
 !L Send_reg::set_pc_delay_1usec() Skipping hardware test, setting delay to 1.
 !L Send_reg::start_clk() Clock started.
 !L Skipping hw underclr.
-<Wed Mar 11 12:15:47 2026> STATUS  Starting Decoder test cycle    1
-<Wed Mar 11 12:15:47 2026> STATUS  Deginning booster warm up.
+<Thu Mar 12 11:31:41 2026> STATUS  Starting Decoder test cycle    1
+<Thu Mar 12 11:31:41 2026> STATUS  Deginning booster warm up.
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
 !L Send_reg::start_clk() Clock started.
@@ -80,7 +81,7 @@ ESC - Return to command line       h - Print header
 !P 55    2 times
 !L Send_reg::set_clk() Clk 0T 200, 0H 100, 1T 116.
 !L Dec_tst::calc_filler() Fill_Idle 179, Cmd_one  85, Cmd_two  42.
-<Wed Mar 11 12:15:47 2026> STATUS  sending 2 fail safe operation sequences.
+<Thu Mar 12 11:31:41 2026> STATUS  sending 2 fail safe operation sequences.
 !L Skipping hw underclr.
 !L Send_reg::send_pkt(Bits) Send fail safe start up sequence..
 !P ff f0 00 00 01 ff e0 00 00 03 ff c0 00 00 07 ff 80 00 00 0f ff 00 00 00
@@ -780,9 +781,9 @@ ESC - Return to command line       h - Print header
 !P ff f7 f8 01 ff
 !L Send_reg::send_pkt(BYTE) Idle.
 !P ff f7 f8 01 ff
-<Wed Mar 11 12:15:47 2026> STATUS  Starting decoder tests.
+<Thu Mar 12 11:31:42 2026> STATUS  Starting decoder tests.
 !L Skipping hw underclr.
-<Wed Mar 11 12:15:47 2026> STATUS  Margin test for 1T clock,  12 preambles
+<Thu Mar 12 11:31:42 2026> STATUS  Margin test for 1T clock,  12 preambles
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
 !L Send_reg::start_clk() Clock started.
@@ -11792,7 +11793,7 @@ ESC - Return to command line       h - Print header
 !L Send_reg::send_pkt(BYTE) Idle.
 !P ff f7 f8 01 ff
   1T Margin:         Minimum 1T     NONE, Maximum 1T     NONE
-<Wed Mar 11 12:15:48 2026> STATUS  Duty cycle test for 1 clock,  12 preambles
+<Thu Mar 12 11:32:00 2026> STATUS  Duty cycle test for 1 clock,  12 preambles
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
 !L Send_reg::start_clk() Clock started.
@@ -20056,7 +20057,7 @@ ESC - Return to command line       h - Print header
 !L Send_reg::send_pkt(BYTE) Idle.
 !P ff f7 f8 01 ff
   1H Duty:           Min 1H     NONE, Max 1H     NONE from  58 nominal
-<Wed Mar 11 12:15:48 2026> STATUS  Starting clock <All nominal>
+<Thu Mar 12 11:32:14 2026> STATUS  Starting clock <All nominal>
 - Clock 0T  200, 0H  100, 1T  116
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -20434,7 +20435,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:48 2026> STATUS  Starting clock <All 1/4 fast>
+<Thu Mar 12 11:32:15 2026> STATUS  Starting clock <All 1/4 fast>
 - Clock 0T  196, 0H   98, 1T  113
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -20822,7 +20823,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Command station min>
+<Thu Mar 12 11:32:15 2026> STATUS  Starting clock <Command station min>
 - Clock 0T  190, 0H   95, 1T  110
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -21220,7 +21221,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Decoder minimum>
+<Thu Mar 12 11:32:16 2026> STATUS  Starting clock <Decoder minimum>
 - Clock 0T  180, 0H   90, 1T  104
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -21640,7 +21641,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <All 1/4 slow>
+<Thu Mar 12 11:32:16 2026> STATUS  Starting clock <All 1/4 slow>
 - Clock 0T  204, 0H  102, 1T  119
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -22010,7 +22011,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Command station max>
+<Thu Mar 12 11:32:17 2026> STATUS  Starting clock <Command station max>
 - Clock 0T  210, 0H  105, 1T  122
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -22370,7 +22371,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Decoder maximum>
+<Thu Mar 12 11:32:18 2026> STATUS  Starting clock <Decoder maximum>
 - Clock 0T  220, 0H  110, 1T  128
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -22716,7 +22717,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Negative stretched 0>
+<Thu Mar 12 11:32:18 2026> STATUS  Starting clock <Negative stretched 0>
 - Clock 0T  300, 0H  100, 1T  116
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -23036,7 +23037,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Positive stretched 0>
+<Thu Mar 12 11:32:18 2026> STATUS  Starting clock <Positive stretched 0>
 - Clock 0T  300, 0H  200, 1T  116
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -23356,7 +23357,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Very negative 0>
+<Thu Mar 12 11:32:19 2026> STATUS  Starting clock <Very negative 0>
 - Clock 0T 2560, 0H  100, 1T  116
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -23438,7 +23439,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Very positive 0>
+<Thu Mar 12 11:32:19 2026> STATUS  Starting clock <Very positive 0>
 - Clock 0T 2560, 0H 2460, 1T  116
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -23520,7 +23521,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Max Decoder Neg 0>
+<Thu Mar 12 11:32:19 2026> STATUS  Starting clock <Max Decoder Neg 0>
 - Clock 0T 12000, 0H 2000, 1T  116
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -23560,7 +23561,7 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Max Decoder Pos 0>
+<Thu Mar 12 11:32:19 2026> STATUS  Starting clock <Max Decoder Pos 0>
 - Clock 0T 12000, 0H 10000, 1T  116
 !L Send_reg::stop_clk() Clock stopped.
 !L Skipping hw underclr.
@@ -23600,8 +23601,8 @@ ESC - Return to command line       h - Print header
 !P 00 0f ff 7f 80 1f ff fe ff 00 3f ff fd fe 00 7f ff fb fc 00 ff ff f7 f8
 !P 01 ff ff ef f0 03 ff ff df e0 07 ff ff bf c0 0f ff ff 7f 80 1f ff fe ff
 !P 00 3f e0
-<Wed Mar 11 12:15:49 2026> STATUS  Packets sent 11415, Bytes sent 74074
-<Wed Mar 11 12:15:49 2026> STATUS  Tests COMPLETED, All tests passed
+<Thu Mar 12 11:32:19 2026> STATUS  Packets sent 11415, Bytes sent 70218
+<Thu Mar 12 11:32:19 2026> STATUS  Tests COMPLETED, All tests passed
 !L Send_reg::stop_clk() Clock stopped.
 !L Send_reg::rst_8255() Done resetting 8255.
-<Wed Mar 11 12:15:49 2026> STATUS  {SEND_END 0}
+<Thu Mar 12 11:32:19 2026> STATUS  {SEND_END 0}

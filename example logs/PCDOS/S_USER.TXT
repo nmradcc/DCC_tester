@@ -1,29 +1,18 @@
-<Wed Mar 11 12:15:38 2026> STATUS  BEGINNING decoder test log
-<Wed Mar 11 12:15:38 2026> STATUS  Test software version B.6.0.0
-<Wed Mar 11 12:15:38 2026> STATUS  File <C:\GitHub\nmradcc\sender\build\Debug\send.exe>
-<Wed Mar 11 12:15:38 2026> STATUS  CRC 3204301686, Length 284160
-Manufacturer: me
-Model number: 1
-Version number: 2
-Modified CVs: 
-Booster type: 
-Track Direction: 
---------------------------------
---------------------------------
+User documenation summary for test software version B.5.11.5
 
-Summary of command line and 'SEND.CFG' switches:
+Summary of command line and 'SEND.INI' switches:
 
 Usage:     send [-?] [-u] [-m] [-a addr] [-d l|f|a|s] [-n pre] [-N trig]
                 [-l] [-p port] [-f] [-x] [-r] [-t mask] [-c mask] [-E pre]
                 [-T] [-F fill] [-R reps] [-P] [-A] [-s] [-S] [-g mask]
                 [-o pair] [-k] [-D] [-e trg]
 
-Cfg file: <C:\GitHub\nmradcc\sender\build\Debug\SEND.CFG>
+Ini file: <C:\\SEND.INI>
 
   -?                    Print usage message and exit
   -u                    Print user information to 's_user.txt' and exit
   -m         MANUAL     Start in manual mode                 <value false>
-  -a <addr>  ADDRESS    Decoder address                      <value 3>
+  -a <addr>  ADDRESS    Decoder address                      <value ???>
   -d l|f|a|s TYPE       Dec. type(l-LOC,f-FUNC,a-ACC,s-SIG)  <value L>
   -l         LAMP       Use rear lamp for function tests     <value false>
   -n <pre>   PRESET     Signal decoder preset aspect         <value 0>
@@ -67,40 +56,51 @@ ESC - Return to command line       h - Print header
   z - Run decoder tests            q - Quit program
 
 
-<Wed Mar 11 12:15:47 2026> STATUS  Starting Decoder test cycle    1
-<Wed Mar 11 12:15:47 2026> STATUS  Deginning booster warm up.
-<Wed Mar 11 12:15:47 2026> STATUS  sending 2 fail safe operation sequences.
-<Wed Mar 11 12:15:47 2026> STATUS  Starting decoder tests.
-<Wed Mar 11 12:15:47 2026> STATUS  Margin test for 1T clock,  12 preambles
-  1T Margin:         Minimum 1T     NONE, Maximum 1T     NONE
-<Wed Mar 11 12:15:48 2026> STATUS  Duty cycle test for 1 clock,  12 preambles
-  1H Duty:           Min 1H     NONE, Max 1H     NONE from  58 nominal
-<Wed Mar 11 12:15:48 2026> STATUS  Starting clock <All nominal>
-- Clock 0T  200, 0H  100, 1T  116
-<Wed Mar 11 12:15:48 2026> STATUS  Starting clock <All 1/4 fast>
-- Clock 0T  196, 0H   98, 1T  113
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Command station min>
-- Clock 0T  190, 0H   95, 1T  110
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Decoder minimum>
-- Clock 0T  180, 0H   90, 1T  104
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <All 1/4 slow>
-- Clock 0T  204, 0H  102, 1T  119
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Command station max>
-- Clock 0T  210, 0H  105, 1T  122
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Decoder maximum>
-- Clock 0T  220, 0H  110, 1T  128
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Negative stretched 0>
-- Clock 0T  300, 0H  100, 1T  116
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Positive stretched 0>
-- Clock 0T  300, 0H  200, 1T  116
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Very negative 0>
-- Clock 0T 2560, 0H  100, 1T  116
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Very positive 0>
-- Clock 0T 2560, 0H 2460, 1T  116
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Max Decoder Neg 0>
-- Clock 0T 12000, 0H 2000, 1T  116
-<Wed Mar 11 12:15:49 2026> STATUS  Starting clock <Max Decoder Pos 0>
-- Clock 0T 12000, 0H 10000, 1T  116
-<Wed Mar 11 12:15:49 2026> STATUS  Packets sent 11415, Bytes sent 74074
-<Wed Mar 11 12:15:49 2026> STATUS  Tests COMPLETED, All tests passed
-<Wed Mar 11 12:15:49 2026> STATUS  {SEND_END 0}
+Summary of decoder tests and clocks:
+
+List of tests to run and their corresponding '-t'  parameter:
+
+PARAMETER   VARIANT                          TEST
+----------------------------------------------------------------------------
+0x00000001                                1: 1T margin test.
+0x00000002                                2: 1H duty cycle test.
+0x00000004                                3: Ramp test.
+0x00000008  Pre 12 Idle 1                 4: Packet acceptance test.
+0x00000010  Pre 12 Idle 2                 5: Packet acceptance test.
+0x00000020  Pre 13 Idle 1                 6: Packet acceptance test.
+0x00000040  Pre 15 Idle 1                 7: Packet acceptance test.
+0x00000080  Pre 15 Idle 2                 8: Packet acceptance test.
+0x00000100                                9: Bad address test.
+0x00000200                               10: Bad bit test.
+0x00000400  No stretch                   11: Single stretched 0 test.
+0x00000800  Long negative stretch        12: Single stretched 0 test.
+0x00001000  Long positive stretch        13: Single stretched 0 test.
+0x00002000  Maximum negative stretch     14: Single stretched 0 test.
+0x00004000  Maximum positive stretch     15: Single stretched 0 test.
+0x00008000                               16: Truncated packet test.
+0x00010000                               17: Prior packet test.
+0x00020000                               18: 6 prior byte test.
+0x00040000                               19: 1 ambiguous bit test.
+0x00080000                               20: 2 ambiguous bits test.
+
+List of clocks to use and their corresponding '-c'  parameters:
+
+PARAMETER   CLK0T  CLK0H  CLK1T        CLOCK NAME
+----------------------------------------------------------------------------
+0x00000001    200    100    116     1: All nominal.
+0x00000002    196     98    113     2: All 1/4 fast.
+0x00000004    190     95    110     3: Command station min.
+0x00000008    184     92    106     4: Minimum + 2.
+0x00000010    182     91    105     5: Minimum + 1.
+0x00000020    180     90    104     6: Decoder minimum.
+0x00000040    204    102    119     7: All 1/4 slow.
+0x00000080    210    105    122     8: Command station max.
+0x00000100    216    108    126     9: Maximum - 2.
+0x00000200    218    109    127    10: Maximum - 1.
+0x00000400    220    110    128    11: Decoder maximum.
+0x00000800    300    100    116    12: Negative stretched 0.
+0x00001000    300    200    116    13: Positive stretched 0.
+0x00002000   2560    100    116    14: Very negative 0.
+0x00004000   2560   2460    116    15: Very positive 0.
+0x00008000  12000   2000    116    16: Max Decoder Neg 0.
+0x00010000  12000  10000    116    17: Max Decoder Pos 0.

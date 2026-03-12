@@ -1,20 +1,7 @@
-<Thu Feb 08 10:41:55 2000> STATUS  BEGINNING decoder test log
-<Thu Feb 08 10:41:55 2000> STATUS  Test software version 1.0.0
-<Thu Feb 08 10:41:55 2000> STATUS  File <DCC_tester firmware>
-<Thu Feb 08 10:41:55 2000> STATUS  CRC 0, Length 0
-Manufacturer: acme
-Model number: 1
-Version number: 2
-Modified CVs: 
-Booster type: 
-Track Direction: 
---------------------------------
-my comment
---------------------------------
-<Thu Feb 08 10:44:49 2000> STATUS  BEGINNING decoder test log
-<Thu Feb 08 10:44:49 2000> STATUS  Test software version 1.0.0
-<Thu Feb 08 10:44:49 2000> STATUS  File <DCC_tester firmware>
-<Thu Feb 08 10:44:49 2000> STATUS  CRC 0, Length 0
+<Fri Feb 09 05:22:38 2000> STATUS  BEGINNING decoder test log
+<Fri Feb 09 05:22:38 2000> STATUS  Test software version 1.0.0
+<Fri Feb 09 05:22:38 2000> STATUS  File <DCC_tester firmware>
+<Fri Feb 09 05:22:38 2000> STATUS  CRC 0, Length 0
 Manufacturer: acme
 Model number: 1
 Version number: 2
@@ -32,7 +19,7 @@ Usage:     send [-?] [-u] [-m] [-a addr] [-d l|f|a|s] [-n pre] [-N trig]
                 [-T] [-F fill] [-R reps] [-P] [-A] [-s] [-S] [-g mask]
                 [-o pair] [-k] [-D] [-e trg]
 
-Cfg file: <none>
+Cfg file: <SEND.CFG>
 
   -?                    Print usage message and exit
   -u                    Print user information to 's_user.txt' and exit
@@ -46,7 +33,7 @@ Cfg file: <none>
   -f         FRAGMENT   Test all fragments                   <value false>
   -x         CRITICAL   Protect critical regions             <value false>
   -r         REPEAT     Repeat decoder tests                 <value false>
-  -t <mask>  TESTS      Bit mask of tests to run             <value 0x00000080>
+  -t <mask>  TESTS      Bit mask of tests to run             <value 0x00000003>
   -c <mask>  CLOCKS     Bit mask of clocks to try            <value 0x0000007f>
   -g <mask>  FUNCS      Bit mask of active functions         <value 0x1f>
   -E <pre>   EXTRA_PRE  Extra margin test preamble bits      <value 2>
@@ -54,7 +41,7 @@ Cfg file: <none>
   -L         LOCO_FIRST Put loco packet before func packet   <value false>
   -F <fill>  FILL_MSEC  Fill time in milliseconds            <value 1000>
   -R <reps>  TEST_REPS  Non packet acceptance test repeats   <value 4>
-  -P         LOG_PKTS   Send packets to log, not hardware    <value false>
+  -P         LOG_PKTS   Send packets to log, not hardware    <value true>
   -A         NO_ABORT   Do not stop program on an error      <value false>
   -s         LATE_SCOPE Put scope trigger after trigger      <value false>
   -S    SAME_AMBIG_ADDR Use same address for ambig tests     <value false>
@@ -80,18 +67,18 @@ ESC - Return to command line       h - Print header
   R - Send hard resets             g - Test generic I/O
   z - Run decoder tests            q - Quit program
 
-<Thu Feb 08 10:44:50 2000> STATUS  Starting clock <nominal>
-<Thu Feb 08 10:44:50 2000> - Clock 0T  200, 0H  100, 1T  116
-<Thu Feb 08 10:44:50 2000> !L TEST map test=margin_1t mask=0x00000001 steps=3
-<Thu Feb 08 10:44:50 2000> !L TEST map test=duty_1h mask=0x00000002 steps=3
-<Thu Feb 08 10:44:50 2000> STATUS  Starting decoder tests.
-<Thu Feb 08 10:44:50 2000> STATUS  tests=0x00000003 reps=4 repeat=false steps=6 first=margin_1t_nom
-<Thu Feb 08 10:44:50 2000> !L TEST step=margin_1t_nom packet=base bit0=100 bit1=58
-<Thu Feb 08 10:44:50 2000> !L TEST_SELECT mode=packet packet=base
-<Thu Feb 08 10:44:50 2000> !P ff f0 19 d0 ef
-<Thu Feb 08 10:44:50 2000> STATUS  Starting Decoder test cycle    1
-<Thu Feb 08 10:44:50 2000> STATUS  Legacy mode start startup_cfg=SEND.CFG log_pkts=true manual=false type=l
-<Thu Feb 08 10:44:50 2000> STATUS  cfg tests=0x00000003 clocks=0x0000007F funcs=0x0000001F reps=4 pre=0 trig=8
-<Thu Feb 08 10:44:50 2000> !L SELECT mode=packet packet=idle
-<Thu Feb 08 10:44:50 2000> !P ff f7 f8 01 ff
-<Thu Feb 08 10:44:56 2000> STATUS  {SEND_END 0}
+<Fri Feb 09 05:22:39 2000> STATUS  Starting clock <nominal>
+<Fri Feb 09 05:22:39 2000> - Clock 0T  200, 0H  100, 1T  116
+<Fri Feb 09 05:22:39 2000> !L TEST map test=margin_1t mask=0x00000001 steps=3
+<Fri Feb 09 05:22:39 2000> !L TEST map test=duty_1h mask=0x00000002 steps=3
+<Fri Feb 09 05:22:39 2000> STATUS  Starting decoder tests.
+<Fri Feb 09 05:22:39 2000> STATUS  tests=0x00000003 reps=4 repeat=false steps=6 first=margin_1t_nom
+<Fri Feb 09 05:22:39 2000> !L TEST step=margin_1t_nom packet=base bit0=100 bit1=58
+<Fri Feb 09 05:22:39 2000> !L TEST_SELECT mode=packet packet=base
+<Fri Feb 09 05:22:39 2000> !P ff f0 19 d0 ef
+<Fri Feb 09 05:22:39 2000> STATUS  Starting Decoder test cycle    1
+<Fri Feb 09 05:22:39 2000> STATUS  Legacy mode start startup_cfg=SEND.CFG log_pkts=true manual=false type=l
+<Fri Feb 09 05:22:39 2000> STATUS  cfg tests=0x00000003 clocks=0x0000007F funcs=0x0000001F reps=4 pre=0 trig=8
+<Fri Feb 09 05:22:39 2000> !L SELECT mode=packet packet=idle
+<Fri Feb 09 05:22:39 2000> !P ff f7 f8 01 ff
+<Fri Feb 09 05:22:44 2000> STATUS  {SEND_END 0}
