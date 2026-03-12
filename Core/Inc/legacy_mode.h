@@ -30,6 +30,8 @@ bool LegacyMode_GetStartupManual(void);
 bool LegacyMode_GetStartupLogPkts(void);
 char LegacyMode_GetStartupDecoderType(void);
 void LegacyMode_RefreshStartupConfigFromSd(void);
+bool LegacyMode_SetLogBaseName(const char* log_base_name);
+bool LegacyMode_AppendStartupSummaryToLogs(const char* log_filename, const char* sum_filename);
 bool LegacyMode_WriteUserDocsToSd(void);
 void LegacyMode_PrintStartupConfigStub(void);
 

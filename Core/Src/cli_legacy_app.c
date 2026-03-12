@@ -12,6 +12,8 @@
 #include "cli_app.h"
 #include "cli_legacy_app.h"
 #include "command_station.h"
+#include "version.h"
+#include "main.h"
 
 int _write(int file, char *ptr, int len);
 
@@ -142,6 +144,37 @@ static void sanitize_log_base(char *name) {
     }
 }
 
+static void format_status_timestamped_line(char *out, size_t out_size, const char *status_payload) {
+    RTC_TimeTypeDef sTime;
+    RTC_DateTypeDef sDate;
+    static const char * const weekday_names[] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+    static const char * const month_names[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    const char *weekday = "Mon";
+    const char *month = "Jan";
+
+    HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+    HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+
+    if ((sDate.WeekDay >= RTC_WEEKDAY_MONDAY) && (sDate.WeekDay <= RTC_WEEKDAY_SUNDAY)) {
+        weekday = weekday_names[sDate.WeekDay - RTC_WEEKDAY_MONDAY];
+    }
+    if ((sDate.Month >= 1U) && (sDate.Month <= 12U)) {
+        month = month_names[sDate.Month - 1U];
+    }
+
+    (void)snprintf(out,
+                   out_size,
+                   "<%s %s %02u %02u:%02u:%02u 20%02u> STATUS  %s\n",
+                   weekday,
+                   month,
+                   (unsigned int)sDate.Date,
+                   (unsigned int)sTime.Hours,
+                   (unsigned int)sTime.Minutes,
+                   (unsigned int)sTime.Seconds,
+                   (unsigned int)sDate.Year,
+                   status_payload);
+}
+
 static bool write_start_questionnaire_files(void) {
     char log_name[48];
     char sum_name[48];
@@ -152,17 +185,33 @@ static bool write_start_questionnaire_files(void) {
     (void)snprintf(log_name, sizeof(log_name), "%s.log", start_prompt.log_base);
     (void)snprintf(sum_name, sizeof(sum_name), "%s.sum", start_prompt.log_base);
 
-    status = AppFileX_AppendTextFileOnSd((const CHAR *)log_name, (const CHAR *)"Legacy Sender startup\n", 0U);
+    format_status_timestamped_line(line, sizeof(line), "BEGINNING decoder test log");
+    status = AppFileX_AppendTextFileOnSd((const CHAR *)log_name, (const CHAR *)line, 0U);
     if (status != FX_SUCCESS) {
         printf("Failed to write log file '%s' (status=%u)\n", log_name, (unsigned int)status);
         return false;
     }
 
-    status = AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)"Legacy Sender startup summary\n", 0U);
+    format_status_timestamped_line(line, sizeof(line), "Test software version " FW_VERSION_STRING);
+    (void)AppFileX_AppendTextFileOnSd((const CHAR *)log_name, (const CHAR *)line, 0U);
+    format_status_timestamped_line(line, sizeof(line), "File <DCC_tester firmware>");
+    (void)AppFileX_AppendTextFileOnSd((const CHAR *)log_name, (const CHAR *)line, 0U);
+    format_status_timestamped_line(line, sizeof(line), "CRC 0, Length 0");
+    (void)AppFileX_AppendTextFileOnSd((const CHAR *)log_name, (const CHAR *)line, 0U);
+
+    format_status_timestamped_line(line, sizeof(line), "BEGINNING decoder test log");
+    status = AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)line, 0U);
     if (status != FX_SUCCESS) {
         printf("Failed to write summary file '%s' (status=%u)\n", sum_name, (unsigned int)status);
         return false;
     }
+
+    format_status_timestamped_line(line, sizeof(line), "Test software version " FW_VERSION_STRING);
+    (void)AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)line, 0U);
+    format_status_timestamped_line(line, sizeof(line), "File <DCC_tester firmware>");
+    (void)AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)line, 0U);
+    format_status_timestamped_line(line, sizeof(line), "CRC 0, Length 0");
+    (void)AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)line, 0U);
 
     for (i = 0U; i < (uint8_t)(sizeof(start_log_labels) / sizeof(start_log_labels[0])); ++i) {
         (void)snprintf(line, sizeof(line), "%s: %s\n", start_log_labels[i], start_prompt.answers[i]);
@@ -179,6 +228,10 @@ static bool write_start_questionnaire_files(void) {
     }
     (void)AppFileX_AppendTextFileOnSd((const CHAR *)log_name, (const CHAR *)"--------------------------------\n", 0U);
     (void)AppFileX_AppendTextFileOnSd((const CHAR *)sum_name, (const CHAR *)"--------------------------------\n", 0U);
+
+    if (!LegacyMode_AppendStartupSummaryToLogs(log_name, sum_name)) {
+        printf("Warning: failed to append startup summary block to log/sum files.\n");
+    }
 
     return true;
 }
@@ -206,6 +259,10 @@ static void finish_start_sequence(void) {
 
     if (!write_start_questionnaire_files()) {
         printf("Warning: could not write startup questionnaire files, continuing to start tests.\n");
+    }
+
+    if (!LegacyMode_SetLogBaseName(start_prompt.log_base)) {
+        printf("Warning: invalid log base for runtime logs, using default filenames.\n");
     }
 
     if (LegacyMode_Start()) {

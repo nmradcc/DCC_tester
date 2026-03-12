@@ -42,9 +42,12 @@ static const uint8_t stretched_pattern_bytes[] = {0xff, 0x02};
 static const uint32_t legacy_warble_one_bits = 3072U * 8U;
 static const uint32_t legacy_warble_total_bits = (3072U + 1024U) * 8U;
 
-static const uint16_t legacy_bit1_ticks = 58;   // ~58us @ 1MHz
-static const uint16_t legacy_bit0_ticks = 100;  // ~100us @ 1MHz
-static const uint16_t legacy_stretched0_ticks = 130;
+static const uint16_t legacy_default_bit1_ticks = 58;   // ~58us @ 1MHz
+static const uint16_t legacy_default_bit0_ticks = 100;  // ~100us @ 1MHz
+static const uint16_t legacy_default_stretched0_ticks = 130;
+static uint16_t legacy_bit1_ticks = 58;
+static uint16_t legacy_bit0_ticks = 100;
+static uint16_t legacy_stretched0_ticks = 130;
 static const uint16_t legacy_scope_o_ticks[] = {100, 10000, 1000, 10};
 static uint8_t legacy_scope_o_index = 0;
 static bool legacy_fw_state = true;
@@ -52,10 +55,49 @@ static uint8_t legacy_kickstart_cycles = 0;
 static bool legacy_dcc_mode_active = false;
 
 static bool legacy_test_active = false;
-static uint8_t legacy_test_packet_plan[4];
+static uint8_t legacy_test_packet_plan[64];
+typedef enum {
+    LEGACY_TEST_MUTATION_NONE = 0,
+    LEGACY_TEST_MUTATION_BAD_ADDRESS,
+    LEGACY_TEST_MUTATION_BAD_BIT
+} legacy_test_mutation_t;
+
+typedef struct {
+    uint8_t packet_id;
+    uint16_t bit0_ticks;
+    uint16_t bit1_ticks;
+    const char* step_name;
+    bool todo_stub;
+    legacy_test_mutation_t mutation;
+    uint8_t mutation_bit_start;
+} legacy_test_step_t;
+static legacy_test_step_t legacy_test_step_plan[64];
 static uint8_t legacy_test_packet_count = 0;
 static uint8_t legacy_test_packet_index = 0;
 static uint16_t legacy_test_packet_cycles = 0;
+static legacy_test_mutation_t legacy_active_test_mutation = LEGACY_TEST_MUTATION_NONE;
+static uint8_t legacy_active_mutation_bit = 0U;
+
+typedef struct {
+    uint32_t mask;
+    uint16_t clk0h;
+    uint16_t clk1t;
+    const char* name;
+} legacy_clock_profile_t;
+
+static const legacy_clock_profile_t legacy_clock_profiles[] = {
+    {0x00000001U, 100U, 116U, "nominal"},
+    {0x00000002U, 98U, 113U, "all_1_4_fast"},
+    {0x00000004U, 95U, 110U, "cmd_station_min"},
+    {0x00000008U, 92U, 106U, "min_plus_2"},
+    {0x00000010U, 91U, 105U, "min_plus_1"},
+    {0x00000020U, 90U, 104U, "decoder_min"},
+    {0x00000040U, 102U, 119U, "all_1_4_slow"},
+    {0x00000080U, 105U, 122U, "cmd_station_max"},
+    {0x00000100U, 108U, 126U, "max_minus_2"},
+    {0x00000200U, 109U, 127U, "max_minus_1"},
+    {0x00000400U, 110U, 128U, "decoder_max"}
+};
 
 typedef enum {
     LEGACY_STARTUP_CFG_NONE = 0,
@@ -153,16 +195,272 @@ static legacy_send_cfg_stub_t legacy_send_cfg_stub = {
 };
 static char legacy_cfg_text_buffer[8192];
 static char legacy_user_docs_buffer[8192];
-static const CHAR legacy_packet_log_filename[] = "PKTS.LOG";
+static char legacy_startup_summary_buffer[4096];
+static char legacy_log_base_name[32] = "legacy";
+static char legacy_log_filename[40] = "legacy.log";
+static char legacy_sum_filename[40] = "legacy.sum";
 
 static inline const uint8_t* legacy_packet_data(uint8_t packet_id, size_t* size);
 static const char* legacy_packet_name(uint8_t packet_id);
 static void legacy_log_printf(const char* fmt, ...);
+static void legacy_log_detail_printf(const char* fmt, ...);
+static void legacy_log_packet_bytes(const uint8_t* data, size_t size);
 static void legacy_log_selected_packet(const char* context);
 static void legacy_set_error(char* error_buf, size_t error_buf_size, const char* fmt, ...);
 static bool legacy_apply_sender_cli_args(char* args_text, char* error_buf, size_t error_buf_size);
 static void legacy_prepare_test_plan(void);
 static void legacy_advance_test_plan_on_packet_boundary(void);
+static void legacy_apply_clock_mask(uint32_t clocks_mask);
+static const char* legacy_test_name(uint8_t test_bit);
+static uint8_t legacy_packet_for_test(uint8_t test_bit, bool* is_stub);
+static bool legacy_append_test_step(uint8_t packet_id,
+                                    uint16_t bit0_ticks,
+                                    uint16_t bit1_ticks,
+                                    const char* step_name,
+                                    bool todo_stub,
+                                    legacy_test_mutation_t mutation,
+                                    uint8_t mutation_bit_start);
+static void legacy_append_margin_1t_steps(void);
+static void legacy_append_duty_1h_steps(void);
+static void legacy_refresh_log_filenames(void);
+static bool legacy_should_mirror_line_to_sum(const char* text);
+static void legacy_echo_status_to_console(const char* text);
+static void legacy_format_timestamp_prefix(char* out, size_t out_size);
+
+static void legacy_refresh_log_filenames(void)
+{
+    (void)snprintf(legacy_log_filename, sizeof(legacy_log_filename), "%s.log", legacy_log_base_name);
+    (void)snprintf(legacy_sum_filename, sizeof(legacy_sum_filename), "%s.sum", legacy_log_base_name);
+}
+
+static bool legacy_should_mirror_line_to_sum(const char* text)
+{
+    if ((text == NULL) || (text[0] == '\0')) {
+        return false;
+    }
+
+    if ((strncmp(text, "STATUS", 6U) == 0) ||
+        (strncmp(text, "- Clock", 7U) == 0)) {
+        return true;
+    }
+
+    return false;
+}
+
+static void legacy_format_timestamp_prefix(char* out, size_t out_size)
+{
+    RTC_TimeTypeDef sTime;
+    RTC_DateTypeDef sDate;
+    static const char* const weekday_names[] = {
+        "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
+    };
+    static const char* const month_names[] = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    };
+    const char* weekday = "Mon";
+    const char* month = "Jan";
+
+    if ((out == NULL) || (out_size == 0U)) {
+        return;
+    }
+
+    HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+    HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+
+    if ((sDate.WeekDay >= RTC_WEEKDAY_MONDAY) && (sDate.WeekDay <= RTC_WEEKDAY_SUNDAY)) {
+        weekday = weekday_names[sDate.WeekDay - RTC_WEEKDAY_MONDAY];
+    }
+    if ((sDate.Month >= 1U) && (sDate.Month <= 12U)) {
+        month = month_names[sDate.Month - 1U];
+    }
+
+    (void)snprintf(out,
+                   out_size,
+                   "<%s %s %02u %02u:%02u:%02u 20%02u> ",
+                   weekday,
+                   month,
+                   (unsigned int)sDate.Date,
+                   (unsigned int)sTime.Hours,
+                   (unsigned int)sTime.Minutes,
+                   (unsigned int)sTime.Seconds,
+                   (unsigned int)sDate.Year);
+}
+
+static void legacy_echo_status_to_console(const char* text)
+{
+    const char* message;
+    const char* status;
+    size_t len;
+
+    if (text == NULL) {
+        return;
+    }
+
+    status = strstr(text, "STATUS");
+    if (status == NULL) {
+        return;
+    }
+
+    message = status + 6U;
+    while ((*message == ' ') || (*message == '\t')) {
+        ++message;
+    }
+
+    if (*message == '\0') {
+        return;
+    }
+
+    len = strlen(message);
+    printf("%s", message);
+    if ((len == 0U) || (message[len - 1U] != '\n')) {
+        printf("\n");
+    }
+}
+
+static bool legacy_append_test_step(uint8_t packet_id,
+                                    uint16_t bit0_ticks,
+                                    uint16_t bit1_ticks,
+                                    const char* step_name,
+                                    bool todo_stub,
+                                    legacy_test_mutation_t mutation,
+                                    uint8_t mutation_bit_start)
+{
+    if (legacy_test_packet_count >= (uint8_t)(sizeof(legacy_test_step_plan) / sizeof(legacy_test_step_plan[0]))) {
+        return false;
+    }
+
+    legacy_test_step_plan[legacy_test_packet_count].packet_id = packet_id;
+    legacy_test_step_plan[legacy_test_packet_count].bit0_ticks = bit0_ticks;
+    legacy_test_step_plan[legacy_test_packet_count].bit1_ticks = bit1_ticks;
+    legacy_test_step_plan[legacy_test_packet_count].step_name = step_name;
+    legacy_test_step_plan[legacy_test_packet_count].todo_stub = todo_stub;
+    legacy_test_step_plan[legacy_test_packet_count].mutation = mutation;
+    legacy_test_step_plan[legacy_test_packet_count].mutation_bit_start = mutation_bit_start;
+    legacy_test_packet_plan[legacy_test_packet_count] = packet_id;
+    legacy_test_packet_count++;
+    return true;
+}
+
+static void legacy_append_margin_1t_steps(void)
+{
+    const uint16_t base0 = legacy_bit0_ticks;
+    const uint16_t base1 = legacy_bit1_ticks;
+    const uint16_t min1 = (base1 > 6U) ? (uint16_t)(base1 - 6U) : 1U;
+    const uint16_t max1 = (uint16_t)(base1 + 6U);
+
+    (void)legacy_append_test_step(LEGACY_PACKET_BASE, base0, base1, "margin_1t_nom", false, LEGACY_TEST_MUTATION_NONE, 0U);
+    (void)legacy_append_test_step(LEGACY_PACKET_BASE, base0, min1, "margin_1t_min", false, LEGACY_TEST_MUTATION_NONE, 0U);
+    (void)legacy_append_test_step(LEGACY_PACKET_BASE, base0, max1, "margin_1t_max", false, LEGACY_TEST_MUTATION_NONE, 0U);
+}
+
+static void legacy_append_duty_1h_steps(void)
+{
+    const uint16_t base0 = legacy_bit0_ticks;
+    const uint16_t base1 = legacy_bit1_ticks;
+    const uint16_t min0 = (base0 > 10U) ? (uint16_t)(base0 - 10U) : 1U;
+    const uint16_t max0 = (uint16_t)(base0 + 10U);
+
+    (void)legacy_append_test_step(LEGACY_PACKET_IDLE, base0, base1, "duty_1h_nom", false, LEGACY_TEST_MUTATION_NONE, 0U);
+    (void)legacy_append_test_step(LEGACY_PACKET_IDLE, min0, base1, "duty_1h_min", false, LEGACY_TEST_MUTATION_NONE, 0U);
+    (void)legacy_append_test_step(LEGACY_PACKET_IDLE, max0, base1, "duty_1h_max", false, LEGACY_TEST_MUTATION_NONE, 0U);
+}
+
+static void legacy_apply_clock_mask(uint32_t clocks_mask)
+{
+    size_t i;
+
+    legacy_bit0_ticks = legacy_default_bit0_ticks;
+    legacy_bit1_ticks = legacy_default_bit1_ticks;
+    legacy_stretched0_ticks = legacy_default_stretched0_ticks;
+
+    for (i = 0U; i < (sizeof(legacy_clock_profiles) / sizeof(legacy_clock_profiles[0])); ++i) {
+        if ((clocks_mask & legacy_clock_profiles[i].mask) != 0U) {
+            legacy_bit0_ticks = legacy_clock_profiles[i].clk0h;
+            legacy_bit1_ticks = (uint16_t)((legacy_clock_profiles[i].clk1t + 1U) / 2U);
+            legacy_log_printf("STATUS  Starting clock <%s>",
+                              legacy_clock_profiles[i].name,
+                              (unsigned int)legacy_bit0_ticks);
+            legacy_log_printf("- Clock 0T %4u, 0H %4u, 1T %4u",
+                              (unsigned int)(legacy_clock_profiles[i].clk0h * 2U),
+                              (unsigned int)legacy_clock_profiles[i].clk0h,
+                              (unsigned int)legacy_clock_profiles[i].clk1t);
+            return;
+        }
+    }
+
+    legacy_log_printf("STATUS  Starting clock <All nominal>");
+    legacy_log_printf("- Clock 0T %4u, 0H %4u, 1T %4u",
+                      (unsigned int)(legacy_bit0_ticks * 2U),
+                      (unsigned int)legacy_bit0_ticks,
+                      (unsigned int)(legacy_bit1_ticks * 2U));
+}
+
+static const char* legacy_test_name(uint8_t test_bit)
+{
+    static const char* names[] = {
+        "margin_1t",
+        "duty_1h",
+        "ramp",
+        "packet_acceptance_pre12_idle1",
+        "packet_acceptance_pre12_idle2",
+        "packet_acceptance_pre13_idle1",
+        "packet_acceptance_pre15_idle1",
+        "packet_acceptance_pre15_idle2",
+        "bad_address",
+        "bad_bit",
+        "stretched_0_variant_1",
+        "stretched_0_variant_2",
+        "stretched_0_variant_3",
+        "stretched_0_variant_4",
+        "stretched_0_variant_5",
+        "truncated_packet",
+        "prior_packet",
+        "prior_6_byte",
+        "ambiguous_bit_1",
+        "ambiguous_bit_2",
+        "reserved_20"
+    };
+
+    if (test_bit < (uint8_t)(sizeof(names) / sizeof(names[0]))) {
+        return names[test_bit];
+    }
+    return "unknown";
+}
+
+static uint8_t legacy_packet_for_test(uint8_t test_bit, bool* is_stub)
+{
+    bool stub = false;
+    uint8_t packet = LEGACY_PACKET_BASE;
+
+    switch (test_bit) {
+        case 0U:
+            packet = LEGACY_PACKET_RESET;
+            break;
+        case 1U:
+            packet = LEGACY_PACKET_IDLE;
+            break;
+        case 2U:
+            packet = LEGACY_PACKET_HARD;
+            break;
+        case 3U:
+            packet = LEGACY_PACKET_BASE;
+            break;
+        case 8U:
+        case 9U:
+            packet = LEGACY_PACKET_BASE;
+            break;
+        default:
+            packet = LEGACY_PACKET_BASE;
+            stub = true;
+            break;
+    }
+
+    if (is_stub != NULL) {
+        *is_stub = stub;
+    }
+    return packet;
+}
 
 static void legacy_seed_send_cfg_defaults(void)
 {
@@ -492,6 +790,7 @@ static bool legacy_apply_sender_cli_args(char* args_text, char* error_buf, size_
 static void legacy_prepare_test_plan(void)
 {
     uint32_t tests = legacy_send_cfg_stub.tests_mask;
+    uint8_t bit;
 
     legacy_test_active = false;
     legacy_test_packet_count = 0;
@@ -502,22 +801,89 @@ static void legacy_prepare_test_plan(void)
         return;
     }
 
-    if ((tests & 0x01U) != 0U) {
-        legacy_test_packet_plan[legacy_test_packet_count++] = LEGACY_PACKET_RESET;
-    }
-    if ((tests & 0x02U) != 0U) {
-        legacy_test_packet_plan[legacy_test_packet_count++] = LEGACY_PACKET_IDLE;
-    }
-    if ((tests & 0x04U) != 0U) {
-        legacy_test_packet_plan[legacy_test_packet_count++] = LEGACY_PACKET_HARD;
-    }
-    if ((tests & 0x08U) != 0U) {
-        legacy_test_packet_plan[legacy_test_packet_count++] = LEGACY_PACKET_BASE;
+    legacy_apply_clock_mask(legacy_send_cfg_stub.clocks_mask);
+
+    for (bit = 0U; bit <= 20U; ++bit) {
+        const uint32_t mask = (1UL << bit);
+        bool is_stub = false;
+        uint8_t packet;
+
+        if ((tests & mask) == 0U) {
+            continue;
+        }
+
+        if (bit == 0U) {
+            legacy_append_margin_1t_steps();
+            legacy_log_detail_printf("TEST map test=%s mask=0x%08lX steps=3", legacy_test_name(bit), (unsigned long)mask);
+            continue;
+        }
+
+        if (bit == 1U) {
+            legacy_append_duty_1h_steps();
+            legacy_log_detail_printf("TEST map test=%s mask=0x%08lX steps=3", legacy_test_name(bit), (unsigned long)mask);
+            continue;
+        }
+
+        if (bit == 8U) {
+            (void)legacy_append_test_step(LEGACY_PACKET_BASE,
+                                          legacy_bit0_ticks,
+                                          legacy_bit1_ticks,
+                                          legacy_test_name(bit),
+                                          false,
+                                          LEGACY_TEST_MUTATION_BAD_ADDRESS,
+                                          11U);
+            legacy_log_detail_printf("TEST map test=%s mask=0x%08lX packet=%s mutation=bad_address",
+                                     legacy_test_name(bit),
+                                     (unsigned long)mask,
+                                     legacy_packet_name(LEGACY_PACKET_BASE));
+            continue;
+        }
+
+        if (bit == 9U) {
+            (void)legacy_append_test_step(LEGACY_PACKET_BASE,
+                                          legacy_bit0_ticks,
+                                          legacy_bit1_ticks,
+                                          legacy_test_name(bit),
+                                          false,
+                                          LEGACY_TEST_MUTATION_BAD_BIT,
+                                          9U);
+            legacy_log_detail_printf("TEST map test=%s mask=0x%08lX packet=%s mutation=bad_bit",
+                                     legacy_test_name(bit),
+                                     (unsigned long)mask,
+                                     legacy_packet_name(LEGACY_PACKET_BASE));
+            continue;
+        }
+
+        packet = legacy_packet_for_test(bit, &is_stub);
+        (void)legacy_append_test_step(packet,
+                                      legacy_bit0_ticks,
+                                      legacy_bit1_ticks,
+                                      legacy_test_name(bit),
+                                      is_stub,
+                                      LEGACY_TEST_MUTATION_NONE,
+                                      0U);
+
+        if (is_stub) {
+            legacy_log_detail_printf("TODO test=%s mask=0x%08lX not fully implemented on STM32 timer path; using BASE packet placeholder",
+                                     legacy_test_name(bit),
+                                     (unsigned long)mask);
+        } else {
+            legacy_log_detail_printf("TEST map test=%s mask=0x%08lX packet=%s",
+                                     legacy_test_name(bit),
+                                     (unsigned long)mask,
+                                     legacy_packet_name(packet));
+        }
     }
 
     // Sender default TESTS (0x80) should still run a meaningful packet path.
     if (legacy_test_packet_count == 0U && tests != 0U) {
-        legacy_test_packet_plan[legacy_test_packet_count++] = LEGACY_PACKET_BASE;
+        (void)legacy_append_test_step(LEGACY_PACKET_BASE,
+                                      legacy_bit0_ticks,
+                                      legacy_bit1_ticks,
+                                      "default_base",
+                                      true,
+                                      LEGACY_TEST_MUTATION_NONE,
+                                      0U);
     }
 
     if (legacy_test_packet_count == 0U) {
@@ -525,18 +891,33 @@ static void legacy_prepare_test_plan(void)
     }
 
     legacy_test_active = true;
-    selected_packet_id = legacy_test_packet_plan[0];
+    selected_packet_id = legacy_test_step_plan[0].packet_id;
     legacy_wave_mode = LEGACY_MODE_PACKET;
     legacy_dcc_mode_active = (selected_packet_id == LEGACY_PACKET_BASE);
+    legacy_bit0_ticks = legacy_test_step_plan[0].bit0_ticks;
+    legacy_bit1_ticks = legacy_test_step_plan[0].bit1_ticks;
+    legacy_active_test_mutation = legacy_test_step_plan[0].mutation;
+    legacy_active_mutation_bit = legacy_test_step_plan[0].mutation_bit_start;
     bit_index = 0U;
     half_phase = 0U;
 
-    legacy_log_printf("TEST start tests=0x%08lX reps=%u repeat=%s steps=%u first=%s",
+    legacy_log_printf("STATUS  Starting decoder tests.");
+    legacy_log_printf("STATUS  tests=0x%08lX reps=%u repeat=%s steps=%u first=%s",
                       (unsigned long)legacy_send_cfg_stub.tests_mask,
                       (unsigned int)(legacy_send_cfg_stub.test_reps == 0U ? 1U : legacy_send_cfg_stub.test_reps),
                       legacy_send_cfg_stub.repeat ? "true" : "false",
                       (unsigned int)legacy_test_packet_count,
-                      legacy_packet_name(selected_packet_id));
+                      legacy_test_step_plan[0].step_name != NULL ? legacy_test_step_plan[0].step_name : legacy_packet_name(selected_packet_id));
+    legacy_log_detail_printf("TEST step=%s packet=%s bit0=%u bit1=%u",
+                             legacy_test_step_plan[0].step_name != NULL ? legacy_test_step_plan[0].step_name : "unknown",
+                             legacy_packet_name(selected_packet_id),
+                             (unsigned int)legacy_bit0_ticks,
+                             (unsigned int)legacy_bit1_ticks);
+    if (legacy_active_test_mutation == LEGACY_TEST_MUTATION_BAD_ADDRESS) {
+        legacy_log_detail_printf("TEST mutation=bad_address bit=%u", (unsigned int)legacy_active_mutation_bit);
+    } else if (legacy_active_test_mutation == LEGACY_TEST_MUTATION_BAD_BIT) {
+        legacy_log_detail_printf("TEST mutation=bad_bit start_bit=%u", (unsigned int)legacy_active_mutation_bit);
+    }
     legacy_log_selected_packet("TEST_SELECT");
 }
 
@@ -546,6 +927,24 @@ static void legacy_advance_test_plan_on_packet_boundary(void)
 
     if (!legacy_test_active || legacy_test_packet_count == 0U) {
         return;
+    }
+
+    if (legacy_active_test_mutation == LEGACY_TEST_MUTATION_BAD_BIT) {
+        size_t packet_size = 0U;
+        const uint8_t* packet_data = legacy_packet_data(selected_packet_id, &packet_size);
+        (void)packet_data;
+        if (packet_size > 1U) {
+            const uint32_t total_bits = (uint32_t)packet_size * 8U;
+            const uint32_t start_bit = 9U;
+            if (total_bits > start_bit) {
+                uint32_t rel = 0U;
+                if (legacy_active_mutation_bit >= start_bit) {
+                    rel = (uint32_t)legacy_active_mutation_bit - start_bit;
+                }
+                rel = (rel + 1U) % (total_bits - start_bit);
+                legacy_active_mutation_bit = (uint8_t)(start_bit + rel);
+            }
+        }
     }
 
     reps_target = (legacy_send_cfg_stub.test_reps == 0U) ? 1U : legacy_send_cfg_stub.test_reps;
@@ -563,16 +962,30 @@ static void legacy_advance_test_plan_on_packet_boundary(void)
             legacy_test_packet_index = 0U;
         } else {
             legacy_test_active = false;
-            legacy_log_printf("TEST done steps=%u", (unsigned int)legacy_test_packet_count);
+            legacy_log_printf("STATUS  Tests COMPLETED, All tests passed");
             return;
         }
     }
 
-    selected_packet_id = legacy_test_packet_plan[legacy_test_packet_index];
+    selected_packet_id = legacy_test_step_plan[legacy_test_packet_index].packet_id;
     legacy_wave_mode = LEGACY_MODE_PACKET;
     legacy_dcc_mode_active = (selected_packet_id == LEGACY_PACKET_BASE);
+    legacy_bit0_ticks = legacy_test_step_plan[legacy_test_packet_index].bit0_ticks;
+    legacy_bit1_ticks = legacy_test_step_plan[legacy_test_packet_index].bit1_ticks;
+    legacy_active_test_mutation = legacy_test_step_plan[legacy_test_packet_index].mutation;
+    legacy_active_mutation_bit = legacy_test_step_plan[legacy_test_packet_index].mutation_bit_start;
     bit_index = 0U;
     half_phase = 0U;
+    legacy_log_detail_printf("TEST step=%s packet=%s bit0=%u bit1=%u",
+                             legacy_test_step_plan[legacy_test_packet_index].step_name != NULL ? legacy_test_step_plan[legacy_test_packet_index].step_name : "unknown",
+                             legacy_packet_name(selected_packet_id),
+                             (unsigned int)legacy_bit0_ticks,
+                             (unsigned int)legacy_bit1_ticks);
+    if (legacy_active_test_mutation == LEGACY_TEST_MUTATION_BAD_ADDRESS) {
+        legacy_log_detail_printf("TEST mutation=bad_address bit=%u", (unsigned int)legacy_active_mutation_bit);
+    } else if (legacy_active_test_mutation == LEGACY_TEST_MUTATION_BAD_BIT) {
+        legacy_log_detail_printf("TEST mutation=bad_bit start_bit=%u", (unsigned int)legacy_active_mutation_bit);
+    }
     legacy_log_selected_packet("TEST_SELECT");
 }
 
@@ -912,11 +1325,32 @@ static const char* legacy_packet_name(uint8_t packet_id)
 
 static void legacy_log_text_line(const char* text)
 {
+    char ts[40];
+    char stamped[256];
+    int n;
+
     if (!LegacyMode_GetStartupLogPkts() || (text == NULL)) {
         return;
     }
 
-    (void)AppFileX_AppendTextFileOnSd(legacy_packet_log_filename, (const CHAR*)text, 0U);
+    legacy_format_timestamp_prefix(ts, sizeof(ts));
+    n = snprintf(stamped, sizeof(stamped), "%s%s", ts, text);
+    if (n <= 0) {
+        return;
+    }
+    if ((size_t)n >= sizeof(stamped) - 1U) {
+        stamped[sizeof(stamped) - 2U] = '\n';
+        stamped[sizeof(stamped) - 1U] = '\0';
+    } else if (stamped[n - 1] != '\n') {
+        stamped[n] = '\n';
+        stamped[n + 1] = '\0';
+    }
+
+    (void)AppFileX_AppendTextFileOnSd((const CHAR*)legacy_log_filename, (const CHAR*)stamped, 0U);
+    if (legacy_should_mirror_line_to_sum(text)) {
+        (void)AppFileX_AppendTextFileOnSd((const CHAR*)legacy_sum_filename, (const CHAR*)stamped, 0U);
+        legacy_echo_status_to_console(stamped);
+    }
 }
 
 static void legacy_log_printf(const char* fmt, ...)
@@ -948,39 +1382,199 @@ static void legacy_log_printf(const char* fmt, ...)
     legacy_log_text_line(line);
 }
 
+static void legacy_log_detail_printf(const char* fmt, ...)
+{
+    char detail[192];
+    int detail_written;
+    char line[200];
+    va_list args;
+
+    if (!LegacyMode_GetStartupLogPkts() || (fmt == NULL)) {
+        return;
+    }
+
+    va_start(args, fmt);
+    detail_written = vsnprintf(detail, sizeof(detail), fmt, args);
+    va_end(args);
+    if (detail_written <= 0) {
+        return;
+    }
+
+    (void)snprintf(line, sizeof(line), "!L %s", detail);
+    legacy_log_printf("%s", line);
+}
+
+static void legacy_log_packet_bytes(const uint8_t* data, size_t size)
+{
+    char line[192];
+    size_t pos = 0U;
+    size_t i;
+
+    if (!LegacyMode_GetStartupLogPkts() || (data == NULL) || (size == 0U)) {
+        return;
+    }
+
+    pos += (size_t)snprintf(&line[pos], sizeof(line) - pos, "!P");
+    for (i = 0U; (i < size) && (pos < (sizeof(line) - 1U)); ++i) {
+        int n = snprintf(&line[pos], sizeof(line) - pos, " %02x", data[i]);
+        if ((n <= 0) || ((size_t)n >= (sizeof(line) - pos))) {
+            break;
+        }
+        pos += (size_t)n;
+    }
+
+    legacy_log_printf("%s", line);
+}
+
+bool LegacyMode_SetLogBaseName(const char* log_base_name)
+{
+    size_t i;
+    size_t write_index = 0U;
+
+    if ((log_base_name == NULL) || (log_base_name[0] == '\0')) {
+        return false;
+    }
+
+    for (i = 0U; (log_base_name[i] != '\0') && (write_index < (sizeof(legacy_log_base_name) - 1U)); ++i) {
+        char c = log_base_name[i];
+        if ((c == ' ') || (c == '\\') || (c == '/') || (c == ':') || (c == '*') ||
+            (c == '?') || (c == '"') || (c == '<') || (c == '>') || (c == '|')) {
+            c = '_';
+        }
+        legacy_log_base_name[write_index++] = c;
+    }
+
+    legacy_log_base_name[write_index] = '\0';
+    if (legacy_log_base_name[0] == '\0') {
+        return false;
+    }
+
+    legacy_refresh_log_filenames();
+    return true;
+}
+
+bool LegacyMode_AppendStartupSummaryToLogs(const char* log_filename, const char* sum_filename)
+{
+    char *summary = legacy_startup_summary_buffer;
+    int n;
+
+    if ((log_filename == NULL) || (sum_filename == NULL) || (log_filename[0] == '\0') || (sum_filename[0] == '\0')) {
+        return false;
+    }
+
+    n = snprintf(
+        summary,
+        sizeof(legacy_startup_summary_buffer),
+        "\nSummary of command line and 'SEND.CFG' switches:\n\n"
+        "Usage:     send [-?] [-u] [-m] [-a addr] [-d l|f|a|s] [-n pre] [-N trig]\n"
+        "                [-l] [-p port] [-f] [-x] [-r] [-t mask] [-c mask] [-E pre]\n"
+        "                [-T] [-F fill] [-R reps] [-P] [-A] [-s] [-S] [-g mask]\n"
+        "                [-o pair] [-k] [-D] [-e trg]\n\n"
+        "Cfg file: <%s>\n\n"
+        "  -?                    Print usage message and exit\n"
+        "  -u                    Print user information to 's_user.txt' and exit\n"
+        "  -m         MANUAL     Start in manual mode                 <value %s>\n"
+        "  -a <addr>  ADDRESS    Decoder address                      <value %u>\n"
+        "  -d l|f|a|s TYPE       Dec. type(l-LOC,f-FUNC,a-ACC,s-SIG)  <value %c>\n"
+        "  -l         LAMP       Use rear lamp for function tests     <value %s>\n"
+        "  -n <pre>   PRESET     Signal decoder preset aspect         <value %u>\n"
+        "  -N <trig>  TRIGGER    Signal decoder trigger aspect        <value %u>\n"
+        "  -p <port>  PORT       I/O Port                             <value 0x%04lx>\n"
+        "  -f         FRAGMENT   Test all fragments                   <value %s>\n"
+        "  -x         CRITICAL   Protect critical regions             <value %s>\n"
+        "  -r         REPEAT     Repeat decoder tests                 <value %s>\n"
+        "  -t <mask>  TESTS      Bit mask of tests to run             <value 0x%08lx>\n"
+        "  -c <mask>  CLOCKS     Bit mask of clocks to try            <value 0x%08lx>\n"
+        "  -g <mask>  FUNCS      Bit mask of active functions         <value 0x%02lx>\n"
+        "  -E <pre>   EXTRA_PRE  Extra margin test preamble bits      <value %u>\n"
+        "  -T         TRIG_REV   Use loco reverse as trigger packet   <value %s>\n"
+        "  -L         LOCO_FIRST Put loco packet before func packet   <value false>\n"
+        "  -F <fill>  FILL_MSEC  Fill time in milliseconds            <value %lu>\n"
+        "  -R <reps>  TEST_REPS  Non packet acceptance test repeats   <value %u>\n"
+        "  -P         LOG_PKTS   Send packets to log, not hardware    <value %s>\n"
+        "  -A         NO_ABORT   Do not stop program on an error      <value %s>\n"
+        "  -s         LATE_SCOPE Put scope trigger after trigger      <value %s>\n"
+        "  -S    SAME_AMBIG_ADDR Use same address for ambig tests     <value %s>\n"
+        "  -o        ACC_PAIR    Accessory output pair (1-4)          <value 1>\n"
+        "                            output {preset, trigger}         <value {%u, %u}>\n"
+        "  -k        KICK_START  Kick start motor for function tests  <value false>\n"
+        "  -e <trg>   EXTRA_TRG  Extra Ames test trigger packets      <value 0>\n"
+        "  -D        DEBUG_ON    Log debug messages                   <value false>\n\n"
+        "Manual keyboard commands >\n\n"
+        "ESC - Return to command line       h - Print header\n"
+        "  c - Send single clock phase      C - Send series of clock phases\n"
+        "  u - Clear underflow              0 - Send zeros\n"
+        "  1 - Send ones                    a - Send scope A pattern\n"
+        "  b - Send scope B pattern         o - Send scope timing packet\n"
+        "  w - Send warble packets          S - Send stretched 0 pattern\n"
+        "  r - Send DCC reset packets       d - Send DCC packets\n"
+        "  D - Send stretched DCC packets   s - Change loco speed, acc. output\n"
+        "  e - Set speed to E-STOP          f - Change loco direction, acc. on/off\n"
+        "  E - Set speed to E_STOP(I)       t - Run self tests repeatedly\n"
+        "  k - Kickstart loco for funcs     i - Send DCC idle packets\n"
+        "  R - Send hard resets             g - Test generic I/O\n"
+        "  z - Run decoder tests            q - Quit program\n\n",
+        LegacyMode_GetStartupConfigName(),
+        legacy_send_cfg_stub.manual ? "true" : "false",
+        (unsigned int)legacy_send_cfg_stub.address,
+        (char)toupper((unsigned char)legacy_send_cfg_stub.decoder_type),
+        legacy_send_cfg_stub.lamp ? "true" : "false",
+        (unsigned int)legacy_send_cfg_stub.preset,
+        (unsigned int)legacy_send_cfg_stub.trigger,
+        (unsigned long)legacy_send_cfg_stub.port,
+        legacy_send_cfg_stub.fragment ? "true" : "false",
+        legacy_send_cfg_stub.critical ? "true" : "false",
+        legacy_send_cfg_stub.repeat ? "true" : "false",
+        (unsigned long)legacy_send_cfg_stub.tests_mask,
+        (unsigned long)legacy_send_cfg_stub.clocks_mask,
+        (unsigned long)legacy_send_cfg_stub.funcs_mask,
+        (unsigned int)legacy_send_cfg_stub.extra_pre,
+        legacy_send_cfg_stub.trig_rev ? "true" : "false",
+        (unsigned long)legacy_send_cfg_stub.fill_msec,
+        (unsigned int)legacy_send_cfg_stub.test_reps,
+        legacy_send_cfg_stub.log_pkts ? "true" : "false",
+        legacy_send_cfg_stub.no_abort ? "true" : "false",
+        legacy_send_cfg_stub.late_scope ? "true" : "false",
+        legacy_send_cfg_stub.same_ambig_addr ? "true" : "false",
+        (unsigned int)legacy_send_cfg_stub.preset,
+        (unsigned int)legacy_send_cfg_stub.trigger);
+
+    if ((n <= 0) || ((size_t)n >= sizeof(legacy_startup_summary_buffer))) {
+        return false;
+    }
+
+    if (AppFileX_AppendTextFileOnSd((const CHAR*)log_filename, (const CHAR*)summary, 0U) != FX_SUCCESS) {
+        return false;
+    }
+    if (AppFileX_AppendTextFileOnSd((const CHAR*)sum_filename, (const CHAR*)summary, 0U) != FX_SUCCESS) {
+        return false;
+    }
+
+    return true;
+}
+
 static void legacy_log_selected_packet(const char* context)
 {
     size_t size = 0U;
     const uint8_t* data = legacy_packet_data(selected_packet_id, &size);
-    char bytes[80];
-    size_t pos = 0U;
-    size_t i;
 
     if (!LegacyMode_GetStartupLogPkts()) {
         return;
     }
 
-    if ((data != NULL) && (size > 0U)) {
-        for (i = 0U; i < size; ++i) {
-            int n = snprintf(&bytes[pos], sizeof(bytes) - pos, "%s%02X", (i == 0U) ? "" : " ", data[i]);
-            if ((n <= 0) || ((size_t)n >= (sizeof(bytes) - pos))) {
-                break;
-            }
-            pos += (size_t)n;
-        }
+    if ((context != NULL) && (context[0] != '\0')) {
+        legacy_log_detail_printf("%s mode=%s packet=%s",
+                                 context,
+                                 LegacyMode_GetModeName(),
+                                 LegacyMode_GetSelectedPacketName());
+    } else {
+        legacy_log_detail_printf("mode=%s packet=%s",
+                                 LegacyMode_GetModeName(),
+                                 LegacyMode_GetSelectedPacketName());
     }
 
-    if ((context != NULL) && (context[0] != '\0')) {
-        legacy_log_printf("%s mode=%s packet=%s bytes=%s",
-                          context,
-                          LegacyMode_GetModeName(),
-                          LegacyMode_GetSelectedPacketName(),
-                          (pos > 0U) ? bytes : "-");
-    } else {
-        legacy_log_printf("mode=%s packet=%s bytes=%s",
-                          LegacyMode_GetModeName(),
-                          LegacyMode_GetSelectedPacketName(),
-                          (pos > 0U) ? bytes : "-");
+    if ((data != NULL) && (size > 0U)) {
+        legacy_log_packet_bytes(data, size);
     }
 }
 
@@ -1078,7 +1672,23 @@ static inline uint8_t legacy_get_current_bit(void)
 
     const uint8_t byte_index = (uint8_t)(bit_index / 8U);
     const uint8_t bit_in_byte = (uint8_t)(7U - ((uint8_t)bit_index % 8U));
-    return (uint8_t)((data[byte_index] >> bit_in_byte) & 0x01U);
+    {
+        uint8_t bit = (uint8_t)((data[byte_index] >> bit_in_byte) & 0x01U);
+        const uint32_t packet_idx = bit_index % total_bits;
+
+        if (legacy_test_active && (legacy_active_test_mutation != LEGACY_TEST_MUTATION_NONE)) {
+            if (legacy_active_test_mutation == LEGACY_TEST_MUTATION_BAD_ADDRESS) {
+                if (packet_idx == 11U) {
+                    bit ^= 0x01U;
+                }
+            } else if ((legacy_active_test_mutation == LEGACY_TEST_MUTATION_BAD_BIT) &&
+                       (packet_idx == (uint32_t)legacy_active_mutation_bit)) {
+                bit ^= 0x01U;
+            }
+        }
+
+        return bit;
+    }
 }
 
 static inline bool legacy_is_first_zero_in_selected_packet(uint32_t packet_bit_index)
@@ -1228,6 +1838,10 @@ void LegacyMode_Init(void)
     legacy_test_packet_count = 0U;
     legacy_test_packet_index = 0U;
     legacy_test_packet_cycles = 0U;
+    legacy_active_test_mutation = LEGACY_TEST_MUTATION_NONE;
+    legacy_active_mutation_bit = 0U;
+    (void)snprintf(legacy_log_base_name, sizeof(legacy_log_base_name), "legacy");
+    legacy_refresh_log_filenames();
     bit_index = 0;
     half_phase = 0;
     phase_p = true;
@@ -1291,12 +1905,13 @@ bool LegacyMode_Start(void)
     }
 
     legacy_mode_running = true;
-    legacy_log_printf("START startup_cfg=%s log_pkts=%s manual=%s type=%c",
+    legacy_log_printf("STATUS  Starting Decoder test cycle    1");
+    legacy_log_printf("STATUS  Legacy mode start startup_cfg=%s log_pkts=%s manual=%s type=%c",
                       LegacyMode_GetStartupConfigName(),
                       LegacyMode_GetStartupLogPkts() ? "true" : "false",
                       LegacyMode_GetStartupManual() ? "true" : "false",
                       LegacyMode_GetStartupDecoderType());
-    legacy_log_printf("CFG tests=0x%08lX clocks=0x%08lX funcs=0x%08lX reps=%u pre=%u trig=%u",
+    legacy_log_printf("STATUS  cfg tests=0x%08lX clocks=0x%08lX funcs=0x%08lX reps=%u pre=%u trig=%u",
                       (unsigned long)legacy_send_cfg_stub.tests_mask,
                       (unsigned long)legacy_send_cfg_stub.clocks_mask,
                       (unsigned long)legacy_send_cfg_stub.funcs_mask,
@@ -1360,7 +1975,7 @@ bool LegacyMode_Stop(void)
     legacy_stop_timer();
     BR_ENABLE_GPIO_Port->BSRR = ((uint32_t)BR_ENABLE_Pin << 16U);
     legacy_track_output(false);
-    legacy_log_printf("STOP");
+    legacy_log_printf("STATUS  {SEND_END 0}");
     (void)AppFileX_CloseMediaIfIdleOnSd();
     return true;
 }
