@@ -204,26 +204,26 @@ void CommandStationThread(void *argument) {
       printf("Loop1: stop\n");
       // required to set direction for some decoders 
       // (those that don't use the direction bit in the speed step packet but instead infer direction from speed 0 vs nonzero)
-      packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
+      packet = dcc::make_128_speed_step_control_packet(3u, 0u);
       command_station.packet(packet);
       osDelay(100u);
       // Set function F0
       printf("Loop1: set function F0 Headlight\n");
-      packet = dcc::make_function_group_f4_f0_packet(3u, 0b0'0001u);
+      packet = dcc::make_f0_f4_packet(3u, 0b0'0001u);
       command_station.packet(packet);
       osDelay(100u);
       while (commandStationRunning) {
 
         // Accelerate forward
         printf("Loop1: accelerate to speed step 42 forward\n");
-        packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 42u);
+        packet = dcc::make_128_speed_step_control_packet(3u, 1u << 7u | 42u);
         command_station.packet(packet);
         osDelay(3000u);
 
         // Stop
         printf("Loop1: stop (forward)\n");
 //printf("1 LastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
-        packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | 0u);
+        packet = dcc::make_128_speed_step_control_packet(3u, 1u << 7u | 0u);
         command_station.packet(packet);
 // note: last idle packet count is only updated after a full packet transmission
 // NOT immediately after command_station.packet() call! 
@@ -237,13 +237,13 @@ void CommandStationThread(void *argument) {
 
         // Accelerate reverse
         printf("Loop1: accelerate to speed step 42 reverse\n");
-        packet = dcc::make_advanced_operations_speed_packet(3u, 42u);
+        packet = dcc::make_128_speed_step_control_packet(3u, 42u);
         command_station.packet(packet);
         osDelay(3000u);
 
         // Stop
         printf("Loop1: stop (reverse)\n");
-        packet = dcc::make_advanced_operations_speed_packet(3u, 0u);
+        packet = dcc::make_128_speed_step_control_packet(3u, 0u);
         command_station.packet(packet);
         osDelay(1000u);
       }
@@ -255,13 +255,13 @@ void CommandStationThread(void *argument) {
       // Accelerate to speed 60 reverse
       printf("Loop2: accelerate to speed 60 reverse\n");
       for (uint8_t loop2_count = 0; loop2_count < 5; loop2_count++) {
-        packet = dcc::make_advanced_operations_speed_packet(3u, 60u);
+        packet = dcc::make_128_speed_step_control_packet(3u, 60u);
         command_station.packet(packet);
         osDelay(100u);
       }
 
       // EMERGENCY STOP - Broadcast to all locomotives (address 0)
-      packet = dcc::make_advanced_operations_speed_packet(0u, 1u << 7u | 1u);  // Broadcast emergency stop
+      packet = dcc::make_128_speed_step_control_packet(0u, 1u << 7u | 1u);  // Broadcast emergency stop
       command_station.packet(packet);
       printf("Loop2: EMERGENCY STOP (broadcast)\n");
       osDelay(1000u);
@@ -279,7 +279,7 @@ void CommandStationThread(void *argument) {
         // Ramp up speed forward
         for (uint8_t speed = 0; speed <= 126 && commandStationRunning; speed += 10) {
           BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | speed);
+          packet = dcc::make_128_speed_step_control_packet(3u, 1u << 7u | speed);
           command_station.packet(packet);
           printf("Loop3: speed step %d forward\n", speed);
           osDelay(500u);
@@ -290,7 +290,7 @@ void CommandStationThread(void *argument) {
         // Ramp down speed forward
         for (int8_t speed = 126; speed >= 0 && commandStationRunning; speed -= 10) {
           BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_advanced_operations_speed_packet(3u, 1u << 7u | speed);
+          packet = dcc::make_128_speed_step_control_packet(3u, 1u << 7u | speed);
           command_station.packet(packet);
           printf("Loop3: speed step %d forward\n", speed);
           osDelay(500u);
@@ -301,7 +301,7 @@ void CommandStationThread(void *argument) {
         // Ramp up speed reverse
         for (uint8_t speed = 0; speed <= 126 && commandStationRunning; speed += 10) {
           BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_advanced_operations_speed_packet(3u, speed);
+          packet = dcc::make_128_speed_step_control_packet(3u, speed);
           command_station.packet(packet);
           printf("Loop3: speed step %d reverse\n", speed);
           osDelay(500u);
@@ -312,7 +312,7 @@ void CommandStationThread(void *argument) {
         // Ramp down speed reverse
         for (int8_t speed = 126; speed >= 0 && commandStationRunning; speed -= 10) {
           BSP_LED_Toggle(LED_GREEN);
-          packet = dcc::make_advanced_operations_speed_packet(3u, speed);
+          packet = dcc::make_128_speed_step_control_packet(3u, speed);
           command_station.packet(packet);
           printf("Loop3: speed step %d reverse\n", speed);
           osDelay(500u);
