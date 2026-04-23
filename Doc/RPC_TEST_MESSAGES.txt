@@ -1086,37 +1086,56 @@ TODO:
 
 Add the following:
 
+Core and reset packets:
 make_idle_packet
 make_reset_packet
+make_hard_reset_packet
 
-make_consist_control_packet
-make_advanced_operations_speed_direction_and_functions_packet
-make_advanced_operations_restricted_speed_packet
+Speed, direction, and consist control:
+make_set_consist_address_packet
+make_speed_direction_and_functions_packet
+make_analog_function_group_packet
 make_128_speed_step_control_packet
-
 make_speed_and_direction_packet
 
+Function group packets:
 make_f0_f4_packet
-make_function_group_f8_f5_packet
-make_function_group_f12_f9_packet
-make_feature_expansion_f20_f13_packet
-make_feature_expansion_f28_f21_packet
+make_f5_f8_packet
+make_f9_f12_packet
+make_f13_f20_packet
+make_f21_f28_packet
+make_f29_f36_packet
+make_f37_f44_packet
+make_f45_f52_packet
+make_f53_f60_packet
+make_f61_f68_packet
 
+Binary state packets:
 make_binary_state_short_packet
 make_binary_state_long_packet
+
+CV programming packets:
 make_cv_access_long_verify_service_packet
 make_cv_access_long_write_service_packet
-
 make_cv_access_short_write_packet
 make_cv_access_long_verify_packet
 make_cv_access_long_write_packet
+make_cv_access_xpom_verify_packet
+make_cv_access_xpom_write_packet
 
+Logon packets:
 make_logon_enable_packet
 make_logon_select_packet
 make_logon_assign_packet
 
+Accessory packets:
 make_basic_accessory_packet
-
+make_extended_accessory_packet
 make_accessory_nop_packet
 
-make arbitary make_idle_packet
+Time and command-station packets:
+make_time_packet
+make_date_packet
+make_time_scale_packet
+make_system_time_packet
+make_command_station_feature_identification_packet
