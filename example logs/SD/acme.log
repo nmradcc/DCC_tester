@@ -1,7 +1,7 @@
-<Fri Feb 09 05:22:38 2000> STATUS  BEGINNING decoder test log
-<Fri Feb 09 05:22:38 2000> STATUS  Test software version 1.0.0
-<Fri Feb 09 05:22:38 2000> STATUS  File <DCC_tester firmware>
-<Fri Feb 09 05:22:38 2000> STATUS  CRC 0, Length 0
+<Fri Feb 09 06:47:28 2000> STATUS  BEGINNING decoder test log
+<Fri Feb 09 06:47:28 2000> STATUS  Test software version 1.0.0
+<Fri Feb 09 06:47:28 2000> STATUS  File <DCC_tester firmware>
+<Fri Feb 09 06:47:28 2000> STATUS  CRC 0, Length 0
 Manufacturer: acme
 Model number: 1
 Version number: 2
@@ -34,13 +34,13 @@ Cfg file: <SEND.CFG>
   -x         CRITICAL   Protect critical regions             <value false>
   -r         REPEAT     Repeat decoder tests                 <value false>
   -t <mask>  TESTS      Bit mask of tests to run             <value 0x00000003>
-  -c <mask>  CLOCKS     Bit mask of clocks to try            <value 0x0000007f>
+  -c <mask>  CLOCKS     Bit mask of clocks to try            <value 0xfffffce7>
   -g <mask>  FUNCS      Bit mask of active functions         <value 0x1f>
-  -E <pre>   EXTRA_PRE  Extra margin test preamble bits      <value 2>
+  -E <pre>   EXTRA_PRE  Extra margin test preamble bits      <value 0>
   -T         TRIG_REV   Use loco reverse as trigger packet   <value false>
   -L         LOCO_FIRST Put loco packet before func packet   <value false>
   -F <fill>  FILL_MSEC  Fill time in milliseconds            <value 1000>
-  -R <reps>  TEST_REPS  Non packet acceptance test repeats   <value 4>
+  -R <reps>  TEST_REPS  Non packet acceptance test repeats   <value 2>
   -P         LOG_PKTS   Send packets to log, not hardware    <value true>
   -A         NO_ABORT   Do not stop program on an error      <value false>
   -s         LATE_SCOPE Put scope trigger after trigger      <value false>
@@ -67,18 +67,18 @@ ESC - Return to command line       h - Print header
   R - Send hard resets             g - Test generic I/O
   z - Run decoder tests            q - Quit program
 
-<Fri Feb 09 05:22:39 2000> STATUS  Starting clock <nominal>
-<Fri Feb 09 05:22:39 2000> - Clock 0T  200, 0H  100, 1T  116
-<Fri Feb 09 05:22:39 2000> !L TEST map test=margin_1t mask=0x00000001 steps=3
-<Fri Feb 09 05:22:39 2000> !L TEST map test=duty_1h mask=0x00000002 steps=3
-<Fri Feb 09 05:22:39 2000> STATUS  Starting decoder tests.
-<Fri Feb 09 05:22:39 2000> STATUS  tests=0x00000003 reps=4 repeat=false steps=6 first=margin_1t_nom
-<Fri Feb 09 05:22:39 2000> !L TEST step=margin_1t_nom packet=base bit0=100 bit1=58
-<Fri Feb 09 05:22:39 2000> !L TEST_SELECT mode=packet packet=base
-<Fri Feb 09 05:22:39 2000> !P ff f0 19 d0 ef
-<Fri Feb 09 05:22:39 2000> STATUS  Starting Decoder test cycle    1
-<Fri Feb 09 05:22:39 2000> STATUS  Legacy mode start startup_cfg=SEND.CFG log_pkts=true manual=false type=l
-<Fri Feb 09 05:22:39 2000> STATUS  cfg tests=0x00000003 clocks=0x0000007F funcs=0x0000001F reps=4 pre=0 trig=8
-<Fri Feb 09 05:22:39 2000> !L SELECT mode=packet packet=idle
-<Fri Feb 09 05:22:39 2000> !P ff f7 f8 01 ff
-<Fri Feb 09 05:22:44 2000> STATUS  {SEND_END 0}
+<Fri Feb 09 06:47:28 2000> STATUS  Starting clock <nominal>
+<Fri Feb 09 06:47:28 2000> - Clock 0T  200, 0H  100, 1T  116
+<Fri Feb 09 06:47:28 2000> !L TEST map test=margin_1t mask=0x00000001 steps=3
+<Fri Feb 09 06:47:28 2000> !L TEST map test=duty_1h mask=0x00000002 steps=3
+<Fri Feb 09 06:47:28 2000> STATUS  Starting decoder tests.
+<Fri Feb 09 06:47:28 2000> STATUS  tests=0x00000003 reps=2 repeat=false steps=6 first=margin_1t_nom
+<Fri Feb 09 06:47:28 2000> !L TEST step=margin_1t_nom packet=base bit0=100 bit1=58
+<Fri Feb 09 06:47:28 2000> !L TEST_SELECT mode=packet packet=base
+<Fri Feb 09 06:47:29 2000> !P ff f0 19 d0 ef
+<Fri Feb 09 06:47:29 2000> STATUS  Starting Decoder test cycle    1
+<Fri Feb 09 06:47:29 2000> STATUS  Legacy mode start startup_cfg=SEND.CFG log_pkts=true manual=false type=l
+<Fri Feb 09 06:47:29 2000> STATUS  cfg tests=0x00000003 clocks=0xFFFFFCE7 funcs=0x0000001F reps=2 pre=0 trig=8
+<Fri Feb 09 06:47:29 2000> !L SELECT mode=packet packet=idle
+<Fri Feb 09 06:47:29 2000> !P ff f7 f8 01 ff
+<Fri Feb 09 06:47:33 2000> STATUS  {SEND_END 0}

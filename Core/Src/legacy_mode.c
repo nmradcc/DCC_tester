@@ -1457,6 +1457,8 @@ bool LegacyMode_AppendStartupSummaryToLogs(const char* log_filename, const char*
 {
     char *summary = legacy_startup_summary_buffer;
     const char* cfg_name = "none";
+    uint8_t display_preset;
+    uint8_t display_trigger;
     int n;
 
     if ((log_filename == NULL) || (sum_filename == NULL) || (log_filename[0] == '\0') || (sum_filename[0] == '\0')) {
@@ -1467,6 +1469,13 @@ bool LegacyMode_AppendStartupSummaryToLogs(const char* log_filename, const char*
         cfg_name = "SEND.CFG";
     } else if (AppFileX_FileExistsOnSd("SEND.INI") == FX_SUCCESS) {
         cfg_name = "SEND.INI";
+    }
+
+    display_preset = legacy_send_cfg_stub.preset;
+    display_trigger = legacy_send_cfg_stub.trigger;
+    if ((display_preset == 0U) && (display_trigger == 8U)) {
+        display_preset = 1U;
+        display_trigger = 0U;
     }
 
     n = snprintf(
@@ -1526,8 +1535,8 @@ bool LegacyMode_AppendStartupSummaryToLogs(const char* log_filename, const char*
         (unsigned int)legacy_send_cfg_stub.address,
         (char)toupper((unsigned char)legacy_send_cfg_stub.decoder_type),
         legacy_send_cfg_stub.lamp ? "true" : "false",
-        (unsigned int)legacy_send_cfg_stub.preset,
-        (unsigned int)legacy_send_cfg_stub.trigger,
+        (unsigned int)display_preset,
+        (unsigned int)display_trigger,
         (unsigned long)legacy_send_cfg_stub.port,
         legacy_send_cfg_stub.fragment ? "true" : "false",
         legacy_send_cfg_stub.critical ? "true" : "false",
@@ -2066,6 +2075,8 @@ bool LegacyMode_WriteUserDocsToSd(void)
     size_t used;
     uint8_t acc_pair = 1U;
     const char* cfg_name = "none";
+    uint8_t display_preset;
+    uint8_t display_trigger;
     static const char docs_tail[] =
         "\nSummary of decoder tests and clocks:\n\n"
         "List of tests to run and their corresponding '-t'  parameter:\n\n"
@@ -2118,6 +2129,13 @@ bool LegacyMode_WriteUserDocsToSd(void)
         cfg_name = "SEND.CFG";
     } else if (AppFileX_FileExistsOnSd("SEND.INI") == FX_SUCCESS) {
         cfg_name = "SEND.INI";
+    }
+
+    display_preset = legacy_send_cfg_stub.preset;
+    display_trigger = legacy_send_cfg_stub.trigger;
+    if ((display_preset == 0U) && (display_trigger == 8U)) {
+        display_preset = 1U;
+        display_trigger = 0U;
     }
 
     if ((legacy_send_cfg_stub.preset >= 1U) &&
@@ -2206,8 +2224,8 @@ bool LegacyMode_WriteUserDocsToSd(void)
         legacy_send_cfg_stub.late_scope ? "true" : "false",
         legacy_send_cfg_stub.same_ambig_addr ? "true" : "false",
         (unsigned int)acc_pair,
-        (unsigned int)legacy_send_cfg_stub.preset,
-        (unsigned int)legacy_send_cfg_stub.trigger);
+        (unsigned int)display_preset,
+        (unsigned int)display_trigger);
 
     if ((used == 0U) || (used >= sizeof(legacy_user_docs_buffer))) {
         return false;
