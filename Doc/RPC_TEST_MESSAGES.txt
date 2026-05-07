@@ -777,9 +777,9 @@ DCC packet generation for testing and debugging.
 
 10.1 Load Custom Packet Queue
 ------------------------------
-Load an arbitrary byte array into the custom packet queue (max 3 packets).
-Bytes must be in the range 0-255, and packet length is limited to
-DCC_MAX_PACKET_SIZE (18). By default, each call appends to the queue. Use
+Load an arbitrary byte array into the custom packet queue.
+Bytes must be in the range 0-255, and que length is limited to
+64 bytes (512 bits). By default, each call appends to the queue. Use
 "replace": true to clear the queue before loading.
 
 Request:
