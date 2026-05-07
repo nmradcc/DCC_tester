@@ -242,9 +242,14 @@ void CommandStationThread(void *argument) {
         osDelay(3000u);
 
         // Stop
-        printf("Loop1: stop (reverse)\n");
-        packet = dcc::make_128_speed_step_control_packet(3u, 0u);
+///        printf("Loop1: stop (reverse)\n");
+///        packet = dcc::make_128_speed_step_control_packet(3u, 0u);
+///        command_station.packet(packet);
+///        osDelay(1000u);
+        // EMERGENCY STOP - Broadcast to all locomotives (address 0)
+        packet = dcc::make_128_speed_step_control_packet(0u, 1u << 7u | 1u);  // Broadcast emergency stop
         command_station.packet(packet);
+        printf("Loop2: EMERGENCY STOP (broadcast)\n");
         osDelay(1000u);
       }
     }
