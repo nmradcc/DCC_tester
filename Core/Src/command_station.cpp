@@ -1,6 +1,7 @@
 #include "command_station.hpp"
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <dcc/speed.hpp>
 #include "cmsis_os2.h"
 #include "main.h"
@@ -32,6 +33,18 @@ static dcc::Packet customPacketQueue[CUSTOM_PACKET_QUEUE_MAX];
 static uint8_t customPacketQueueCount = 0;
 static bool customPacketTrigger = false;
 static uint32_t customInterPacketDelay = 100;
+
+// Streaming bits mode (bypasses DCC library entirely)
+static constexpr uint16_t STREAMING_BITS_MAX = 512;
+static uint8_t streamingBitBuffer[STREAMING_BITS_MAX / 8u];  // packed bits, MSB first
+static uint16_t streamingBitCount = 0;                       // total number of bits loaded
+static uint16_t streamingBit1Duration = 58u;                 // half-bit timer ticks for a '1'
+static uint16_t streamingBit0Duration = 100u;                // half-bit timer ticks for a '0'
+static volatile uint16_t streamingBitPos = 0u;               // current half-bit index (ISR-driven)
+static volatile uint16_t streamingRepeatRemaining = 0u;      // number of full stream dumps left
+static volatile bool streamingBitsTrigger = false;           // set by API, cleared by thread
+static volatile bool streamingBitsActive = false;            // set by thread, cleared by ISR
+static volatile bool streamingBitsPolarity = false;          // track polarity in ISR (MSB = initial state)
 
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
@@ -110,14 +123,49 @@ extern "C" void TIM2_IRQHandler(void)
     if ((itsource & (TIM_IT_UPDATE)) == (TIM_IT_UPDATE))
     {
       __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
-      auto arr{command_station.transmit()};
-      if ((zerobitOverrideMask & bitCountMask) != 0) {
-        if (arr >= DCC_TX_MIN_BIT_0_TIMING) {  // only adjust Zero bits
-          // Adjust zero bit by deltaP or deltaN based on current phase
-          arr = arr + (currentPhaseIsP ? zerobitDeltaP : zerobitDeltaN);
+      if (streamingBitsActive) {
+        // Streaming bits mode: bypass DCC library, drive raw bit timings directly
+        uint16_t pos = streamingBitPos;
+        uint16_t bit_index = pos / 2u;
+        if (bit_index >= streamingBitCount) {
+          if (streamingRepeatRemaining > 1u) {
+            // Start next dump of the same stream
+            streamingRepeatRemaining--;
+            streamingBitPos = 0u;
+            streamingBitsPolarity = true;
+            uint8_t bit_val = (streamingBitBuffer[0] >> 7u) & 1u;
+            uint16_t duration = bit_val ? streamingBit1Duration : streamingBit0Duration;
+            streamingBitsPolarity = !streamingBitsPolarity;
+            command_station.trackOutputs(streamingBitsPolarity, !streamingBitsPolarity, true);
+            streamingBitPos = 1u;
+            htim2.Instance->ARR = duration;
+          } else {
+            // All requested dumps streamed - resume DCC library (idle packet)
+            streamingBitsActive = false;
+            streamingBitPos = 0u;
+            streamingRepeatRemaining = 0u;
+            auto arr{command_station.transmit()};
+            htim2.Instance->ARR = arr;
+          }
+        } else {
+          uint8_t bit_val = (streamingBitBuffer[bit_index / 8u] >> (7u - (bit_index % 8u))) & 1u;
+          uint16_t duration = bit_val ? streamingBit1Duration : streamingBit0Duration;
+          // Toggle polarity and drive outputs; flag first half-bit of stream for scope trigger
+          streamingBitsPolarity = !streamingBitsPolarity;
+          command_station.trackOutputs(streamingBitsPolarity, !streamingBitsPolarity, pos == 0u);
+          streamingBitPos = pos + 1u;
+          htim2.Instance->ARR = duration;
         }
+      } else {
+        auto arr{command_station.transmit()};
+        if ((zerobitOverrideMask & bitCountMask) != 0) {
+          if (arr >= DCC_TX_MIN_BIT_0_TIMING) {  // only adjust Zero bits
+            // Adjust zero bit by deltaP or deltaN based on current phase
+            arr = arr + (currentPhaseIsP ? zerobitDeltaP : zerobitDeltaN);
+          }
+        }
+        htim2.Instance->ARR = arr; // Set auto-reload register for next interrupt
       }
-      htim2.Instance->ARR = arr; // Set auto-reload register for next interrupt
     }
   }
 }
@@ -192,6 +240,21 @@ void CommandStationThread(void *argument) {
             }
           }
           customPacketTrigger = false;
+        }
+        // Arm streaming bits: set up ISR state then enable
+        if (streamingBitsTrigger && streamingBitCount > 0u && !streamingBitsActive) {
+          if (streamingRepeatRemaining == 0u) {
+            streamingRepeatRemaining = 1u;
+          }
+          printf("Streaming bits: %u bits, count=%u, bit1_dur=%u, bit0_dur=%u\n",
+                 static_cast<unsigned>(streamingBitCount),
+                 static_cast<unsigned>(streamingRepeatRemaining),
+                 static_cast<unsigned>(streamingBit1Duration),
+                 static_cast<unsigned>(streamingBit0Duration));
+          streamingBitPos = 0u;
+          streamingBitsPolarity = true;  // ISR flips before first use -> first output: N=false P=true
+          streamingBitsTrigger = false;
+          streamingBitsActive = true;    // arm ISR last
         }
         osDelay(100u);
       }
@@ -337,6 +400,10 @@ void CommandStationThread(void *argument) {
     __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
     customPacketQueueCount = 0;
     customPacketTrigger = false;
+    streamingBitsActive = false;
+    streamingBitsTrigger = false;
+    streamingBitPos = 0u;
+    streamingRepeatRemaining = 0u;
     
     // Keep semaphore acquired to prevent auto-restart
     // Explicit CommandStation_Start() call is required to run again
@@ -415,6 +482,62 @@ extern "C" bool CommandStation_IsCustomPacketQueueFull(void) {
 
 extern "C" uint8_t CommandStation_GetCustomPacketQueueCount(void) {
   return customPacketQueueCount;
+}
+
+// Load bits into the streaming buffer (each element in bits[] is 0 or 1).
+// bit1_duration / bit0_duration are half-bit timer ticks (µs at 1 MHz).
+// Set replace=true to clear existing buffer before loading.
+extern "C" bool CommandStation_LoadStreamBits(const uint8_t* bits, uint16_t bit_count,
+                                              uint16_t bit1_duration, uint16_t bit0_duration,
+                                              bool replace) {
+  if (!bits || bit_count == 0u) return false;
+
+  if (replace) {
+    memset(streamingBitBuffer, 0, sizeof(streamingBitBuffer));
+    streamingBitCount = 0u;
+  }
+
+  if (streamingBitCount + bit_count > STREAMING_BITS_MAX) return false;
+
+  for (uint16_t i = 0u; i < bit_count; i++) {
+    uint16_t pos = streamingBitCount + i;
+    if (bits[i]) {
+      streamingBitBuffer[pos / 8u] |=  (uint8_t)(1u << (7u - (pos % 8u)));
+    } else {
+      streamingBitBuffer[pos / 8u] &= (uint8_t)~(1u << (7u - (pos % 8u)));
+    }
+  }
+  streamingBitCount += bit_count;
+  streamingBit1Duration = bit1_duration;
+  streamingBit0Duration = bit0_duration;
+  return true;
+}
+
+extern "C" bool CommandStation_TriggerStreamBits(uint16_t count) {
+  if (count == 0u) return false;
+  if (streamingBitCount > 0u && !streamingBitsActive) {
+    streamingRepeatRemaining = count;
+    streamingBitsTrigger = true;
+    return true;
+  }
+  return false;
+}
+
+extern "C" void CommandStation_ClearStreamBits(void) {
+  streamingBitsTrigger = false;
+  streamingBitsActive = false;
+  streamingBitPos = 0u;
+  streamingRepeatRemaining = 0u;
+  streamingBitCount = 0u;
+  memset(streamingBitBuffer, 0, sizeof(streamingBitBuffer));
+}
+
+extern "C" bool CommandStation_IsStreamBitsActive(void) {
+  return streamingBitsActive;
+}
+
+extern "C" uint16_t CommandStation_GetStreamBitCount(void) {
+  return streamingBitCount;
 }
 
 // Can be called from anywhere

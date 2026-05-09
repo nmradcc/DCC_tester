@@ -1243,6 +1243,147 @@ static json system_usb_status_handler(const json& params) {
     };
 }
 
+// ---------------------------------------------------------------------------
+// Streaming bits handlers (bypasses DCC library - raw half-bit output)
+// ---------------------------------------------------------------------------
+
+static json command_station_load_bits_handler(const json& params) {
+    if (!params.is_object() || !params.contains("bits")) {
+        return {
+            {"status", "error"},
+            {"message", "params must contain 'bits' array (values 0 or 1)"}
+        };
+    }
+
+    if (!params["bits"].is_array()) {
+        return {
+            {"status", "error"},
+            {"message", "'bits' must be an array of 0/1 values"}
+        };
+    }
+
+    const auto& bits_array = params["bits"];
+    if (bits_array.empty() || bits_array.size() > 512u) {
+        return {
+            {"status", "error"},
+            {"message", "bits array must have 1-512 elements"}
+        };
+    }
+
+    // Optional replace (default true)
+    bool replace = true;
+    if (params.contains("replace") && params["replace"].is_boolean()) {
+        replace = params["replace"].get<bool>();
+    }
+
+    // Optional timing overrides - defaults to standard DCC timings
+    uint16_t bit1_duration = 58u;
+    uint16_t bit0_duration = 100u;
+    if (params.contains("bit1_duration")) {
+        if (!params["bit1_duration"].is_number_unsigned()) {
+            return {{"status", "error"}, {"message", "bit1_duration must be an unsigned integer"}};
+        }
+        bit1_duration = params["bit1_duration"].get<uint16_t>();
+    }
+    if (params.contains("bit0_duration")) {
+        if (!params["bit0_duration"].is_number_unsigned()) {
+            return {{"status", "error"}, {"message", "bit0_duration must be an unsigned integer"}};
+        }
+        bit0_duration = params["bit0_duration"].get<uint16_t>();
+    }
+
+    // Convert JSON array to flat uint8_t buffer
+    uint16_t count = static_cast<uint16_t>(bits_array.size());
+    uint8_t bits_buf[512];
+    for (uint16_t i = 0u; i < count; i++) {
+        if (!bits_array[i].is_number_unsigned()) {
+            return {{"status", "error"}, {"message", "all bits must be 0 or 1"}};
+        }
+        uint32_t val = bits_array[i].get<uint32_t>();
+        if (val > 1u) {
+            return {{"status", "error"}, {"message", "bit values must be 0 or 1"}};
+        }
+        bits_buf[i] = static_cast<uint8_t>(val);
+    }
+
+    if (!CommandStation_LoadStreamBits(bits_buf, count, bit1_duration, bit0_duration, replace)) {
+        return {
+            {"status", "error"},
+            {"message", "Failed to load bits (buffer full or invalid params)"},
+            {"loaded_count", CommandStation_GetStreamBitCount()},
+            {"max_bits", 512}
+        };
+    }
+
+    return {
+        {"status", "ok"},
+        {"message", "Bits loaded successfully"},
+        {"bit_count", CommandStation_GetStreamBitCount()},
+        {"bit1_duration", bit1_duration},
+        {"bit0_duration", bit0_duration},
+        {"replace", replace}
+    };
+}
+
+static json command_station_transmit_bits_handler(const json& params) {
+    uint16_t bit_count = CommandStation_GetStreamBitCount();
+    if (bit_count == 0u) {
+        return {
+            {"status", "error"},
+            {"message", "No bits loaded - call command_station_load_bits first"}
+        };
+    }
+    if (CommandStation_IsStreamBitsActive()) {
+        return {
+            {"status", "error"},
+            {"message", "Stream already active"}
+        };
+    }
+
+    uint16_t repeat_count = 1u;
+    if (params.contains("count")) {
+        if (!params["count"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "count must be an unsigned integer"}
+            };
+        }
+        uint32_t val = params["count"].get<uint32_t>();
+        if (val == 0u || val > 65535u) {
+            return {
+                {"status", "error"},
+                {"message", "count must be between 1 and 65535"}
+            };
+        }
+        repeat_count = static_cast<uint16_t>(val);
+    }
+
+    if (!CommandStation_TriggerStreamBits(repeat_count)) {
+        return {
+            {"status", "error"},
+            {"message", "Failed to trigger stream bits transmission"}
+        };
+    }
+
+    return {
+        {"status", "ok"},
+        {"message", "Stream bits transmission triggered"},
+        {"bit_count", bit_count},
+        {"count", repeat_count}
+    };
+}
+
+static json command_station_clear_bits_handler(const json& params) {
+    (void)params;
+
+    CommandStation_ClearStreamBits();
+
+    return {
+        {"status", "ok"},
+        {"message", "Stream bits buffer cleared"}
+    };
+}
+
 // ---------------- RTOS Task ----------------
 
 RpcServer server;
@@ -1280,6 +1421,9 @@ void RpcServerThread(void* argument) {
     server.register_method("get_rtc_datetime", get_rtc_datetime_handler);
     server.register_method("set_rtc_datetime", set_rtc_datetime_handler);
     server.register_method("system_usb_status", system_usb_status_handler);
+    server.register_method("command_station_load_bits", command_station_load_bits_handler);
+    server.register_method("command_station_transmit_bits", command_station_transmit_bits_handler);
+    server.register_method("command_station_clear_bits", command_station_clear_bits_handler);
 
     while (rpcServerRunning) {
         std::string request;

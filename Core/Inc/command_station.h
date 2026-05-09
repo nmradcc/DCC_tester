@@ -14,6 +14,18 @@ void CommandStation_TriggerTransmit(uint32_t delay_ms);
 bool CommandStation_IsCustomPacketQueueFull(void);
 uint8_t CommandStation_GetCustomPacketQueueCount(void);
 
+// Streaming bits mode (bypasses DCC library; raw half-bit timings)
+// bits[]: one byte per bit (0 or 1), bit_count <= 512
+// bit1_duration / bit0_duration: half-bit timer ticks (µs at 1 MHz)
+// replace: true = clear existing buffer first
+bool CommandStation_LoadStreamBits(const uint8_t* bits, uint16_t bit_count,
+                                   uint16_t bit1_duration, uint16_t bit0_duration,
+                                   bool replace);
+bool CommandStation_TriggerStreamBits(uint16_t count);
+void CommandStation_ClearStreamBits(void);
+bool CommandStation_IsStreamBitsActive(void);
+uint16_t CommandStation_GetStreamBitCount(void);
+
 // RAM-only override parameter getters/setters
 void CommandStation_SetZerobitOverrideMask(uint64_t mask);
 uint64_t CommandStation_GetZerobitOverrideMask(void);
