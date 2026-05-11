@@ -1,0 +1,27 @@
+# ReadRequiredManufacturerIdCvConfig.txt
+# Reads required DCC manufacturer ID CV (CV8) using service-mode direct bit verify.
+
+# Required CV for manufacturer ID in DCC is CV8.
+cv_number=8
+
+# Decoder tuning profile.
+# Supported: loksound5_micro, generic
+decoder_profile=loksound5_micro
+
+# ACK detection is firmware-side only (STM32 command_station_detect_ack RPC).
+
+# Expected manufacturer ID (decimal or hex, e.g. 0x0D).
+# Set to -1 to only read/report CV8 without pass/fail comparison.
+expected_manufacturer_id=-1
+
+# ACK detection tuning.
+ack_current_threshold_ma=20
+ack_window_ms=20
+ack_poll_interval_ms=1
+baseline_sample_delay_ms=1
+baseline_samples=3
+repeats_per_verify=3
+
+# Packet/timing settings.
+inter_packet_delay_ms=20
+service_preamble_bits=25

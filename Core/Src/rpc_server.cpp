@@ -661,6 +661,186 @@ static json get_current_feedback_ma_handler(const json& params) {
     };
 }
 
+static json command_station_detect_ack_handler(const json& params) {
+    // Defaults tuned for service-mode ACK checks.
+    uint8_t baseline_samples = 4;
+    uint32_t baseline_sample_delay_ms = 1;
+    uint32_t ack_window_ms = 20;
+    uint32_t ack_poll_interval_ms = 1;
+    uint16_t ack_threshold_ma = 20;
+
+    if (!params.is_object()) {
+        return {
+            {"status", "error"},
+            {"message", "Params must be an object"}
+        };
+    }
+
+    if (params.contains("baseline_samples")) {
+        if (!params["baseline_samples"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "baseline_samples must be a positive integer"}
+            };
+        }
+        baseline_samples = params["baseline_samples"].get<uint8_t>();
+    }
+
+    if (params.contains("baseline_sample_delay_ms")) {
+        if (!params["baseline_sample_delay_ms"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "baseline_sample_delay_ms must be a positive integer"}
+            };
+        }
+        baseline_sample_delay_ms = params["baseline_sample_delay_ms"].get<uint32_t>();
+    }
+
+    if (params.contains("ack_window_ms")) {
+        if (!params["ack_window_ms"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "ack_window_ms must be a positive integer"}
+            };
+        }
+        ack_window_ms = params["ack_window_ms"].get<uint32_t>();
+    }
+
+    if (params.contains("ack_poll_interval_ms")) {
+        if (!params["ack_poll_interval_ms"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "ack_poll_interval_ms must be a positive integer"}
+            };
+        }
+        ack_poll_interval_ms = params["ack_poll_interval_ms"].get<uint32_t>();
+    }
+
+    if (params.contains("ack_threshold_ma")) {
+        if (!params["ack_threshold_ma"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "ack_threshold_ma must be a positive integer"}
+            };
+        }
+        ack_threshold_ma = params["ack_threshold_ma"].get<uint16_t>();
+    }
+
+    // Validate limits
+    if (baseline_samples == 0 || baseline_samples > 64) {
+        return {
+            {"status", "error"},
+            {"message", "baseline_samples must be between 1 and 64"}
+        };
+    }
+    if (baseline_sample_delay_ms > 1000) {
+        return {
+            {"status", "error"},
+            {"message", "baseline_sample_delay_ms must be between 0 and 1000"}
+        };
+    }
+    if (ack_window_ms == 0 || ack_window_ms > 5000) {
+        return {
+            {"status", "error"},
+            {"message", "ack_window_ms must be between 1 and 5000"}
+        };
+    }
+    if (ack_poll_interval_ms > 1000) {
+        return {
+            {"status", "error"},
+            {"message", "ack_poll_interval_ms must be between 0 and 1000"}
+        };
+    }
+    if (ack_threshold_ma == 0 || ack_threshold_ma > 2000) {
+        return {
+            {"status", "error"},
+            {"message", "ack_threshold_ma must be between 1 and 2000"}
+        };
+    }
+
+    // Baseline acquisition
+    uint32_t baseline_sum_ma = 0;
+    uint16_t baseline_sample_ma = 0;
+    for (uint8_t i = 0; i < baseline_samples; i++) {
+        if (get_current_feedback_ma(&baseline_sample_ma) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to read baseline current"}
+            };
+        }
+        baseline_sum_ma += baseline_sample_ma;
+        if (i < (baseline_samples - 1) && baseline_sample_delay_ms > 0) {
+            osDelay(baseline_sample_delay_ms);
+        }
+    }
+
+    uint16_t baseline_ma = static_cast<uint16_t>(baseline_sum_ma / baseline_samples);
+    uint32_t target_ma = static_cast<uint32_t>(baseline_ma) + ack_threshold_ma;
+
+    // ACK window sampling
+    uint32_t t_start = HAL_GetTick();
+    uint32_t t_now = t_start;
+    uint16_t peak_ma = baseline_ma;
+    uint16_t current_ma = 0;
+    uint32_t samples = 0;
+    bool ack_detected = false;
+    bool threshold_crossing = false;
+    uint32_t first_crossing_ms = 0;
+
+    while ((t_now - t_start) < ack_window_ms) {
+        if (get_current_feedback_ma(&current_ma) != 0) {
+            return {
+                {"status", "error"},
+                {"message", "Failed to read current during ACK window"}
+            };
+        }
+
+        samples++;
+        if (current_ma > peak_ma) {
+            peak_ma = current_ma;
+        }
+
+        if (static_cast<uint32_t>(current_ma) >= target_ma) {
+            ack_detected = true;
+            threshold_crossing = true;
+            first_crossing_ms = HAL_GetTick() - t_start;
+            break;
+        }
+
+        if (ack_poll_interval_ms > 0) {
+            osDelay(ack_poll_interval_ms);
+        }
+        t_now = HAL_GetTick();
+    }
+
+    uint16_t peak_delta_ma = static_cast<uint16_t>(peak_ma - baseline_ma);
+    if (!ack_detected && peak_delta_ma >= ack_threshold_ma) {
+        ack_detected = true;
+    }
+
+    const char* reason = "none";
+    if (threshold_crossing) {
+        reason = "threshold_crossing";
+    } else if (ack_detected) {
+        reason = "peak_delta";
+    }
+
+    return {
+        {"status", "ok"},
+        {"ack_detected", ack_detected},
+        {"ack_reason", reason},
+        {"baseline_ma", baseline_ma},
+        {"peak_ma", peak_ma},
+        {"peak_delta_ma", peak_delta_ma},
+        {"target_ma", target_ma},
+        {"samples", samples},
+        {"window_ms", ack_window_ms},
+        {"poll_interval_ms", ack_poll_interval_ms},
+        {"threshold_ma", ack_threshold_ma},
+        {"first_crossing_ms", first_crossing_ms}
+    };
+}
+
 static json get_gpio_input_handler(const json& params) {
     // Check if pin parameter exists
     if (!params.contains("pin") || !params["pin"].is_number_integer()) {
@@ -1273,6 +1453,7 @@ void RpcServerThread(void* argument) {
     server.register_method("system_reboot", system_reboot_handler);
     server.register_method("get_voltage_feedback_mv", get_voltage_feedback_mv_handler);
     server.register_method("get_current_feedback_ma", get_current_feedback_ma_handler);
+    server.register_method("command_station_detect_ack", command_station_detect_ack_handler);
     server.register_method("get_gpio_input", get_gpio_input_handler);
     server.register_method("get_gpio_inputs", get_gpio_inputs_handler);
     server.register_method("configure_gpio_output", configure_gpio_output_handler);

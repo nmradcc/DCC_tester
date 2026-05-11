@@ -222,6 +222,21 @@ Expected Response:
 
 -------------------------------------------------------------------------------
 
+4.7 Detect DCC ACK Current Pulse (Firmware)
+--------------------------------------------
+Request:
+{"method":"command_station_detect_ack","params":{"baseline_samples":4,"baseline_sample_delay_ms":1,"ack_window_ms":20,"ack_poll_interval_ms":1,"ack_threshold_ma":20}}
+
+Expected Response:
+{"status":"ok","ack_detected":true,"ack_reason":"threshold_crossing","baseline_ma":12,"peak_ma":41,"peak_delta_ma":29,"target_ma":32,"samples":8,"window_ms":20,"poll_interval_ms":1,"threshold_ma":20,"first_crossing_ms":7}
+
+Notes:
+- Runs ACK detection fully on STM32 to avoid USB/host latency.
+- ack_reason is one of: threshold_crossing, peak_delta, none.
+- Typical service-mode flow is: queue/transmit reset+verify packet(s), then call this method.
+
+-------------------------------------------------------------------------------
+
 4.7 Set Multiple Parameters
 -----------------------------
 Request:
