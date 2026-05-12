@@ -15,13 +15,19 @@ decoder_profile=loksound5_micro
 expected_manufacturer_id=-1
 
 # ACK detection tuning.
-ack_current_threshold_ma=20
-ack_window_ms=20
+# NOTE: When decoder_profile=loksound5_micro the profile clamps these to
+# known-good minimums/maximums.  Values here already match the effective result:
+#   ack_current_threshold_ma -> min(config, 10)
+#   ack_window_ms            -> max(config, 35)
+#   baseline_samples         -> max(config, 5)
+#   repeats_per_verify       -> max(config, 5)
+ack_current_threshold_ma=10
+ack_window_ms=35
 ack_poll_interval_ms=1
 baseline_sample_delay_ms=1
-baseline_samples=3
-repeats_per_verify=3
+baseline_samples=5
+repeats_per_verify=5
 
 # Packet/timing settings.
-inter_packet_delay_ms=20
+inter_packet_delay_ms=10
 service_preamble_bits=25

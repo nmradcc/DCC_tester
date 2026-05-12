@@ -1,0 +1,9 @@
+# Configuration for TestIdleSteadyStateCurrent.py
+# Use key=value pairs. Lines starting with # or ; are ignored.
+# Global parameters (serial_port, logging_level, save_logs) are read from SystemConfig.txt
+
+# Duration of measurement window in seconds.
+test_duration_seconds=30
+
+# Time between current samples.
+sample_interval_ms=100

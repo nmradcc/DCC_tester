@@ -10,7 +10,7 @@ serial_port=COM3
 in_circuit_motor=false
 
 # Logging level (0=none, 1=normal, 2=verbose)
-logging_level=2
+logging_level=1
 
 # Save logs to file (true/false)
 # Note: Console/screen output is always displayed, this only controls file logging
