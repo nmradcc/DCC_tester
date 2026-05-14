@@ -6,7 +6,7 @@ cv_number=8
 
 # Decoder tuning profile.
 # Supported: loksound5_micro, generic
-decoder_profile=loksound5_micro
+decoder_profile=generic
 
 # ACK detection is firmware-side only (STM32 command_station_detect_ack RPC).
 
@@ -29,5 +29,5 @@ baseline_samples=5
 repeats_per_verify=5
 
 # Packet/timing settings.
-inter_packet_delay_ms=10
+inter_packet_delay_ms=0
 service_preamble_bits=25

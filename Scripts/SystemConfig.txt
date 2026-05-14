@@ -7,7 +7,7 @@ serial_port=COM3
 
 # In-circuit motor flag (true/false)
 # Set to true if testing with motor connected
-in_circuit_motor=false
+in_circuit_motor=true
 
 # Logging level (0=none, 1=normal, 2=verbose)
 logging_level=1

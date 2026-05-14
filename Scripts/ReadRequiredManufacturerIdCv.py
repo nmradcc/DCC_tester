@@ -190,8 +190,8 @@ def make_direct_bit_verify_packet(cv_number, bit_index, bit_value):
     addr_high = (cv_addr >> 8) & 0x03
     addr_low = cv_addr & 0xFF
 
-    # Service mode direct bit verify format.
-    instruction = 0x7C | addr_high
+    # Service mode direct bit verify format: 0b011110AA, data 0b1110DBBB.
+    instruction = 0x78 | addr_high
     data = 0xE0 | ((bit_value & 0x01) << 3) | (bit_index & 0x07)
 
     packet = [instruction, addr_low, data]

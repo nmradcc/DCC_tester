@@ -17,6 +17,7 @@
 #include "command_station.h"
 #include "decoder.h"
 #include "susi.h"
+#include "analog_manager.h"
 
 // Declare _write prototype to avoid implicit declaration error
 int _write(int file, char *ptr, int len);
@@ -41,11 +42,18 @@ static char OutputBuffer[32];
 static unsigned int inputIndex = 0;
 static ParsedInput parsed = {0};
 
+/* Current feedback monitoring state */
+static osThreadId_t currentFeedbackThread_id = NULL;
+static bool currentFeedbackRunning = false;
+
 static void print_help(void);
 
 void uart_receive_callback(char *input) {
     osMessageQueuePut(commandQueue, input, 0, 0);
 }
+
+/* Forward declarations */
+void vCurrentFeedbackTask(void *pvParameters);
 
 
 // Command implementations
@@ -134,6 +142,54 @@ void decoder_command(const char *arg1, const char *arg2) {
         printf("Unknown decoder command: %s\n", arg1);
     }
 }
+void current_command(const char *arg1, const char *arg2) {
+    (void)arg2; // Unused
+    if (strcasecmp(arg1,"start") == 0) {
+        if (currentFeedbackRunning) {
+            printf("Current feedback already running\n");
+            return;
+        }
+        printf("Start Current Feedback Monitoring...\n");
+        currentFeedbackRunning = true;
+        const osThreadAttr_t attr = {
+            .name = "CurrentFeedback",
+            .stack_size = 2048,
+            .priority = osPriorityNormal
+        };
+        currentFeedbackThread_id = osThreadNew(vCurrentFeedbackTask, NULL, &attr);
+    }
+    else if (strcasecmp(arg1,"stop") == 0) {
+        printf("Stop Current Feedback Monitoring...\n");
+        currentFeedbackRunning = false;
+        if (currentFeedbackThread_id != NULL) {
+            osThreadTerminate(currentFeedbackThread_id);
+            currentFeedbackThread_id = NULL;
+        }
+    }
+    else {
+        printf("Unknown current command: %s (use start or stop)\n", arg1);
+    }
+}
+
+void vCurrentFeedbackTask(void *pvParameters) {
+    (void)pvParameters;
+    uint16_t current_ma = 0;
+    
+    printf("Current Feedback Task Started. Reading every 100ms...\n");
+    
+    while (currentFeedbackRunning) {
+        if (get_current_feedback_ma(&current_ma) == 0) {
+            printf("Current: %u mA\n", current_ma);
+        } else {
+            printf("Current: read failed\n");
+        }
+        osDelay(100);
+    }
+    
+    printf("Current Feedback Task Stopped\n");
+    osThreadExit();
+}
+
 void rpc_server_command(const char *arg1, const char *arg2) {
     (void)arg2; // Unused
     if (strcasecmp(arg1,"start") == 0) {
@@ -264,11 +320,17 @@ Command cmd_dec = {
     .help = "Decoder: dec <start|stop>",
     .next = &cmd_cms
 };
+Command cmd_current = {
+    .name = "current",
+    .execute = current_command,
+    .help = "Current Feedback: current <start|stop>",
+    .next = &cmd_dec
+};
 Command cmd_susi_slave = {
     .name = "susi_slave", 
     .execute = susi_slave_command,
     .help = "SUSI Slave start/stop",
-    .next = &cmd_dec
+    .next = &cmd_current
 };
 Command cmd_susi_master = {
     .name = "susi_master", 
