@@ -233,19 +233,52 @@ static json command_station_load_packet_handler(const json& params) {
 
 static json command_station_transmit_packet_handler(const json& params) {
     uint32_t delay_ms = 100;  // Default to 100ms delay
+    int8_t trigger_override = -1;  // -1 means keep current trigger setting
+
+    if (!params.is_object()) {
+        return {
+            {"status", "error"},
+            {"message", "Params must be an object"}
+        };
+    }
     
     // Parse optional delay_ms parameter
     if (params.contains("delay_ms")) {
+        if (!params["delay_ms"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "delay_ms must be a positive integer"}
+            };
+        }
         delay_ms = params["delay_ms"].get<uint32_t>();
     }
+
+    // Parse optional one-shot trigger override for this transmit batch.
+    if (params.contains("trigger_first_bit")) {
+        if (!params["trigger_first_bit"].is_boolean()) {
+            return {
+                {"status", "error"},
+                {"message", "trigger_first_bit must be a boolean"}
+            };
+        }
+        trigger_override = params["trigger_first_bit"].get<bool>() ? 1 : 0;
+    }
     
-    CommandStation_TriggerTransmit(delay_ms);
+    CommandStation_TriggerTransmitWithOverride(delay_ms, trigger_override);
     
-    return {
+    json response = {
         {"status", "ok"},
         {"message", "Packet transmission triggered"},
         {"delay_ms", delay_ms}
     };
+
+    if (trigger_override >= 0) {
+        response["trigger_first_bit_override"] = static_cast<bool>(trigger_override);
+    } else {
+        response["trigger_first_bit_override"] = nullptr;
+    }
+
+    return response;
 }
 
 static json decoder_start_handler(const json& params) {

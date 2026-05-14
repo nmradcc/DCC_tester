@@ -21,6 +21,10 @@ static uint64_t bitCountMask = 0;
 
 static uint16_t dac_value = 0;
 static uint8_t trigger_first_bit = false;
+static bool customTriggerOverridePending = false;
+static bool customTriggerOverrideValue = false;
+static bool restoreTriggerAfterCustom = false;
+static uint8_t savedTriggerFirstBit = false;
 static uint64_t zerobitOverrideMask = 0;
 static int32_t zerobitDeltaP = 0;
 static int32_t zerobitDeltaN = 0;
@@ -171,6 +175,13 @@ void CommandStationThread(void *argument) {
       printf("Command station started in custom packet mode\n");
       while (commandStationRunning) {
         if (customPacketTrigger && customPacketQueueCount > 0) {
+          if (customTriggerOverridePending) {
+            savedTriggerFirstBit = trigger_first_bit;
+            trigger_first_bit = customTriggerOverrideValue;
+            restoreTriggerAfterCustom = true;
+            customTriggerOverridePending = false;
+          }
+
           uint32_t total_packets = customPacketQueueCount;
           uint32_t sent_packets = 0;
           for (uint8_t index = 0; index < customPacketQueueCount; index++) {
@@ -191,6 +202,12 @@ void CommandStationThread(void *argument) {
               osDelay(customInterPacketDelay);
             }
           }
+
+          if (restoreTriggerAfterCustom) {
+            trigger_first_bit = savedTriggerFirstBit;
+            restoreTriggerAfterCustom = false;
+          }
+
           customPacketTrigger = false;
         }
         osDelay(100u);
@@ -406,6 +423,21 @@ extern "C" void CommandStation_TriggerTransmit(uint32_t delay_ms) {
   if (customPacketQueueCount > 0) {
     customInterPacketDelay = delay_ms;
     customPacketTrigger = true;
+  }
+}
+
+extern "C" void CommandStation_TriggerTransmitWithOverride(uint32_t delay_ms, int8_t trigger_first_bit_override) {
+  if (customPacketQueueCount == 0) {
+    return;
+  }
+
+  customInterPacketDelay = delay_ms;
+  customPacketTrigger = true;
+
+  // One-shot override: -1 leaves current trigger setting unchanged.
+  if (trigger_first_bit_override >= 0) {
+    customTriggerOverrideValue = (trigger_first_bit_override != 0);
+    customTriggerOverridePending = true;
   }
 }
 
