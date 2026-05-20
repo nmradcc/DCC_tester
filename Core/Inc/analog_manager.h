@@ -19,7 +19,7 @@ extern "C" {
 #include <stdint.h>
 
 /* Number of samples to average for each channel */
-#define ADC_AVG_SAMPLES 4
+#define ADC_AVG_SAMPLES 8
 
 // 656mV per count (multiplier)
 #define VOLTAGE_FEEDBACK_SCALE_FACTOR_MV  (6.8f)

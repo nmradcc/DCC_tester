@@ -17,6 +17,30 @@
                     "imageFileName": "${command:st-stm32-ide-debug-launch.get-projects-binary-from-context1}"
                 }
             ]
+        },
+        {
+            "type": "stlinkgdbtarget",
+            "request": "launch",
+            "name": "STM32Cube: Debug STM32 Launch ST-Link GDB Server",
+            "origin": "snippet",
+            "cwd": "${workspaceFolder}",
+            "preBuild": "${command:st-stm32-ide-debug-launch.build}",
+            "gdb": "C:/ST/STM32CubeIDE_1.19.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.0.202411081344/tools/bin/arm-none-eabi-gdb.exe",
+            "serverExe": "ST-LINK_gdbserver.exe",
+            "serverCwd": "C:/ST/STM32CubeIDE_1.19.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.win32_2.2.200.202505060755/tools/bin",
+            "serverCubeProgPath": "C:/Program Files/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin",
+            "serverHost": "localhost",
+            "serverPort": "61234",
+            "serverStartupDelay": 2000,
+//           "serverLogFile": "${workspaceFolder}/stlinkgdbserver_log.txt",
+//            "logFile": "${workspaceFolder}/gdbClient_log.txt",
+            "verbose": true,
+            "runEntry": "main",
+            "imagesAndSymbols": [
+                {
+                    "imageFileName": "${command:st-stm32-ide-debug-launch.get-projects-binary-from-context1}"
+                }
+            ]
         }
     ]
 }
