@@ -71,6 +71,11 @@ def calculate_dcc_checksum(bytes_list):
     return checksum
 
 
+def make_reset_packet():
+    """Create a DCC reset packet for decoder synchronization."""
+    return [0x00, 0x00, 0x00]
+
+
 def _validate_function_params(address, function_number):
     if not 1 <= function_number <= 4:
         raise ValueError("function_number must be between 1 and 4 (F1-F4)")
@@ -162,14 +167,30 @@ def run_function_io_test(rpc, loco_address, function_number, inter_packet_delay_
             return {"status": "FAIL", "error": "Failed to start command station"}
         log(2, f"✓ Command station started (loop={response.get('loop', 0)})\n")
 
+        log(1, "Step 2: Waiting 500 ms before decoder sync reset packet...")
         time.sleep(0.5)
 
-        # Step 2: Create Function ON packet
-        log(1, f"Step 2: Creating Function ON packet for F{function_number}...")
+        log(1, "Step 3: Sending decoder sync reset packet...")
+        reset_packet = make_reset_packet()
+        response = rpc.send_rpc("command_station_load_packet", {"bytes": reset_packet, "replace": True})
+
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to load reset packet: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to load reset packet"}
+
+        response = rpc.send_rpc("command_station_transmit_packet", {"delay_ms": 0})
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to transmit reset packet: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to transmit reset packet"}
+
+        # Step 4: Create Function ON packet
+        log(1, f"Step 4: Creating Function ON packet for F{function_number}...")
         func_on_packet = make_function_on_packet(loco_address, function_number)
 
-        # Step 3: Load and transmit the Function ON packet
-        log(1, "Step 3: Loading and transmitting Function ON packet...")
+        # Step 5: Load and transmit the Function ON packet
+        log(1, "Step 5: Loading and transmitting Function ON packet...")
         response = rpc.send_rpc("command_station_load_packet", {"bytes": func_on_packet})
 
         if response is None or response.get("status") != "ok":
@@ -185,8 +206,8 @@ def run_function_io_test(rpc, loco_address, function_number, inter_packet_delay_
             rpc.close()
             return {"status": "FAIL", "error": "Failed to transmit Function ON packet"}
 
-        # Step 4: Read Function IO state after ON
-        log(1, f"Step 4: Reading IO{function_number} after Function ON transmit...")
+        # Step 6: Read Function IO state after ON
+        log(1, f"Step 6: Reading IO{function_number} after Function ON transmit...")
         func_on_state = read_function_io_state(rpc, function_number)
         if func_on_state is None:
             rpc.close()
@@ -194,17 +215,17 @@ def run_function_io_test(rpc, loco_address, function_number, inter_packet_delay_
         func_on_ok = func_on_state is True
         log(1, f"✓ Function ON IO state: {func_on_ok} (IO{function_number}={'LOW' if func_on_state else 'HIGH'})")
 
-        # Step 5: Wait for inter-packet delay
-        log(1, f"Step 5: Waiting {inter_packet_delay_ms} ms (inter-packet delay)...")
+        # Step 7: Wait for inter-packet delay
+        log(1, f"Step 7: Waiting {inter_packet_delay_ms} ms (inter-packet delay)...")
         time.sleep(inter_packet_delay_ms / 1000.0)
         log(2, "✓ Inter-packet delay complete\n")
 
-        # Step 6: Create Function OFF packet
-        log(1, f"Step 6: Creating Function OFF packet for F{function_number}...")
+        # Step 8: Create Function OFF packet
+        log(1, f"Step 8: Creating Function OFF packet for F{function_number}...")
         func_off_packet = make_function_off_packet(loco_address, function_number)
 
-        # Step 7: Load and transmit the Function OFF packet
-        log(1, "Step 7: Loading and transmitting Function OFF packet...")
+        # Step 9: Load and transmit the Function OFF packet
+        log(1, "Step 9: Loading and transmitting Function OFF packet...")
         response = rpc.send_rpc("command_station_load_packet", {"bytes": func_off_packet})
 
         if response is None or response.get("status") != "ok":
@@ -220,8 +241,8 @@ def run_function_io_test(rpc, loco_address, function_number, inter_packet_delay_
             rpc.close()
             return {"status": "FAIL", "error": "Failed to transmit Function OFF packet"}
 
-        # Step 8: Read Function IO state after OFF
-        log(1, f"Step 8: Reading IO{function_number} after Function OFF transmit...")
+        # Step 10: Read Function IO state after OFF
+        log(1, f"Step 10: Reading IO{function_number} after Function OFF transmit...")
         func_off_state = read_function_io_state(rpc, function_number)
         if func_off_state is None:
             rpc.close()
@@ -229,8 +250,8 @@ def run_function_io_test(rpc, loco_address, function_number, inter_packet_delay_
         func_off_ok = func_off_state is False
         log(1, f"✓ Function OFF IO state: {func_off_ok} (IO{function_number}={'LOW' if func_off_state else 'HIGH'})")
 
-        # Step 9: Stop command station
-        log(1, "Step 9: Stopping command station")
+        # Step 11: Stop command station
+        log(1, "Step 11: Stopping command station")
         response = rpc.send_rpc("command_station_stop", {})
 
         if response is None or response.get("status") != "ok":
@@ -254,14 +275,16 @@ def run_function_io_test(rpc, loco_address, function_number, inter_packet_delay_
         log(2, f"  Inter-packet delay:    {inter_packet_delay_ms} ms")
         log(2, "\nTest sequence completed:")
         log(2, "  1. Started command station in custom packet mode")
-        log(2, f"  2. Created Function ON packet for F{function_number}")
-        log(2, f"  3. Transmitted Function ON packet to address {loco_address}")
-        log(2, f"  4. Read IO{function_number} after Function ON: {func_on_ok}")
-        log(2, f"  5. Waited {inter_packet_delay_ms} ms (inter-packet delay)")
-        log(2, f"  6. Created Function OFF packet for F{function_number}")
-        log(2, f"  7. Transmitted Function OFF packet to address {loco_address}")
-        log(2, f"  8. Read IO{function_number} after Function OFF: {func_off_ok}")
-        log(2, "  9. Stopped command station")
+        log(2, "  2. Waited 500 ms after start")
+        log(2, "  3. Sent decoder sync reset packet")
+        log(2, f"  4. Created Function ON packet for F{function_number}")
+        log(2, f"  5. Transmitted Function ON packet to address {loco_address}")
+        log(2, f"  6. Read IO{function_number} after Function ON: {func_on_ok}")
+        log(2, f"  7. Waited {inter_packet_delay_ms} ms (inter-packet delay)")
+        log(2, f"  8. Created Function OFF packet for F{function_number}")
+        log(2, f"  9. Transmitted Function OFF packet to address {loco_address}")
+        log(2, f"  10. Read IO{function_number} after Function OFF: {func_off_ok}")
+        log(2, "  11. Stopped command station")
         log(2, "\nIO state measurements:")
         log(2, f"  Function ON IO match:  {func_on_ok}")
         log(2, f"  Function OFF IO match: {func_off_ok}")

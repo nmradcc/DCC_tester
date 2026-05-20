@@ -222,6 +222,34 @@ def stop_logging(close_file=False):
             pass
 
 
+def start_runner_logging():
+    """Start file logging for standalone runner scripts.
+
+    Returns:
+        True if file logging is active for this process, otherwise False.
+    """
+    global _logging_active
+    config = get_config()
+
+    if not config.save_logs:
+        return False
+
+    if _log_file is not None:
+        return True
+
+    _logging_active = True
+    start_logging()
+    return _log_file is not None
+
+
+def stop_runner_logging():
+    """Stop file logging that was started by a standalone runner script."""
+    global _logging_active
+    if _log_file is not None:
+        stop_logging(close_file=True)
+    _logging_active = False
+
+
 def capture_screen(prefix=None, interactive=True):
     """Capture screenshot from configured monitor and save with timestamp.
     

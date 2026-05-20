@@ -106,6 +106,11 @@ def _validate_aux_params(address, aux_number):
         raise ValueError("address must be between 1 and 511 for basic accessory packets")
 
 
+def make_reset_packet():
+    """Create a DCC reset packet for decoder synchronization."""
+    return [0x00, 0x00, 0x00]
+
+
 def _make_basic_accessory_packet(address, aux_number, activate):
     """
     Create a basic accessory decoder packet (NMRA S-9.2.1).
@@ -203,14 +208,30 @@ def run_aux_io_test(rpc, loco_address, aux_number, inter_packet_delay_ms=1000, l
             return {"status": "FAIL", "error": "Failed to start command station"}
         log(2, f"✓ Command station started (loop={response.get('loop', 0)})\n")
 
+        log(1, "Step 2: Waiting 500 ms before decoder sync reset packet...")
         time.sleep(0.5)
 
-        # Step 2: Create Aux ON packet
-        log(1, f"Step 2: Creating Aux ON packet for Aux {aux_number}...")
+        log(1, "Step 3: Sending decoder sync reset packet...")
+        reset_packet = make_reset_packet()
+        response = rpc.send_rpc("command_station_load_packet", {"bytes": reset_packet, "replace": True})
+
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to load reset packet: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to load reset packet"}
+
+        response = rpc.send_rpc("command_station_transmit_packet", {"delay_ms": 0})
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to transmit reset packet: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to transmit reset packet"}
+
+        # Step 4: Create Aux ON packet
+        log(1, f"Step 4: Creating Aux ON packet for Aux {aux_number}...")
         aux_on_packet = make_aux_on_packet(loco_address, aux_number)
 
-        # Step 3: Load and transmit the Aux ON packet
-        log(1, "Step 3: Loading and transmitting Aux ON packet...")
+        # Step 5: Load and transmit the Aux ON packet
+        log(1, "Step 5: Loading and transmitting Aux ON packet...")
         response = rpc.send_rpc("command_station_load_packet", {"bytes": aux_on_packet})
 
         if response is None or response.get("status") != "ok":
@@ -226,8 +247,8 @@ def run_aux_io_test(rpc, loco_address, aux_number, inter_packet_delay_ms=1000, l
             rpc.close()
             return {"status": "FAIL", "error": "Failed to transmit Aux ON packet"}
 
-        # Step 4: Read Aux IO state after ON
-        log(1, f"Step 4: Reading IO{aux_number} after Aux ON transmit...")
+        # Step 6: Read Aux IO state after ON
+        log(1, f"Step 6: Reading IO{aux_number} after Aux ON transmit...")
         aux_on_state = read_aux_io_state(rpc, aux_number)
         if aux_on_state is None:
             rpc.close()
@@ -235,17 +256,17 @@ def run_aux_io_test(rpc, loco_address, aux_number, inter_packet_delay_ms=1000, l
         aux_on_ok = aux_on_state is True
         log(1, f"✓ Aux ON IO state: {aux_on_ok} (IO{aux_number}={'HIGH' if aux_on_state else 'LOW'})")
 
-        # Step 5: Wait for inter-packet delay
-        log(1, f"Step 5: Waiting {inter_packet_delay_ms} ms (inter-packet delay)...")
+        # Step 7: Wait for inter-packet delay
+        log(1, f"Step 7: Waiting {inter_packet_delay_ms} ms (inter-packet delay)...")
         time.sleep(inter_packet_delay_ms / 1000.0)
         log(2, "✓ Inter-packet delay complete\n")
 
-        # Step 6: Create Aux OFF packet
-        log(1, f"Step 6: Creating Aux OFF packet for Aux {aux_number}...")
+        # Step 8: Create Aux OFF packet
+        log(1, f"Step 8: Creating Aux OFF packet for Aux {aux_number}...")
         aux_off_packet = make_aux_off_packet(loco_address, aux_number)
 
-        # Step 7: Load and transmit the Aux OFF packet
-        log(1, "Step 7: Loading and transmitting Aux OFF packet...")
+        # Step 9: Load and transmit the Aux OFF packet
+        log(1, "Step 9: Loading and transmitting Aux OFF packet...")
         response = rpc.send_rpc("command_station_load_packet", {"bytes": aux_off_packet})
 
         if response is None or response.get("status") != "ok":
@@ -261,8 +282,8 @@ def run_aux_io_test(rpc, loco_address, aux_number, inter_packet_delay_ms=1000, l
             rpc.close()
             return {"status": "FAIL", "error": "Failed to transmit Aux OFF packet"}
 
-        # Step 8: Read Aux IO state after OFF
-        log(1, f"Step 8: Reading IO{aux_number} after Aux OFF transmit...")
+        # Step 10: Read Aux IO state after OFF
+        log(1, f"Step 10: Reading IO{aux_number} after Aux OFF transmit...")
         aux_off_state = read_aux_io_state(rpc, aux_number)
         if aux_off_state is None:
             rpc.close()
@@ -270,8 +291,8 @@ def run_aux_io_test(rpc, loco_address, aux_number, inter_packet_delay_ms=1000, l
         aux_off_ok = aux_off_state is False
         log(1, f"✓ Aux OFF IO state: {aux_off_ok} (IO{aux_number}={'HIGH' if aux_off_state else 'LOW'})")
 
-        # Step 9: Stop command station
-        log(1, "Step 9: Stopping command station")
+        # Step 11: Stop command station
+        log(1, "Step 11: Stopping command station")
         response = rpc.send_rpc("command_station_stop", {})
 
         if response is None or response.get("status") != "ok":
@@ -295,14 +316,16 @@ def run_aux_io_test(rpc, loco_address, aux_number, inter_packet_delay_ms=1000, l
         log(2, f"  Inter-packet delay:    {inter_packet_delay_ms} ms")
         log(2, "\nTest sequence completed:")
         log(2, "  1. Started command station in custom packet mode")
-        log(2, f"  2. Created Aux ON packet for Aux {aux_number}")
-        log(2, f"  3. Transmitted Aux ON packet to address {loco_address}")
-        log(2, f"  4. Read IO{aux_number} after Aux ON: {aux_on_ok}")
-        log(2, f"  5. Waited {inter_packet_delay_ms} ms (inter-packet delay)")
-        log(2, f"  6. Created Aux OFF packet for Aux {aux_number}")
-        log(2, f"  7. Transmitted Aux OFF packet to address {loco_address}")
-        log(2, f"  8. Read IO{aux_number} after Aux OFF: {aux_off_ok}")
-        log(2, "  9. Stopped command station")
+        log(2, "  2. Waited 500 ms after start")
+        log(2, "  3. Sent decoder sync reset packet")
+        log(2, f"  4. Created Aux ON packet for Aux {aux_number}")
+        log(2, f"  5. Transmitted Aux ON packet to address {loco_address}")
+        log(2, f"  6. Read IO{aux_number} after Aux ON: {aux_on_ok}")
+        log(2, f"  7. Waited {inter_packet_delay_ms} ms (inter-packet delay)")
+        log(2, f"  8. Created Aux OFF packet for Aux {aux_number}")
+        log(2, f"  9. Transmitted Aux OFF packet to address {loco_address}")
+        log(2, f"  10. Read IO{aux_number} after Aux OFF: {aux_off_ok}")
+        log(2, "  11. Stopped command station")
         log(2, "\nIO state measurements:")
         log(2, f"  Aux ON IO match:  {aux_on_ok}")
         log(2, f"  Aux OFF IO match: {aux_off_ok}")
