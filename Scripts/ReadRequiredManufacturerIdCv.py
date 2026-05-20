@@ -203,7 +203,7 @@ def make_reset_packet():
     return [0x00, 0x00, 0x00]
 
 
-def send_reset_and_verify(rpc, verify_packet, inter_packet_delay_ms):
+def send_reset_and_verify(rpc, verify_packet, inter_packet_delay_ms, trigger_first_bit=True):
     reset_packet = make_reset_packet()
 
     log(2, "Queueing service-mode packet sequence:")
@@ -226,7 +226,7 @@ def send_reset_and_verify(rpc, verify_packet, inter_packet_delay_ms):
 
     response = rpc.send_rpc(
         "command_station_transmit_packet",
-        {"count": 3, "delay_ms": inter_packet_delay_ms},
+        {"count": 3, "delay_ms": inter_packet_delay_ms, "trigger_first_bit": trigger_first_bit},
     )
     if response is None or response.get("status") != "ok":
         raise RuntimeError(f"Failed to transmit reset+verify packets: {response}")
@@ -273,7 +273,7 @@ def verify_bit_value(rpc, cv_number, bit_index, bit_value, cfg):
 
     for attempt in range(cfg["repeats_per_verify"]):
         log(2, f"Attempt {attempt + 1}/{cfg['repeats_per_verify']}")
-        send_reset_and_verify(rpc, verify_packet, cfg["inter_packet_delay_ms"])
+        send_reset_and_verify(rpc, verify_packet, cfg["inter_packet_delay_ms"], trigger_first_bit=True)
         ack_detected, ack_details = detect_ack_firmware(rpc, cfg)
 
         if ack_detected is None:
@@ -398,14 +398,18 @@ def main():
 
     rpc = None
     original_preamble = None
+    original_trigger_first_bit = None
     try:
         rpc = DCCTesterRPC(port)
         log(1, "Connected to DCC_tester")
 
         response = rpc.send_rpc("command_station_get_params", {})
         if response is not None and response.get("status") == "ok":
-            original_preamble = response.get("parameters", {}).get("preamble_bits")
+            parameters = response.get("parameters", {})
+            original_preamble = parameters.get("preamble_bits")
+            original_trigger_first_bit = parameters.get("trigger_first_bit")
             log(2, f"Original preamble bits: {original_preamble}")
+            log(2, f"Original trigger_first_bit: {original_trigger_first_bit}")
         else:
             log(2, f"Could not query original command station params: {response}")
 
@@ -413,6 +417,11 @@ def main():
         if response is None or response.get("status") != "ok":
             raise RuntimeError(f"Failed to set command station params: {response}")
         log(2, f"Applied service-mode preamble bits: {cfg['service_preamble_bits']}")
+
+        response = rpc.send_rpc("command_station_params", {"trigger_first_bit": False})
+        if response is None or response.get("status") != "ok":
+            raise RuntimeError(f"Failed to disable trigger_first_bit: {response}")
+        log(2, "Disabled trigger_first_bit for startup")
 
         response = rpc.send_rpc("command_station_start", {"loop": 0})
         if response is None or response.get("status") != "ok":
@@ -456,6 +465,8 @@ def main():
             rpc.send_rpc("command_station_stop", {})
             if original_preamble is not None:
                 rpc.send_rpc("command_station_params", {"preamble_bits": original_preamble})
+            if original_trigger_first_bit is not None:
+                rpc.send_rpc("command_station_params", {"trigger_first_bit": original_trigger_first_bit})
             rpc.close()
         if file_logging_started:
             System.stop_logging(close_file=True)
