@@ -154,6 +154,11 @@ def make_emergency_stop_packet(address):
     return packet
 
 
+def make_reset_packet():
+    """Create a DCC reset packet for decoder synchronization."""
+    return [0x00, 0x00, 0x00]
+
+
 def read_io13_io14(rpc):
     """
     Read IO13 and IO14 via a single RPC call.
@@ -226,17 +231,33 @@ def run_packet_acceptance_test(
             return {"status": "FAIL", "error": "Failed to start command station"}
         log(2, f"✓ Command station started (loop={response.get('loop', 0)})\n")
 
+        log(1, "Step 2: Waiting 500 ms before decoder sync reset packet...")
         time.sleep(0.5)
 
+        log(1, "Step 3: Sending decoder sync reset packet...")
+        reset_packet = make_reset_packet()
+        response = rpc.send_rpc("command_station_load_packet", {"bytes": reset_packet, "replace": True})
+
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to load reset packet: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to load reset packet"}
+
+        response = rpc.send_rpc("command_station_transmit_packet", {"delay_ms": 0})
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to transmit reset packet: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to transmit reset packet"}
+
         if in_circuit_motor:
-            log(1, "Step 2: Reading motor off current as baseline...")
+            log(1, "Step 4: Reading motor off current as baseline...")
             motor_off_current_ma = read_current_ma(rpc)
             if motor_off_current_ma is None:
                 rpc.close()
                 return {"status": "FAIL", "error": "Failed to read motor off current"}
             log(1, f"✓ Motor off current: {motor_off_current_ma} mA (baseline)")
         else:
-            log(1, "Step 2: Reading motor off IO status as baseline...")
+            log(1, "Step 4: Reading motor off IO status as baseline...")
             io_state = read_io13_io14(rpc)
             if io_state is None:
                 rpc.close()
@@ -245,10 +266,10 @@ def run_packet_acceptance_test(
             motor_off_ok = io13_high and io14_high
             log(1, f"✓ Motor off IO state: {motor_off_ok} (IO13={'HIGH' if io13_high else 'LOW'}, IO14={'HIGH' if io14_high else 'LOW'})")
 
-        log(1, f"Step 3: Creating motor start packet (speed {HALF_SPEED} reverse)...")
+        log(1, f"Step 5: Creating motor start packet (speed {HALF_SPEED} reverse)...")
         start_packet = make_speed_packet(loco_address, HALF_SPEED, forward=False)
 
-        log(1, "Step 4: Loading and transmitting motor start packet...")
+        log(1, "Step 6: Loading and transmitting motor start packet...")
         response = rpc.send_rpc("command_station_load_packet", {"bytes": start_packet, "replace": True})
 
         if response is None or response.get("status") != "ok":
@@ -263,19 +284,19 @@ def run_packet_acceptance_test(
             rpc.close()
             return {"status": "FAIL", "error": "Failed to transmit packet"}
 
-        log(1, f"Step 5: Waiting {inter_packet_delay_ms} ms (inter-packet delay)...")
+        log(1, f"Step 7: Waiting {inter_packet_delay_ms} ms (inter-packet delay)...")
         time.sleep(inter_packet_delay_ms / 1000.0)
         log(2, "✓ Inter-packet delay complete\n")
 
         if in_circuit_motor:
-            log(1, "Step 6: Reading motor run current...")
+            log(1, "Step 8: Reading motor run current...")
             motor_on_current_ma = read_current_ma(rpc)
             if motor_on_current_ma is None:
                 rpc.close()
                 return {"status": "FAIL", "error": "Failed to read motor current"}
             log(1, f"✓ Motor run current: {motor_on_current_ma} mA")
         else:
-            log(1, "Step 6: Reading motor run IO status...")
+            log(1, "Step 8: Reading motor run IO status...")
             io_state = read_io13_io14(rpc)
             if io_state is None:
                 rpc.close()
@@ -284,7 +305,7 @@ def run_packet_acceptance_test(
             motor_run_ok = (not io13_high) or (not io14_high)
             log(1, f"✓ Motor run IO state: {motor_run_ok} (IO13={'HIGH' if io13_high else 'LOW'}, IO14={'HIGH' if io14_high else 'LOW'})")
 
-        log(1, f"Step 7: Sending emergency stop packet to address {loco_address}...")
+        log(1, f"Step 9: Sending emergency stop packet to address {loco_address}...")
         estop_packet = make_emergency_stop_packet(loco_address)
 
         response = rpc.send_rpc("command_station_load_packet", {"bytes": estop_packet, "replace": True})
@@ -299,18 +320,18 @@ def run_packet_acceptance_test(
             rpc.close()
             return {"status": "FAIL", "error": "Failed to transmit emergency stop"}
 
-        log(2, f"Step 8: Waiting {test_stop_delay_ms} ms for motor to stop...")
+        log(2, f"Step 10: Waiting {test_stop_delay_ms} ms for motor to stop...")
         time.sleep(test_stop_delay_ms / 1000.0)
 
         if in_circuit_motor:
-            log(1, "Step 9: Reading motor stopped current...")
+            log(1, "Step 11: Reading motor stopped current...")
             motor_stopped_current_ma = read_current_ma(rpc)
             if motor_stopped_current_ma is None:
                 rpc.close()
                 return {"status": "FAIL", "error": "Failed to read stopped current"}
             log(1, f"✓ Motor stopped current: {motor_stopped_current_ma} mA")
         else:
-            log(1, "Step 9: Reading motor stopped IO status...")
+            log(1, "Step 11: Reading motor stopped IO status...")
             io_state = read_io13_io14(rpc)
             if io_state is None:
                 rpc.close()
@@ -319,7 +340,7 @@ def run_packet_acceptance_test(
             motor_stop_ok = io13_high and io14_high
             log(1, f"✓ Motor stopped IO state: {motor_stop_ok} (IO13={'HIGH' if io13_high else 'LOW'}, IO14={'HIGH' if io14_high else 'LOW'})")
 
-        log(1, "Step 10: Stopping command station")
+        log(1, "Step 12: Stopping command station")
         response = rpc.send_rpc("command_station_stop", {})
 
         if response is None or response.get("status") != "ok":
@@ -347,15 +368,17 @@ def run_packet_acceptance_test(
             log(2, f"  Inter-packet delay:    {inter_packet_delay_ms} ms")
             log(2, "\nTest sequence completed:")
             log(2, "  1. Started command station in custom packet mode")
-            log(2, f"  2. Read motor off current: {motor_off_current_ma} mA (baseline)")
-            log(2, f"  3. Created motor start packet (speed {HALF_SPEED} reverse)")
-            log(2, f"  4. Transmitted motor start packet to address {loco_address}")
-            log(2, f"  5. Waited {inter_packet_delay_ms} ms (inter-packet delay)")
-            log(2, f"  6. Read motor run current: {motor_on_current_ma} mA")
-            log(2, f"  7. Sent emergency stop packet to address {loco_address}")
-            log(2, f"  8. Waited {test_stop_delay_ms} ms for motor to stop")
-            log(2, f"  9. Read motor stopped current: {motor_stopped_current_ma} mA")
-            log(2, "  10. Stopped command station")
+            log(2, "  2. Waited 500 ms after start")
+            log(2, "  3. Sent decoder sync reset packet")
+            log(2, f"  4. Read motor off current: {motor_off_current_ma} mA (baseline)")
+            log(2, f"  5. Created motor start packet (speed {HALF_SPEED} reverse)")
+            log(2, f"  6. Transmitted motor start packet to address {loco_address}")
+            log(2, f"  7. Waited {inter_packet_delay_ms} ms (inter-packet delay)")
+            log(2, f"  8. Read motor run current: {motor_on_current_ma} mA")
+            log(2, f"  9. Sent emergency stop packet to address {loco_address}")
+            log(2, f"  10. Waited {test_stop_delay_ms} ms for motor to stop")
+            log(2, f"  11. Read motor stopped current: {motor_stopped_current_ma} mA")
+            log(2, "  12. Stopped command station")
             log(2, "\nCurrent measurements:")
             log(2, f"  Motor off:     {motor_off_current_ma} mA (baseline)")
             log(2, f"  Motor running: {motor_on_current_ma} mA (delta: {current_increase:+d} mA)")
@@ -391,15 +414,17 @@ def run_packet_acceptance_test(
         log(2, f"  Inter-packet delay:    {inter_packet_delay_ms} ms")
         log(2, "\nTest sequence completed:")
         log(2, "  1. Started command station in custom packet mode")
-        log(2, f"  2. Read motor off IO state: {motor_off_ok}")
-        log(2, f"  3. Created motor start packet (speed {HALF_SPEED} reverse)")
-        log(2, f"  4. Transmitted motor start packet to address {loco_address}")
-        log(2, f"  5. Waited {inter_packet_delay_ms} ms (inter-packet delay)")
-        log(2, f"  6. Read motor run IO state: {motor_run_ok}")
-        log(2, f"  7. Sent emergency stop packet to address {loco_address}")
-        log(2, f"  8. Waited {test_stop_delay_ms} ms for motor to stop")
-        log(2, f"  9. Read motor stopped IO state: {motor_stop_ok}")
-        log(2, "  10. Stopped command station")
+        log(2, "  2. Waited 500 ms after start")
+        log(2, "  3. Sent decoder sync reset packet")
+        log(2, f"  4. Read motor off IO state: {motor_off_ok}")
+        log(2, f"  5. Created motor start packet (speed {HALF_SPEED} reverse)")
+        log(2, f"  6. Transmitted motor start packet to address {loco_address}")
+        log(2, f"  7. Waited {inter_packet_delay_ms} ms (inter-packet delay)")
+        log(2, f"  8. Read motor run IO state: {motor_run_ok}")
+        log(2, f"  9. Sent emergency stop packet to address {loco_address}")
+        log(2, f"  10. Waited {test_stop_delay_ms} ms for motor to stop")
+        log(2, f"  11. Read motor stopped IO state: {motor_stop_ok}")
+        log(2, "  12. Stopped command station")
         log(2, "\nIO state measurements:")
         log(2, f"  Motor off OK:  {motor_off_ok}")
         log(2, f"  Motor run OK:  {motor_run_ok}")
