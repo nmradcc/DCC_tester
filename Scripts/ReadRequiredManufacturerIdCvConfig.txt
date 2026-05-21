@@ -1,9 +1,0 @@
-# ReadRequiredManufacturerIdCvConfig.txt
-# Reads required DCC manufacturer ID CV (CV8) using service-mode direct bit verify.
-
-# Required CV for manufacturer ID in DCC is CV8.
-cv_number=8
-
-# Expected manufacturer ID (decimal or hex, e.g. 0x0D).
-# Set to -1 to only read/report CV8 without pass/fail comparison.
-expected_manufacturer_id=-1

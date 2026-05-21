@@ -1,0 +1,6 @@
+# ReadManufacturerCvInfoConfig.txt
+# Reads required DCC manufacturer CV information using service-mode direct bit verify.
+
+# Expected manufacturer ID for CV8 (decimal or hex, e.g. 0x0D).
+# Set to -1 to only read/report CV8 without pass/fail comparison.
+cv8_expected_manufacturer_id=-1

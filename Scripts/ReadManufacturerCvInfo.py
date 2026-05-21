@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-ReadRequiredManufacturerIdCv Script
-==================================
+ReadManufacturerCvInfo Script
+=============================
 
-Reads the required DCC manufacturer ID CV (CV8) using service-mode direct bit
+Reads required DCC manufacturer information CVs using service-mode direct bit
 verify packets with current-based ACK detection.
 
 Configuration:
-    - SystemConfig.txt                     global settings (serial port, logging, ACK/preamble tuning)
-    - ReadRequiredManufacturerIdCvConfig.txt test-specific settings (CV selection only)
+    - SystemConfig.txt                 global settings (serial port, logging, ACK/preamble tuning)
+    - ReadManufacturerCvInfoConfig.txt  test-specific settings (CV selection only)
 """
 
 import json
@@ -93,25 +93,22 @@ def load_config(config_path):
             config[key.strip()] = value.strip()
 
     required = {
-        "cv_number",
-        "expected_manufacturer_id",
+        "cv8_expected_manufacturer_id",
     }
     missing = sorted(required - set(config.keys()))
     if missing:
         raise ValueError(f"Missing required config keys: {', '.join(missing)}")
 
-    cv_number = _parse_int(config["cv_number"], "cv_number")
-    if cv_number != 8:
-        raise ValueError("cv_number must be 8 for manufacturer ID")
-
-    expected_manufacturer_id = _parse_int(config["expected_manufacturer_id"], "expected_manufacturer_id")
-    if expected_manufacturer_id < -1 or expected_manufacturer_id > 255:
-        raise ValueError("expected_manufacturer_id must be -1 (skip check) or 0..255")
-
     cfg = {
-        "cv_number": cv_number,
-        "expected_manufacturer_id": expected_manufacturer_id,
+        "cv8_number": 8,
+        "cv8_expected_manufacturer_id": _parse_int(
+            config["cv8_expected_manufacturer_id"], "cv8_expected_manufacturer_id"
+        ),
+        "cv7_number": 7,
     }
+
+    if cfg["cv8_expected_manufacturer_id"] < -1 or cfg["cv8_expected_manufacturer_id"] > 255:
+        raise ValueError("cv8_expected_manufacturer_id must be -1 (skip check) or 0..255")
 
     return cfg
 
@@ -286,17 +283,38 @@ def read_cv_value(rpc, cv_number, cfg):
     return value, bits
 
 
+def read_and_report_cv(rpc, cv_number, cfg, label, expected_value=None):
+    value, bits = read_cv_value(rpc, cv_number, cfg)
+    log(1, "")
+    log(1, "=" * 70)
+    log(1, f"{label} Result")
+    log(1, "=" * 70)
+    log(1, f"  CV{cv_number} bits (LSB->MSB): {''.join(str(b) for b in bits)}")
+    log(1, f"  CV{cv_number} value: {value} (0x{value:02X})")
+
+    if expected_value is None:
+        log(1, "  Verdict: READ ONLY")
+        return 0
+
+    if value == expected_value:
+        log(1, f"  Verdict: PASS (matches expected {label.lower()})")
+        return 0
+
+    log(1, f"  Verdict: FAIL (does not match expected {label.lower()})")
+    return 2
+
+
 def main():
     print("=" * 70)
-    print("Read Required DCC Manufacturer ID CV (CV8)")
+    print("Read Manufacturer CV Info")
     print("=" * 70)
 
-    config_path = os.path.join(script_dir, "ReadRequiredManufacturerIdCvConfig.txt")
+    config_path = os.path.join(script_dir, "ReadManufacturerCvInfoConfig.txt")
     try:
         cfg = load_config(config_path)
     except (FileNotFoundError, ValueError) as exc:
         print(f"ERROR: {exc}")
-        print("Please update ReadRequiredManufacturerIdCvConfig.txt with valid values.")
+        print("Please update ReadManufacturerCvInfoConfig.txt with valid values.")
         return 1
 
     sys_cfg = System.get_config()
@@ -330,11 +348,7 @@ def main():
     log(1, "Configuration Summary:")
     log(1, "=" * 70)
     log(1, f"  Serial port:            {port}")
-    log(1, f"  CV number:              {cfg['cv_number']}")
-    if cfg["expected_manufacturer_id"] >= 0:
-        log(1, f"  Expected mfg ID:        {cfg['expected_manufacturer_id']} (0x{cfg['expected_manufacturer_id']:02X})")
-    else:
-        log(1, "  Expected mfg ID:        (not checked)")
+    log(1, f"  CV8 expected ID:         {cfg['cv8_expected_manufacturer_id'] if cfg['cv8_expected_manufacturer_id'] >= 0 else '(not checked)'}")
     log(1, f"  ACK threshold:          {cfg['ack_current_threshold_ma']} mA")
     log(1, f"  ACK window:             {cfg['ack_window_ms']} ms")
     log(1, f"  ACK poll interval:      {cfg['ack_poll_interval_ms']} ms")
@@ -382,25 +396,16 @@ def main():
 
         time.sleep(1.0)
 
-        value, bits = read_cv_value(rpc, cfg["cv_number"], cfg)
+        exit_code = read_and_report_cv(
+            rpc,
+            8,
+            cfg,
+            "CV8 Manufacturer ID",
+            cfg["cv8_expected_manufacturer_id"] if cfg["cv8_expected_manufacturer_id"] >= 0 else None,
+        )
 
-        log(1, "")
-        log(1, "=" * 70)
-        log(1, "Manufacturer ID Result")
-        log(1, "=" * 70)
-        log(1, f"  CV{cfg['cv_number']} bits (LSB->MSB): {''.join(str(b) for b in bits)}")
-        log(1, f"  CV{cfg['cv_number']} value: {value} (0x{value:02X})")
-
-        if cfg["expected_manufacturer_id"] < 0:
-            log(1, "  Verdict: READ ONLY (no expected manufacturer ID check)")
-            return 0
-
-        if value == cfg["expected_manufacturer_id"]:
-            log(1, "  Verdict: PASS (matches expected manufacturer ID)")
-            return 0
-
-        log(1, "  Verdict: FAIL (does not match expected manufacturer ID)")
-        return 2
+        cv7_exit_code = read_and_report_cv(rpc, 7, cfg, "CV7 Version", None)
+        return max(exit_code, cv7_exit_code)
 
     except serial.SerialException as exc:
         log(1, f"ERROR: Serial port error: {exc}")
