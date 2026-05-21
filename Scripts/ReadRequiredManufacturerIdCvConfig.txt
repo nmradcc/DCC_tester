@@ -26,7 +26,7 @@ ack_window_ms=35
 ack_poll_interval_ms=1
 baseline_sample_delay_ms=3
 baseline_samples=5
-repeats_per_verify=5
+repeats_per_verify=20
 
 # Packet/timing settings.
 inter_packet_delay_ms=0
