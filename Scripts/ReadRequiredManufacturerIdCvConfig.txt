@@ -4,30 +4,6 @@
 # Required CV for manufacturer ID in DCC is CV8.
 cv_number=8
 
-# Decoder tuning profile.
-# Supported: loksound5_micro, generic
-decoder_profile=generic
-
-# ACK detection is firmware-side only (STM32 command_station_detect_ack RPC).
-
 # Expected manufacturer ID (decimal or hex, e.g. 0x0D).
 # Set to -1 to only read/report CV8 without pass/fail comparison.
 expected_manufacturer_id=-1
-
-# ACK detection tuning.
-# NOTE: When decoder_profile=loksound5_micro the profile clamps these to
-# known-good minimums/maximums.  Values here already match the effective result:
-#   ack_current_threshold_ma -> min(config, 10)
-#   ack_window_ms            -> max(config, 35)
-#   baseline_samples         -> max(config, 5)
-#   repeats_per_verify       -> max(config, 5)
-ack_current_threshold_ma=10
-ack_window_ms=35
-ack_poll_interval_ms=1
-baseline_sample_delay_ms=3
-baseline_samples=5
-repeats_per_verify=20
-
-# Packet/timing settings.
-inter_packet_delay_ms=0
-service_preamble_bits=25

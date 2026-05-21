@@ -38,6 +38,13 @@ class SystemConfig:
         self.serial_port = "COM6"
         self.in_circuit_motor = False
         self.logging_level = 1
+        self.ack_current_threshold_ma = 10
+        self.ack_window_ms = 35
+        self.ack_poll_interval_ms = 1
+        self.baseline_sample_delay_ms = 3
+        self.baseline_samples = 5
+        self.repeats_per_verify = 20
+        self.service_preamble_bits = 25
         self.monitor_index = 2
         self.screenshot_directory = "screenshots"
         self.save_logs = False
@@ -84,6 +91,13 @@ class SystemConfig:
             self.serial_port = config.get("serial_port", "COM6")
             self.in_circuit_motor = self._parse_bool(config.get("in_circuit_motor", "false"))
             self.logging_level = self._parse_int(config.get("logging_level", "1"), default=1)
+            self.ack_current_threshold_ma = self._parse_int(config.get("ack_current_threshold_ma", "10"), default=10)
+            self.ack_window_ms = self._parse_int(config.get("ack_window_ms", "35"), default=35)
+            self.ack_poll_interval_ms = self._parse_int(config.get("ack_poll_interval_ms", "1"), default=1)
+            self.baseline_sample_delay_ms = self._parse_int(config.get("baseline_sample_delay_ms", "3"), default=3)
+            self.baseline_samples = self._parse_int(config.get("baseline_samples", "5"), default=5)
+            self.repeats_per_verify = self._parse_int(config.get("repeats_per_verify", "20"), default=20)
+            self.service_preamble_bits = self._parse_int(config.get("service_preamble_bits", "25"), default=25)
             self.monitor_index = self._parse_int(config.get("monitor_index", "2"), default=2)
             self.screenshot_directory = config.get("screenshot_directory", "screenshots")
             self.save_logs = self._parse_bool(config.get("save_logs", "false"))
@@ -101,6 +115,13 @@ class SystemConfig:
         print(f"  Serial port:         {self.serial_port}")
         print(f"  In-circuit motor:    {self.in_circuit_motor}")
         print(f"  Logging level:       {self.logging_level}")
+        print(f"  ACK threshold:       {self.ack_current_threshold_ma} mA")
+        print(f"  ACK window:          {self.ack_window_ms} ms")
+        print(f"  ACK poll interval:   {self.ack_poll_interval_ms} ms")
+        print(f"  Baseline sample dly: {self.baseline_sample_delay_ms} ms")
+        print(f"  Baseline samples:    {self.baseline_samples}")
+        print(f"  Repeats per verify:  {self.repeats_per_verify}")
+        print(f"  Service preamble:    {self.service_preamble_bits} bits")
         print(f"  Save logs:           {self.save_logs}")
         print(f"  Log directory:       {self.log_directory}")
         print(f"  Monitor index:       {self.monitor_index}")

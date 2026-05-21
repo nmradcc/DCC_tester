@@ -9,6 +9,21 @@ serial_port=COM3
 # Set to true if testing with motor connected
 in_circuit_motor=true
 
+
+## Service mode
+# Service-mode packet timing
+service_preamble_bits=25
+
+# ACK detection tuning shared by service-mode
+ack_current_threshold_ma=10
+ack_window_ms=35
+ack_poll_interval_ms=1
+baseline_sample_delay_ms=3
+baseline_samples=5
+repeats_per_verify=20
+
+
+## Logging
 # Logging level (0=none, 1=normal, 2=verbose)
 logging_level=1
 

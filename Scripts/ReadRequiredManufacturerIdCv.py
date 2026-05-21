@@ -7,8 +7,8 @@ Reads the required DCC manufacturer ID CV (CV8) using service-mode direct bit
 verify packets with current-based ACK detection.
 
 Configuration:
-  - SystemConfig.txt                     global settings (serial port, logging)
-  - ReadRequiredManufacturerIdCvConfig.txt test-specific settings
+    - SystemConfig.txt                     global settings (serial port, logging, ACK/preamble tuning)
+    - ReadRequiredManufacturerIdCvConfig.txt test-specific settings (CV selection only)
 """
 
 import json
@@ -25,17 +25,6 @@ import System
 
 
 LOG_LEVEL = 1
-
-
-LOKSOUND5_MICRO_PROFILE = {
-    "ack_current_threshold_ma": 10,
-    "ack_window_ms": 35,
-    "ack_poll_interval_ms": 1,
-    "baseline_samples": 5,
-    "repeats_per_verify": 5,
-    "inter_packet_delay_ms": 2,
-    "service_preamble_bits": 25,
-}
 
 
 def set_log_level(level):
@@ -88,12 +77,6 @@ def _parse_int(value, key):
         raise ValueError(f"Invalid integer value for '{key}': {value}") from exc
 
 
-def _normalize_profile_name(value):
-    if value is None:
-        return "loksound5_micro"
-    return str(value).strip().lower()
-
-
 def load_config(config_path):
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
@@ -112,13 +95,6 @@ def load_config(config_path):
     required = {
         "cv_number",
         "expected_manufacturer_id",
-        "ack_current_threshold_ma",
-        "ack_window_ms",
-        "ack_poll_interval_ms",
-        "baseline_samples",
-        "repeats_per_verify",
-        "inter_packet_delay_ms",
-        "service_preamble_bits",
     }
     missing = sorted(required - set(config.keys()))
     if missing:
@@ -135,38 +111,7 @@ def load_config(config_path):
     cfg = {
         "cv_number": cv_number,
         "expected_manufacturer_id": expected_manufacturer_id,
-        "ack_current_threshold_ma": _parse_int(config["ack_current_threshold_ma"], "ack_current_threshold_ma"),
-        "ack_window_ms": _parse_int(config["ack_window_ms"], "ack_window_ms"),
-        "ack_poll_interval_ms": _parse_int(config["ack_poll_interval_ms"], "ack_poll_interval_ms"),
-        "baseline_sample_delay_ms": _parse_int(config.get("baseline_sample_delay_ms", "1"), "baseline_sample_delay_ms"),
-        "baseline_samples": _parse_int(config["baseline_samples"], "baseline_samples"),
-        "repeats_per_verify": _parse_int(config["repeats_per_verify"], "repeats_per_verify"),
-        "inter_packet_delay_ms": _parse_int(config["inter_packet_delay_ms"], "inter_packet_delay_ms"),
-        "service_preamble_bits": _parse_int(config["service_preamble_bits"], "service_preamble_bits"),
-        "decoder_profile": _normalize_profile_name(config.get("decoder_profile")),
     }
-
-    profile = cfg["decoder_profile"]
-    if profile == "loksound5_micro":
-        # Keep explicit values from config unless they are less robust than
-        # known-good LokSound 5 Micro defaults for ACK detection.
-        cfg["ack_current_threshold_ma"] = min(
-            cfg["ack_current_threshold_ma"], LOKSOUND5_MICRO_PROFILE["ack_current_threshold_ma"]
-        )
-        cfg["ack_window_ms"] = max(cfg["ack_window_ms"], LOKSOUND5_MICRO_PROFILE["ack_window_ms"])
-        cfg["ack_poll_interval_ms"] = min(
-            cfg["ack_poll_interval_ms"], LOKSOUND5_MICRO_PROFILE["ack_poll_interval_ms"]
-        )
-        cfg["baseline_samples"] = max(cfg["baseline_samples"], LOKSOUND5_MICRO_PROFILE["baseline_samples"])
-        cfg["repeats_per_verify"] = max(
-            cfg["repeats_per_verify"], LOKSOUND5_MICRO_PROFILE["repeats_per_verify"]
-        )
-        cfg["inter_packet_delay_ms"] = max(
-            cfg["inter_packet_delay_ms"], LOKSOUND5_MICRO_PROFILE["inter_packet_delay_ms"]
-        )
-        cfg["service_preamble_bits"] = max(
-            cfg["service_preamble_bits"], LOKSOUND5_MICRO_PROFILE["service_preamble_bits"]
-        )
 
     return cfg
 
@@ -203,14 +148,14 @@ def make_reset_packet():
     return [0x00, 0x00, 0x00]
 
 
-def send_reset_and_verify(rpc, verify_packet, inter_packet_delay_ms, trigger_first_bit=True):
+def send_reset_and_verify(rpc, verify_packet, trigger_first_bit=True):
     reset_packet = make_reset_packet()
 
     log(2, "Queueing service-mode packet sequence:")
     log(2, f"  reset #1: {[f'0x{b:02X}' for b in reset_packet]}")
     log(2, f"  reset #2: {[f'0x{b:02X}' for b in reset_packet]}")
     log(2, f"  verify:   {[f'0x{b:02X}' for b in verify_packet]}")
-    log(2, f"  tx: count=3, delay_ms={inter_packet_delay_ms}")
+    log(2, "  tx: count=3, delay_ms=0")
 
     response = rpc.send_rpc("command_station_load_packet", {"bytes": reset_packet, "replace": True})
     if response is None or response.get("status") != "ok":
@@ -226,7 +171,7 @@ def send_reset_and_verify(rpc, verify_packet, inter_packet_delay_ms, trigger_fir
 
     response = rpc.send_rpc(
         "command_station_transmit_packet",
-        {"count": 3, "delay_ms": inter_packet_delay_ms, "trigger_first_bit": trigger_first_bit},
+        {"count": 3, "delay_ms": 0, "trigger_first_bit": trigger_first_bit},
     )
     if response is None or response.get("status") != "ok":
         raise RuntimeError(f"Failed to transmit reset+verify packets: {response}")
@@ -273,7 +218,7 @@ def verify_bit_value(rpc, cv_number, bit_index, bit_value, cfg):
 
     for attempt in range(cfg["repeats_per_verify"]):
         log(2, f"Attempt {attempt + 1}/{cfg['repeats_per_verify']}")
-        send_reset_and_verify(rpc, verify_packet, cfg["inter_packet_delay_ms"], trigger_first_bit=True)
+        send_reset_and_verify(rpc, verify_packet, trigger_first_bit=True)
         ack_detected, ack_details = detect_ack_firmware(rpc, cfg)
 
         if ack_detected is None:
@@ -356,6 +301,13 @@ def main():
 
     sys_cfg = System.get_config()
     port = sys_cfg.serial_port
+    cfg["ack_current_threshold_ma"] = sys_cfg.ack_current_threshold_ma
+    cfg["ack_window_ms"] = sys_cfg.ack_window_ms
+    cfg["ack_poll_interval_ms"] = sys_cfg.ack_poll_interval_ms
+    cfg["baseline_sample_delay_ms"] = sys_cfg.baseline_sample_delay_ms
+    cfg["baseline_samples"] = sys_cfg.baseline_samples
+    cfg["repeats_per_verify"] = sys_cfg.repeats_per_verify
+    cfg["service_preamble_bits"] = sys_cfg.service_preamble_bits
 
     # When this script is run directly, opt into the same file-logging
     # behavior used by the System menu flow.
@@ -383,13 +335,13 @@ def main():
         log(1, f"  Expected mfg ID:        {cfg['expected_manufacturer_id']} (0x{cfg['expected_manufacturer_id']:02X})")
     else:
         log(1, "  Expected mfg ID:        (not checked)")
-    log(1, f"  Decoder profile:        {cfg['decoder_profile']}")
     log(1, f"  ACK threshold:          {cfg['ack_current_threshold_ma']} mA")
     log(1, f"  ACK window:             {cfg['ack_window_ms']} ms")
     log(1, f"  ACK poll interval:      {cfg['ack_poll_interval_ms']} ms")
+    log(1, f"  Baseline sample delay:  {cfg['baseline_sample_delay_ms']} ms")
     log(1, f"  Baseline samples:       {cfg['baseline_samples']}")
     log(1, f"  Repeats per verify:     {cfg['repeats_per_verify']}")
-    log(1, f"  Inter-packet delay:     {cfg['inter_packet_delay_ms']} ms")
+    log(1, "  Inter-packet delay:     0 ms")
     log(1, f"  Service preamble bits:  {cfg['service_preamble_bits']}")
     log(1, "=" * 70)
     log(1, "")
