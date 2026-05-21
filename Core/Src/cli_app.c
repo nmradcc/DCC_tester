@@ -113,7 +113,7 @@ void command_station_command(const char *arg1, const char *arg2) {
             }
         }
         
-        if (CommandStation_Start(loop)) {
+        if (CommandStation_Start(loop, false)) {
             const char* loop_names[] = {"no loop", "loop1 (basic)", "loop2 (functions)", "loop3 (speed ramp)"};
             printf("Start Command Station with %s ...\n", loop_names[loop]);
         }

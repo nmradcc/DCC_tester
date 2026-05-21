@@ -24,7 +24,7 @@ expected_manufacturer_id=-1
 ack_current_threshold_ma=10
 ack_window_ms=35
 ack_poll_interval_ms=1
-baseline_sample_delay_ms=1
+baseline_sample_delay_ms=3
 baseline_samples=5
 repeats_per_verify=5
 

@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 void CommandStation_Init(void);
-bool CommandStation_Start(uint8_t loop);  // loop: 0=no loop, 1=loop1, 2=loop2, 3=loop3. Returns true if started, false if already running
+bool CommandStation_Start(uint8_t loop, bool reset);  // loop: 0=no loop, 1=loop1, 2=loop2, 3=loop3; reset=true uses reset packet as persistent idle packet. Returns true if started, false if already running
 bool CommandStation_Stop(void);  // Returns true if stopped, false if not running
 bool CommandStation_bidi_Threshold(uint16_t threshold);
 bool CommandStation_LoadCustomPacket(const uint8_t* bytes, uint8_t length, bool replace);

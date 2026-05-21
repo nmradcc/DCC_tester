@@ -35,13 +35,30 @@ Request:
 {"method":"command_station_start","params":{}}
 
 Expected Response (on success):
-{"status":"ok","message":"Command station started","loop":0}
+{"status":"ok","message":"Command station started","loop":0,"servicemode":false}
 
 Expected Response (if already running):
 {"status":"error","message":"Command station is already running"}
 
 Note: With loop=0, the command station runs without any test loop.
 Use this mode when sending custom packets via RPC commands.
+By default, servicemode=false, so the command station uses normal idle packet behavior.
+
+-------------------------------------------------------------------------------
+
+2.1b Start Command Station with Reset Idle Packet
+-------------------------------------------------
+Request:
+{"method":"command_station_start","params":{"servicemode":true}}
+
+Expected Response (on success):
+{"status":"ok","message":"Command station started","loop":0,"servicemode":true}
+
+Expected Response (if already running):
+{"status":"error","message":"Command station is already running"}
+
+Note: With servicemode=true, the command station starts with persistent idle packet
+set to DCC reset packet (service-mode friendly idle behavior).
 
 -------------------------------------------------------------------------------
 
@@ -51,7 +68,7 @@ Request:
 {"method":"command_station_start","params":{"loop":1}}
 
 Expected Response (on success):
-{"status":"ok","message":"Command station started","loop":1}
+{"status":"ok","message":"Command station started","loop":1,"servicemode":false}
 
 Expected Response (if already running):
 {"status":"error","message":"Command station is already running"}
@@ -73,7 +90,7 @@ Request:
 {"method":"command_station_start","params":{"loop":2}}
 
 Expected Response (on success):
-{"status":"ok","message":"Command station started","loop":2}
+{"status":"ok","message":"Command station started","loop":2,"servicemode":false}
 
 Expected Response (if already running):
 {"status":"error","message":"Command station is already running"}
@@ -97,7 +114,7 @@ Request:
 {"method":"command_station_start","params":{"loop":3}}
 
 Expected Response (on success):
-{"status":"ok","message":"Command station started","loop":3}
+{"status":"ok","message":"Command station started","loop":3,"servicemode":false}
 
 Expected Response (if already running):
 {"status":"error","message":"Command station is already running"}
@@ -111,19 +128,7 @@ Note: Loop 3 tests speed ramping on address 10:
 
 -------------------------------------------------------------------------------
 
-2.5 Start Command Station (Backwards Compatibility - Boolean)
----------------------------------------------------------------
-Request:
-{"method":"command_station_start","params":{"loop":true}}
-
-Expected Response:
-{"status":"ok","message":"Command station started","loop":1}
-
-Note: For backwards compatibility, boolean true maps to loop 1, false to loop 0.
-
--------------------------------------------------------------------------------
-
-2.6 Stop Command Station
+2.5 Stop Command Station
 --------------------------
 Request:
 {"method":"command_station_stop","params":{}}

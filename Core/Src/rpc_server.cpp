@@ -100,6 +100,7 @@ static json echo_handler(const json& params) {
 
 static json command_station_start_handler(const json& params) {
     uint8_t loop = 0;  // 0=no loop, 1=loop1, 2=loop2, 3=loop3
+    bool servicemode = false;
     
     // Check if params contains a "loop" field
     if (params.is_object() && params.contains("loop")) {
@@ -124,8 +125,18 @@ static json command_station_start_handler(const json& params) {
             };
         }
     }
+
+    if (params.is_object() && params.contains("servicemode")) {
+        if (!params["servicemode"].is_boolean()) {
+            return {
+                {"status", "error"},
+                {"message", "servicemode must be a boolean"}
+            };
+        }
+        servicemode = params["servicemode"].get<bool>();
+    }
     
-    if (!CommandStation_Start(loop)) {
+    if (!CommandStation_Start(loop, servicemode)) {
         return {
             {"status", "error"},
             {"message", "Command station is already running"}
@@ -135,7 +146,8 @@ static json command_station_start_handler(const json& params) {
     return {
         {"status", "ok"},
         {"message", "Command station started"},
-        {"loop", loop}
+        {"loop", loop},
+        {"servicemode", servicemode}
     };
 }
 

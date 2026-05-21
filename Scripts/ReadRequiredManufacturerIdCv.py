@@ -423,10 +423,10 @@ def main():
             raise RuntimeError(f"Failed to disable trigger_first_bit: {response}")
         log(2, "Disabled trigger_first_bit for startup")
 
-        response = rpc.send_rpc("command_station_start", {"loop": 0})
+        response = rpc.send_rpc("command_station_start", {"loop": 0, "servicemode": True})
         if response is None or response.get("status") != "ok":
             raise RuntimeError(f"Failed to start command station: {response}")
-        log(2, "Command station started in loop=0")
+        log(2, "Command station started in loop=0, servicemode=true")
 
         time.sleep(1.0)
 

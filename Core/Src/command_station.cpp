@@ -17,6 +17,7 @@ static osThreadId_t commandStationThread_id;
 static osSemaphoreId_t commandStationStart_sem;
 static bool commandStationRunning = false;
 static uint8_t commandStationLoop = 0;  // 0=no loop, 1=loop1, 2=loop2, 3=loop3
+static bool commandStationStartWithReset = false;
 static uint64_t bitCountMask = 0;
 
 static uint16_t dac_value = 0;
@@ -155,12 +156,18 @@ void CommandStationThread(void *argument) {
       HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_value);
       printf("DAC value: %d\n", dac_value);
     }
-    command_station.init({
+    auto cfg = dcc::tx::Config{
       .num_preamble = preamble_bits,
       .bit1_duration = bit1_duration,
       .bit0_duration = bit0_duration,
       .flags = {.bidi = static_cast<bool>(bidi)},
-    });
+    };
+    if (commandStationStartWithReset) {
+      command_station.init(cfg, dcc::make_reset_packet());
+      printf("Command station init: reset packet configured as persistent idle packet\n");
+    } else {
+      command_station.init(cfg);
+    }
 
   // Enable update interrupt
     __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
@@ -375,10 +382,11 @@ extern "C" void CommandStation_Init(void)
 // Can be called from anywhere
 // loop: 0=custom packet, 1=loop1 (basic), 2=loop2 (functions), 3=loop3 (speed ramp)
 // Returns true if started, false if already running
-extern "C" bool CommandStation_Start(uint8_t loop)
+extern "C" bool CommandStation_Start(uint8_t loop, bool reset)
 {
   if (!commandStationRunning) {
     commandStationLoop = loop;
+    commandStationStartWithReset = reset;
     
     // Reset override parameters to 0 on each start
     zerobitOverrideMask = 0;
@@ -387,7 +395,7 @@ extern "C" bool CommandStation_Start(uint8_t loop)
     
     HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, static_cast<GPIO_PinState>(GPIO_PIN_SET));   // Set BR_ENABLE high
     osSemaphoreRelease(commandStationStart_sem);
-    printf("Command station started (loop=%d)\n", loop);
+    printf("Command station started (loop=%d, reset=%s)\n", loop, commandStationStartWithReset ? "true" : "false");
     return true;
   }
   else {
