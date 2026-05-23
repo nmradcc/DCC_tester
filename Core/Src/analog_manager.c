@@ -127,7 +127,6 @@ int analog_manager_init(void)
         printf("ADC2 calibration failed\n");
     }
     
-    printf("Analog Manager initialized (on-demand mode)\n");
     return 0;
 }
 

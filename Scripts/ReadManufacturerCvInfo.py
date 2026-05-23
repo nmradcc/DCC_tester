@@ -145,14 +145,14 @@ def make_reset_packet():
     return [0x00, 0x00, 0x00]
 
 
-def send_reset_and_verify(rpc, verify_packet, trigger_first_bit=True):
+def send_reset_and_verify(rpc, verify_packet, delay_ms, trigger_first_bit=True):
     reset_packet = make_reset_packet()
 
     log(2, "Queueing service-mode packet sequence:")
     log(2, f"  reset #1: {[f'0x{b:02X}' for b in reset_packet]}")
     log(2, f"  reset #2: {[f'0x{b:02X}' for b in reset_packet]}")
     log(2, f"  verify:   {[f'0x{b:02X}' for b in verify_packet]}")
-    log(2, "  tx: count=3, delay_ms=0")
+    log(2, f"  tx: count=3, delay_ms={delay_ms}")
 
     response = rpc.send_rpc("command_station_load_packet", {"bytes": reset_packet, "replace": True})
     if response is None or response.get("status") != "ok":
@@ -168,7 +168,7 @@ def send_reset_and_verify(rpc, verify_packet, trigger_first_bit=True):
 
     response = rpc.send_rpc(
         "command_station_transmit_packet",
-        {"count": 3, "delay_ms": 0, "trigger_first_bit": trigger_first_bit},
+        {"count": 3, "delay_ms": delay_ms, "trigger_first_bit": trigger_first_bit},
     )
     if response is None or response.get("status") != "ok":
         raise RuntimeError(f"Failed to transmit reset+verify packets: {response}")
@@ -215,7 +215,12 @@ def verify_bit_value(rpc, cv_number, bit_index, bit_value, cfg):
 
     for attempt in range(cfg["repeats_per_verify"]):
         log(2, f"Attempt {attempt + 1}/{cfg['repeats_per_verify']}")
-        send_reset_and_verify(rpc, verify_packet, trigger_first_bit=True)
+        send_reset_and_verify(
+            rpc,
+            verify_packet,
+            cfg["inter_packet_delay_ms"],
+            trigger_first_bit=True,
+        )
         ack_detected, ack_details = detect_ack_firmware(rpc, cfg)
 
         if ack_detected is None:
@@ -326,6 +331,7 @@ def main():
     cfg["baseline_samples"] = sys_cfg.baseline_samples
     cfg["repeats_per_verify"] = sys_cfg.repeats_per_verify
     cfg["service_preamble_bits"] = sys_cfg.service_preamble_bits
+    cfg["inter_packet_delay_ms"] = 0
 
     # When this script is run directly, opt into the same file-logging
     # behavior used by the System menu flow.
@@ -355,7 +361,7 @@ def main():
     log(1, f"  Baseline sample delay:  {cfg['baseline_sample_delay_ms']} ms")
     log(1, f"  Baseline samples:       {cfg['baseline_samples']}")
     log(1, f"  Repeats per verify:     {cfg['repeats_per_verify']}")
-    log(1, "  Inter-packet delay:     0 ms")
+    log(1, f"  Inter-packet delay:     {cfg['inter_packet_delay_ms']} ms")
     log(1, f"  Service preamble bits:  {cfg['service_preamble_bits']}")
     log(1, "=" * 70)
     log(1, "")
