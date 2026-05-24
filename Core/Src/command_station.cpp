@@ -37,6 +37,9 @@ static dcc::Packet customPacketQueue[CUSTOM_PACKET_QUEUE_MAX];
 static uint8_t customPacketQueueCount = 0;
 static bool customPacketTrigger = false;
 static uint32_t customInterPacketDelay = 100;
+static uint32_t customTransmitRepeatCount = 1;
+
+extern "C" void CommandStation_TriggerTransmitWithCountAndOverride(uint32_t delay_ms, uint32_t count, int8_t trigger_first_bit_override);
 
 /* Definitions for cmdStationTask */
 const osThreadAttr_t cmdStationTask_attributes = {
@@ -189,24 +192,29 @@ void CommandStationThread(void *argument) {
             customTriggerOverridePending = false;
           }
 
-          uint32_t total_packets = customPacketQueueCount;
+          uint32_t repeats = (customTransmitRepeatCount == 0) ? 1 : customTransmitRepeatCount;
+          uint32_t total_packets = static_cast<uint32_t>(customPacketQueueCount) * repeats;
           uint32_t sent_packets = 0;
-          for (uint8_t index = 0; index < customPacketQueueCount; index++) {
-            const dcc::Packet& packet = customPacketQueue[index];
-            command_station.packet(packet);
-            sent_packets++;
-            printf("Custom packet transmitted [%lu/%lu] (packet %u/%u): ",
-                   static_cast<unsigned long>(sent_packets),
-                   static_cast<unsigned long>(total_packets),
-                   static_cast<unsigned>(index + 1),
-                   static_cast<unsigned>(customPacketQueueCount));
-            for (size_t j = 0; j < packet.size(); j++) {
-              printf("0x%02X ", packet[j]);
-            }
-            printf("lastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
-            printf("\n");
-            if (sent_packets < total_packets && customInterPacketDelay > 0) {
-              osDelay(customInterPacketDelay);
+          for (uint32_t repeat_index = 0; repeat_index < repeats; repeat_index++) {
+            for (uint8_t index = 0; index < customPacketQueueCount; index++) {
+              const dcc::Packet& packet = customPacketQueue[index];
+              command_station.packet(packet);
+              sent_packets++;
+              printf("Custom packet transmitted [%lu/%lu] (repeat %lu/%lu, packet %u/%u): ",
+                     static_cast<unsigned long>(sent_packets),
+                     static_cast<unsigned long>(total_packets),
+                     static_cast<unsigned long>(repeat_index + 1),
+                     static_cast<unsigned long>(repeats),
+                     static_cast<unsigned>(index + 1),
+                     static_cast<unsigned>(customPacketQueueCount));
+              for (size_t j = 0; j < packet.size(); j++) {
+                printf("0x%02X ", packet[j]);
+              }
+              printf("lastIdlePacketCount: %u\n", command_station.lastIdlePacketCount());
+              printf("\n");
+              if (sent_packets < total_packets && customInterPacketDelay > 0) {
+                osDelay(customInterPacketDelay);
+              }
             }
           }
 
@@ -430,16 +438,22 @@ extern "C" bool CommandStation_LoadCustomPacket(const uint8_t* bytes, uint8_t le
 extern "C" void CommandStation_TriggerTransmit(uint32_t delay_ms) {
   if (customPacketQueueCount > 0) {
     customInterPacketDelay = delay_ms;
+    customTransmitRepeatCount = 1;
     customPacketTrigger = true;
   }
 }
 
 extern "C" void CommandStation_TriggerTransmitWithOverride(uint32_t delay_ms, int8_t trigger_first_bit_override) {
+  CommandStation_TriggerTransmitWithCountAndOverride(delay_ms, 1, trigger_first_bit_override);
+}
+
+extern "C" void CommandStation_TriggerTransmitWithCountAndOverride(uint32_t delay_ms, uint32_t count, int8_t trigger_first_bit_override) {
   if (customPacketQueueCount == 0) {
     return;
   }
 
   customInterPacketDelay = delay_ms;
+  customTransmitRepeatCount = (count == 0) ? 1 : count;
   customPacketTrigger = true;
 
   // One-shot override: -1 leaves current trigger setting unchanged.

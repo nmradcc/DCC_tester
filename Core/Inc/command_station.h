@@ -12,6 +12,7 @@ bool CommandStation_bidi_Threshold(uint16_t threshold);
 bool CommandStation_LoadCustomPacket(const uint8_t* bytes, uint8_t length, bool replace);
 void CommandStation_TriggerTransmit(uint32_t delay_ms);
 void CommandStation_TriggerTransmitWithOverride(uint32_t delay_ms, int8_t trigger_first_bit_override);
+void CommandStation_TriggerTransmitWithCountAndOverride(uint32_t delay_ms, uint32_t count, int8_t trigger_first_bit_override);
 bool CommandStation_IsCustomPacketQueueFull(void);
 uint8_t CommandStation_GetCustomPacketQueueCount(void);
 

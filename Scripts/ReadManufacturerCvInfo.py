@@ -141,28 +141,13 @@ def make_direct_bit_verify_packet(cv_number, bit_index, bit_value):
     return packet
 
 
-def make_reset_packet():
-    return [0x00, 0x00, 0x00]
-
-
-def send_reset_and_verify(rpc, verify_packet, delay_ms, trigger_first_bit=True):
-    reset_packet = make_reset_packet()
+def send_verify(rpc, verify_packet, delay_ms, trigger_first_bit=True):
 
     log(2, "Queueing service-mode packet sequence:")
-    log(2, f"  reset #1: {[f'0x{b:02X}' for b in reset_packet]}")
-    log(2, f"  reset #2: {[f'0x{b:02X}' for b in reset_packet]}")
     log(2, f"  verify:   {[f'0x{b:02X}' for b in verify_packet]}")
     log(2, f"  tx: count=3, delay_ms={delay_ms}")
 
-    response = rpc.send_rpc("command_station_load_packet", {"bytes": reset_packet, "replace": True})
-    if response is None or response.get("status") != "ok":
-        raise RuntimeError(f"Failed to load reset packet 1: {response}")
-
-    response = rpc.send_rpc("command_station_load_packet", {"bytes": reset_packet, "replace": False})
-    if response is None or response.get("status") != "ok":
-        raise RuntimeError(f"Failed to load reset packet 2: {response}")
-
-    response = rpc.send_rpc("command_station_load_packet", {"bytes": verify_packet, "replace": False})
+    response = rpc.send_rpc("command_station_load_packet", {"bytes": verify_packet, "replace": True})
     if response is None or response.get("status") != "ok":
         raise RuntimeError(f"Failed to load verify packet: {response}")
 
@@ -215,7 +200,7 @@ def verify_bit_value(rpc, cv_number, bit_index, bit_value, cfg):
 
     for attempt in range(cfg["repeats_per_verify"]):
         log(2, f"Attempt {attempt + 1}/{cfg['repeats_per_verify']}")
-        send_reset_and_verify(
+        send_verify(
             rpc,
             verify_packet,
             cfg["inter_packet_delay_ms"],

@@ -245,6 +245,7 @@ static json command_station_load_packet_handler(const json& params) {
 
 static json command_station_transmit_packet_handler(const json& params) {
     uint32_t delay_ms = 100;  // Default to 100ms delay
+    uint32_t count = 1;
     int8_t trigger_override = -1;  // -1 means keep current trigger setting
 
     if (!params.is_object()) {
@@ -265,6 +266,23 @@ static json command_station_transmit_packet_handler(const json& params) {
         delay_ms = params["delay_ms"].get<uint32_t>();
     }
 
+    // Parse optional count parameter
+    if (params.contains("count")) {
+        if (!params["count"].is_number_unsigned()) {
+            return {
+                {"status", "error"},
+                {"message", "count must be a positive integer"}
+            };
+        }
+        count = params["count"].get<uint32_t>();
+        if (count == 0) {
+            return {
+                {"status", "error"},
+                {"message", "count must be greater than 0"}
+            };
+        }
+    }
+
     // Parse optional one-shot trigger override for this transmit batch.
     if (params.contains("trigger_first_bit")) {
         if (!params["trigger_first_bit"].is_boolean()) {
@@ -276,11 +294,12 @@ static json command_station_transmit_packet_handler(const json& params) {
         trigger_override = params["trigger_first_bit"].get<bool>() ? 1 : 0;
     }
     
-    CommandStation_TriggerTransmitWithOverride(delay_ms, trigger_override);
+    CommandStation_TriggerTransmitWithCountAndOverride(delay_ms, count, trigger_override);
     
     json response = {
         {"status", "ok"},
         {"message", "Packet transmission triggered"},
+        {"count", count},
         {"delay_ms", delay_ms}
     };
 
