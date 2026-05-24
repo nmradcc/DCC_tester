@@ -20,8 +20,7 @@ ack_window_ms=35
 ack_poll_interval_ms=1
 baseline_sample_delay_ms=3
 baseline_samples=5
-repeats_per_verify=20
-
+repeats_per_verify=10
 
 ## Logging
 # Logging level (0=none, 1=normal, 2=verbose)

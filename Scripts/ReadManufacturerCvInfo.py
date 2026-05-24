@@ -153,7 +153,7 @@ def send_verify(rpc, verify_packet, delay_ms, trigger_first_bit=True):
 
     response = rpc.send_rpc(
         "command_station_transmit_packet",
-        {"count": 3, "delay_ms": delay_ms, "trigger_first_bit": trigger_first_bit},
+        {"count": 2, "delay_ms": delay_ms, "trigger_first_bit": trigger_first_bit},
     )
     if response is None or response.get("status") != "ok":
         raise RuntimeError(f"Failed to transmit reset+verify packets: {response}")
