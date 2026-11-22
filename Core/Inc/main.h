@@ -101,6 +101,8 @@ uint32_t freq_meas_hz(uint32_t gate_ms);
 #define DEADTRP_ADC1_INP3_GPIO_Port GPIOA
 #define DEADTRM_ADC1_INP5_Pin GPIO_PIN_1
 #define DEADTRM_ADC1_INP5_GPIO_Port GPIOB
+#define IO10_Pin GPIO_PIN_2
+#define IO10_GPIO_Port GPIOB
 #define SCOPE_Pin GPIO_PIN_7
 #define SCOPE_GPIO_Port GPIOE
 #define AUXOUT_Pin GPIO_PIN_8
@@ -131,8 +133,6 @@ uint32_t freq_meas_hz(uint32_t gate_ms);
 #define IO5_GPIO_Port GPIOD
 #define SD_DETECT_Pin GPIO_PIN_2
 #define SD_DETECT_GPIO_Port GPIOG
-#define IOIN_EN_Pin GPIO_PIN_5
-#define IOIN_EN_GPIO_Port GPIOG
 #define BR_ENABLE_Pin GPIO_PIN_6
 #define BR_ENABLE_GPIO_Port GPIOG
 #define USART6_RX_BIDIR_Pin GPIO_PIN_6
@@ -143,8 +143,8 @@ uint32_t freq_meas_hz(uint32_t gate_ms);
 #define IO9_GPIO_Port GPIOD
 #define IO8_Pin GPIO_PIN_9
 #define IO8_GPIO_Port GPIOG
-#define IO10_Pin GPIO_PIN_10
-#define IO10_GPIO_Port GPIOG
+#define IO10G10_Pin GPIO_PIN_10
+#define IO10G10_GPIO_Port GPIOG
 #define IO11_Pin GPIO_PIN_12
 #define IO11_GPIO_Port GPIOG
 #define IO6_Pin GPIO_PIN_14

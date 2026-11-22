@@ -1446,7 +1446,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, TRACK_P_Pin|BIDIR_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOG, IOIN_EN_Pin|BR_ENABLE_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(BR_ENABLE_GPIO_Port, BR_ENABLE_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(OUT_DE_GPIO_Port, OUT_DE_Pin, GPIO_PIN_SET);
@@ -1463,7 +1463,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = IN2_Pin|IN0_Pin|IO1_Pin|IN1_Pin
                           |IO2_Pin|IN3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pins : IO13_Pin IO14_Pin IO15_Pin */
@@ -1479,17 +1479,23 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : IO10_Pin IO3_Pin */
-  GPIO_InitStruct.Pin = IO10_Pin|IO3_Pin;
+  /*Configure GPIO pins : IO10_Pin DCC_IN_Pin */
+  GPIO_InitStruct.Pin = IO10_Pin|DCC_IN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : IO1_Pin IO2_Pin IO12_Pin */
-  GPIO_InitStruct.Pin = IO1_Pin|IO2_Pin|IO12_Pin;
+  /*Configure GPIO pin : IO7_Pin */
+  GPIO_InitStruct.Pin = IO7_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(IO7_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : IO12_Pin */
+  GPIO_InitStruct.Pin = IO12_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+  HAL_GPIO_Init(IO12_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : IO3_Pin */
   GPIO_InitStruct.Pin = IO3_Pin;
@@ -1509,20 +1515,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : SD_DETECT_Pin IO8_Pin IO10_Pin IO11_Pin
+  /*Configure GPIO pins : SD_DETECT_Pin IO8_Pin IO10G10_Pin IO11_Pin
                            IO6_Pin */
-  GPIO_InitStruct.Pin = SD_DETECT_Pin|IO8_Pin|IO10_Pin|IO11_Pin
+  GPIO_InitStruct.Pin = SD_DETECT_Pin|IO8_Pin|IO10G10_Pin|IO11_Pin
                           |IO6_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : IOIN_EN_Pin */
-  GPIO_InitStruct.Pin = IOIN_EN_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(IOIN_EN_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : BR_ENABLE_Pin */
   GPIO_InitStruct.Pin = BR_ENABLE_Pin;
@@ -1539,8 +1538,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF0_MCO;
   HAL_GPIO_Init(MC_OUT_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : HL_Pin HL_EXT_Pin */
-  GPIO_InitStruct.Pin = HL_Pin|HL_EXT_Pin;
+  /*Configure GPIO pin : OUT_DE_Pin */
+  GPIO_InitStruct.Pin = OUT_DE_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(OUT_DE_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : HL_Pin FUNC_IN_Pin */
+  GPIO_InitStruct.Pin = HL_Pin|FUNC_IN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
