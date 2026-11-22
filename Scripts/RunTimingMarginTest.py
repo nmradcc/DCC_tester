@@ -209,6 +209,11 @@ def run_timing_margin_test_step(rpc, log, address, delay_ms, logging_level,
 
 def main():
     """Main entry point."""
+    runner_logging_started = False
+    try:
+        runner_logging_started = System.start_runner_logging()
+    except Exception as exc:
+        print(f"Warning: could not initialize file logging: {exc}")
 
     print("=" * 70)
     print("DCC Timing Margin Test Runner")
@@ -471,6 +476,9 @@ def main():
         except:
             pass
         return 1
+    finally:
+        if runner_logging_started:
+            System.stop_runner_logging()
 
 
 if __name__ == "__main__":

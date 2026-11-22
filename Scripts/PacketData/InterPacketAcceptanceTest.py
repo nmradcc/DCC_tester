@@ -106,6 +106,11 @@ def calculate_dcc_checksum(bytes_list):
     return checksum
 
 
+def make_reset_packet():
+    """Create a DCC reset packet for decoder synchronization."""
+    return [0x00, 0x00, 0x00]
+
+
 def make_aux_io_packet(address, function_mask):
     """
     Create a DCC function group packet to control F0-F4.
@@ -192,10 +197,26 @@ def run_interpacket_acceptance_test(rpc, loco_address, inter_packet_delay_ms=100
             return {"status": "FAIL", "error": "Failed to start command station"}
         log(2, f"✓ Command station started (loop={response.get('loop', 0)})\n")
 
+        log(1, "Step 2: Waiting 500 ms before decoder sync reset packet...")
         time.sleep(0.5)
 
-        # Step 2: Create and load F1 on packet (reset queue)
-        log(1, "Step 2: Loading F1 ON packet (reset queue)...")
+        log(1, "Step 3: Sending decoder sync reset packet...")
+        reset_packet = make_reset_packet()
+        response = rpc.send_rpc("command_station_load_packet", {"bytes": reset_packet, "replace": True})
+
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to load reset packet: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to load reset packet"}
+
+        response = rpc.send_rpc("command_station_transmit_packet", {"delay_ms": 0})
+        if response is None or response.get("status") != "ok":
+            log(1, f"ERROR: Failed to transmit reset packet: {response}")
+            rpc.close()
+            return {"status": "FAIL", "error": "Failed to transmit reset packet"}
+
+        # Step 4: Create and load F1 on packet (reset queue)
+        log(1, "Step 4: Loading F1 ON packet (reset queue)...")
         f1_packet = make_aux_io_packet(loco_address, 0b0010)
         response = rpc.send_rpc("command_station_load_packet", {"bytes": f1_packet, "replace": True})
         if response is None or response.get("status") != "ok":
@@ -203,8 +224,8 @@ def run_interpacket_acceptance_test(rpc, loco_address, inter_packet_delay_ms=100
             rpc.close()
             return {"status": "FAIL", "error": "Failed to load F1 packet"}
 
-        # Step 3: Load F1+F2 on packet
-        log(1, "Step 3: Loading F1+F2 ON packet...")
+        # Step 5: Load F1+F2 on packet
+        log(1, "Step 5: Loading F1+F2 ON packet...")
         f2_packet = make_aux_io_packet(loco_address, 0b0110)
         response = rpc.send_rpc("command_station_load_packet", {"bytes": f2_packet, "replace": False})
         if response is None or response.get("status") != "ok":
@@ -212,8 +233,8 @@ def run_interpacket_acceptance_test(rpc, loco_address, inter_packet_delay_ms=100
             rpc.close()
             return {"status": "FAIL", "error": "Failed to load F2 packet"}
 
-        # Step 4: Load F1+F2+F3 on packet
-        log(1, "Step 4: Loading F1+F2+F3 ON packet...")
+        # Step 6: Load F1+F2+F3 on packet
+        log(1, "Step 6: Loading F1+F2+F3 ON packet...")
         f3_packet = make_aux_io_packet(loco_address, 0b1110)
         response = rpc.send_rpc("command_station_load_packet", {"bytes": f3_packet, "replace": False})
         if response is None or response.get("status") != "ok":
@@ -221,20 +242,20 @@ def run_interpacket_acceptance_test(rpc, loco_address, inter_packet_delay_ms=100
             rpc.close()
             return {"status": "FAIL", "error": "Failed to load F3 packet"}
 
-        # Step 5: Trigger queue dump with inter-packet delay
-        log(1, f"Step 5: Triggering queue dump ({inter_packet_delay_ms} ms delay)...")
+        # Step 7: Trigger queue dump with inter-packet delay
+        log(1, f"Step 7: Triggering queue dump ({inter_packet_delay_ms} ms delay)...")
         response = rpc.send_rpc("command_station_transmit_packet", {"delay_ms": inter_packet_delay_ms})
         if response is None or response.get("status") != "ok":
             log(1, f"ERROR: Failed to transmit packet queue: {response}")
             rpc.close()
             return {"status": "FAIL", "error": "Failed to transmit packet queue"}
 
-        # Step 6: Sleep 0.5 seconds
-        log(1, "Step 6: Waiting 0.5 seconds...")
+        # Step 8: Sleep 0.5 seconds
+        log(1, "Step 8: Waiting 0.5 seconds...")
         time.sleep(0.5)
 
-        # Step 7: Read IO1/IO2/IO3
-        log(1, "Step 7: Reading IO1/IO2/IO3...")
+        # Step 9: Read IO1/IO2/IO3
+        log(1, "Step 9: Reading IO1/IO2/IO3...")
         io_state = read_io1_io2_io3(rpc)
         if io_state is None:
             rpc.close()
@@ -243,8 +264,8 @@ def run_interpacket_acceptance_test(rpc, loco_address, inter_packet_delay_ms=100
         log(1, f"✓ IO states: IO1={'HIGH' if io1_high else 'LOW'}, IO2={'HIGH' if io2_high else 'LOW'}, IO3={'HIGH' if io3_high else 'LOW'}")
         io_all_low = not (io1_high or io2_high or io3_high)
 
-        # Step 8: Stop command station
-        log(1, "Step 8: Stopping command station")
+        # Step 10: Stop command station
+        log(1, "Step 10: Stopping command station")
         response = rpc.send_rpc("command_station_stop", {})
 
         if response is None or response.get("status") != "ok":
@@ -268,13 +289,15 @@ def run_interpacket_acceptance_test(rpc, loco_address, inter_packet_delay_ms=100
         log(2, f"  Inter-packet delay:    {inter_packet_delay_ms} ms")
         log(2, "\nTest sequence completed:")
         log(2, "  1. Started command station in custom packet mode")
-        log(2, "  2. Loaded F1 ON packet (reset queue)")
-        log(2, "  3. Loaded F1+F2 ON packet")
-        log(2, "  4. Loaded F1+F2+F3 ON packet")
-        log(2, f"  5. Triggered queue dump with {inter_packet_delay_ms} ms delay")
-        log(2, "  6. Waited 0.5 seconds")
-        log(2, "  7. Read IO1/IO2/IO3")
-        log(2, "  8. Stopped command station")
+        log(2, "  2. Waited 500 ms after start")
+        log(2, "  3. Sent decoder sync reset packet")
+        log(2, "  4. Loaded F1 ON packet (reset queue)")
+        log(2, "  5. Loaded F1+F2 ON packet")
+        log(2, "  6. Loaded F1+F2+F3 ON packet")
+        log(2, f"  7. Triggered queue dump with {inter_packet_delay_ms} ms delay")
+        log(2, "  8. Waited 0.5 seconds")
+        log(2, "  9. Read IO1/IO2/IO3")
+        log(2, "  10. Stopped command station")
         log(2, "\nIO state measurements:")
         log(2, f"  IO1 LOW: {not io1_high}")
         log(2, f"  IO2 LOW: {not io2_high}")

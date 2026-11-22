@@ -42,7 +42,7 @@ static uint16_t read_adc_channel(ADC_HandleTypeDef *hadc, uint32_t channel)
     // Configure the ADC channel
     sConfig.Channel = channel;
     sConfig.Rank = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5;
     sConfig.SingleDiff = ADC_SINGLE_ENDED;
     sConfig.OffsetNumber = ADC_OFFSET_NONE;
     sConfig.Offset = 0;
@@ -87,12 +87,10 @@ static uint16_t average_adc_readings(ADC_HandleTypeDef *hadc, uint32_t channel, 
         samples = 1;
     }
     
-    // Collect samples
+    // Collect samples back-to-back; hardware sampling time handles settling.
     for (uint8_t i = 0; i < samples; i++)
     {
         sum += read_adc_channel(hadc, channel);
-        // Small delay between samples
-        osDelay(1);
     }
     
     // Calculate average

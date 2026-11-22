@@ -94,6 +94,11 @@ def load_test_config(config_path):
 
 def main():
     """Main entry point."""
+    runner_logging_started = False
+    try:
+        runner_logging_started = System.start_runner_logging()
+    except Exception as exc:
+        print(f"Warning: could not initialize file logging: {exc}")
     
     print("=" * 70)
     print("DCC Packet Acceptance Test Runner")
@@ -250,6 +255,9 @@ def main():
         import traceback
         traceback.print_exc()
         return 1
+    finally:
+        if runner_logging_started:
+            System.stop_runner_logging()
 
 
 if __name__ == "__main__":
