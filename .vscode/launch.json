@@ -7,7 +7,7 @@
         {
             "type": "stlinkgdbtarget",
             "request": "launch",
-            "name": "STM32Cube: STM32 Launch ST-Link GDB Server",
+            "name": "STM32Cube: Launch ST-Link GDB Server",
             "origin": "snippet",
             "cwd": "${workspaceFolder}",
             "preBuild": "${command:st-stm32-ide-debug-launch.build}",
@@ -32,8 +32,8 @@
             "serverHost": "localhost",
             "serverPort": "61234",
             "serverStartupDelay": 2000,
-//           "serverLogFile": "${workspaceFolder}/stlinkgdbserver_log.txt",
-//            "logFile": "${workspaceFolder}/gdbClient_log.txt",
+            "serverLogFile": "${workspaceFolder}/stlinkgdbserver_log.txt",
+            "logFile": "${workspaceFolder}/gdbClient_log.txt",
             "verbose": true,
             "runEntry": "main",
             "imagesAndSymbols": [
