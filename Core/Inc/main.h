@@ -69,7 +69,7 @@ void MX_USB_PCD_Init(void);
 
 uint32_t GetSector_EDATA(uint32_t Address);
 uint32_t GetBank_EDATA(uint32_t Address);
-
+uint32_t freq_meas_hz(uint32_t gate_ms);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -103,6 +103,8 @@ uint32_t GetBank_EDATA(uint32_t Address);
 #define DEADTRM_ADC1_INP5_GPIO_Port GPIOB
 #define SCOPE_Pin GPIO_PIN_7
 #define SCOPE_GPIO_Port GPIOE
+#define AUXOUT_Pin GPIO_PIN_8
+#define AUXOUT_GPIO_Port GPIOE
 #define IO7_Pin GPIO_PIN_9
 #define IO7_GPIO_Port GPIOE
 #define IN0_Pin GPIO_PIN_10
@@ -123,8 +125,6 @@ uint32_t GetBank_EDATA(uint32_t Address);
 #define IO3_GPIO_Port GPIOB
 #define UART4_TX_BIDIR_Pin GPIO_PIN_12
 #define UART4_TX_BIDIR_GPIO_Port GPIOD
-#define REF_OSC_Pin GPIO_PIN_13
-#define REF_OSC_GPIO_Port GPIOD
 #define IO4_Pin GPIO_PIN_14
 #define IO4_GPIO_Port GPIOD
 #define IO5_Pin GPIO_PIN_15
@@ -149,10 +149,12 @@ uint32_t GetBank_EDATA(uint32_t Address);
 #define IO11_GPIO_Port GPIOG
 #define IO6_Pin GPIO_PIN_14
 #define IO6_GPIO_Port GPIOG
+#define OUT_DE_Pin GPIO_PIN_15
+#define OUT_DE_GPIO_Port GPIOG
 #define DCC_IN_Pin GPIO_PIN_3
 #define DCC_IN_GPIO_Port GPIOB
-#define HL_IN_PLACE_Pin GPIO_PIN_4
-#define HL_IN_PLACE_GPIO_Port GPIOB
+#define HL_Pin GPIO_PIN_4
+#define HL_GPIO_Port GPIOB
 #define FUNC_IN_Pin GPIO_PIN_5
 #define FUNC_IN_GPIO_Port GPIOB
 
