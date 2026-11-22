@@ -292,7 +292,6 @@ void CommandStationThread(void *argument) {
       }
     }
     else if (commandStationLoop == 1) {
-      uint16_t current_ma = 0;
       // Test loop1: Basic function and speed control (address 3)
       printf("Starting test loop1: Basic function and speed control (address 3)\n");
 
